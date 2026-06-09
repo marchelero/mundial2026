@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#16a34a">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
+  <title>Mundial 2026 - Polla</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+  <div id="app">
+    <div v-if="loading" class="loading-screen">
+      <div class="spinner"></div>
+      <p>Cargando...</p>
+    </div>
+
+    <template v-else>
+      <div v-if="!user" class="login-screen">
+        <div class="login-card">
+          <div class="logo">
+            <span class="logo-icon">🏆</span>
+            <h1>Mundial 2026</h1>
+            <p class="logo-sub">Polla Mundialista</p>
+          </div>
+          <p class="login-desc">Ingresa con Google para participar</p>
+          <button class="btn btn-google" @click="loginGoogle" :disabled="authLoading">
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <path fill="currentColor"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
+              <path fill="currentColor"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="currentColor"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+              <path fill="currentColor"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+            </svg>
+            {{ authLoading ? 'Conectando...' : 'Ingresar con Google' }}
+          </button>
+          <p v-if="authError" class="error-text">{{ authError }}</p>
+        </div>
+      </div>
+
+      <div v-else class="app-layout">
+        <header class="app-header">
+          <div class="header-left">
+            <span class="header-title">🏆 Mundial 2026</span>
+          </div>
+          <div class="header-right">
+            <span class="user-name">{{ userName }}</span>
+            <button class="btn-icon" @click="logout" title="Cerrar sesión">✕</button>
+          </div>
+        </header>
+
+        <nav class="tab-nav">
+          <button :class="['tab-btn', { active: view === 'votar' }]" @click="view = 'votar'">Votar</button>
+          <button :class="['tab-btn', { active: view === 'posiciones' }]"
+            @click="view = 'posiciones'; loadRankings()">Posiciones</button>
+          <button :class="['tab-btn', { active: view === 'historial' }]" @click="view = 'historial'">Historial</button>
+          <button v-if="isAdmin" :class="['tab-btn', { active: view === 'admin' }]"
+            @click="view = 'admin'">Admin</button>
+        </nav>
+
+        <main class="main-content">
+          <div v-if="alert" :class="['alert', alertType]">{{ alert }}</div>
+
+          <!-- VOTAR -->
+          <div v-if="view === 'votar'" class="voting-view" key="votar">
+            <!-- Champion pick -->
+            <div v-if="championPick" class="champion-section">
+              <h2>🏆 Pronóstico Campeón <span class="champion-badge">+{{ championBonus }}pts</span></h2>
+              <p class="champion-desc">¿Quién ganará el mundial?</p>
+              <div v-if="!championPick.id && !canEditChampion()" class="champion-locked">
+                🔒 Plazo vencido{{ championDeadline ? ' — era hasta el ' + championDeadline : '' }}
+              </div>
+              <div v-if="championPick.id" class="champion-saved">✓ Guardado — {{ championPick.champion }}</div>
+              <div v-if="!championPick.id && canEditChampion()" class="champion-form">
+                <input type="text" v-model="championPick.champion" placeholder="Ej: Argentina" class="champion-input"
+                  list="champion-list">
+                <datalist id="champion-list">
+                  <option v-for="c in countryNames" :key="c" :value="c">
+                </datalist>
+                <div class="champion-actions">
+                  <button class="btn btn-primary btn-sm" @click="saveChampion"
+                    :disabled="!championPick.champion || championLoading">
+                    {{ championLoading ? 'Guardando...' : 'Guardar' }}
+                  </button>
+                  <span v-if="championDeadline" class="champion-deadline">⏰ Hasta {{ championDeadline }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Comodín status -->
+            <div class="comodin-status">
+              <span v-if="!comodinUsado" class="comodin-disponible">⭐ Comodín disponible (1 para todo el torneo)</span>
+              <span v-else class="comodin-usado">⭐ Comodín usado en {{ comodinMatchName }}</span>
+            </div>
+
+            <!-- Matches -->
+            <div v-if="matchGroups.length === 0" class="empty-state">
+              <p>No hay partidos disponibles.</p>
+            </div>
+
+            <div v-for="group in matchGroups" :key="group.date" class="date-group">
+              <h2 class="date-header">{{ formatDate(group.date) }}</h2>
+              <div class="match-list">
+                <div v-for="match in group.matches" :key="match.id" class="match-card"
+                  :class="{ closed: getMatchStatus(match) === 'closed', votado: predictions[match.id]?.id }">
+                  <div class="match-header">
+                    <div class="match-header-left">
+                      <span v-if="match.round" class="match-round">{{ roundLabel(match.round) }}</span>
+                      <span class="match-time">{{ match.time }}</span>
+                    </div>
+                    <span :class="['match-status', getMatchStatus(match)]">{{ getMatchStatusLabel(match) }}</span>
+                  </div>
+                  <div class="match-teams">
+                    <div class="team home">
+                      <span class="team-name">{{ getFlag(match.home_team) }} {{ match.home_team }}</span>
+                    </div>
+                    <div v-if="predictions[match.id]?.id" class="score-display">
+                      <span class="score-value">{{ predHome(match.id) }}</span>
+                      <span class="score-sep">-</span>
+                      <span class="score-value">{{ predAway(match.id) }}</span>
+                      <span v-if="predictions[match.id]?.comodin" class="comodin-activo">⭐</span>
+                      <span v-if="predDetail(match.id)" :class="['pts-badge', predDetail(match.id).type]">
+                        {{ predDetail(match.id).pts }}pts
+                        <span v-if="predDetail(match.id).comodin" class="pts-x2">×2</span>
+                      </span>
+                      <div v-if="match.status === 'finished'" class="actual-result">
+                        Real: {{ match.home_score }}-{{ match.away_score }}
+                      </div>
+                    </div>
+                    <div v-else class="score-inputs">
+                      <input type="number" min="0" max="99" :disabled="!canVote(match)" :value="predHome(match.id)"
+                        @input="setPredHome(match.id, $event.target.value)" placeholder="-" class="score-input">
+                      <span class="score-sep">-</span>
+                      <input type="number" min="0" max="99" :disabled="!canVote(match)" :value="predAway(match.id)"
+                        @input="setPredAway(match.id, $event.target.value)" placeholder="-" class="score-input">
+                      <button v-if="canVote(match) && !comodinUsado && !predictions[match.id]?.comodin"
+                        class="btn-comodin" @click="toggleComodin(match.id)">
+                        <span class="comodin-label">⭐ Usar comodín</span>
+                      </button>
+                      <button v-if="canVote(match) && predictions[match.id]?.comodin" class="btn-comodin activo"
+                        @click="toggleComodin(match.id)">
+                        <span class="comodin-label">⭐ Comodín activo (tocar para quitar)</span>
+                      </button>
+                    </div>
+                    <div class="team away">
+                      <span class="team-name">{{ getFlag(match.away_team) }} {{ match.away_team }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button v-if="hasPredictionsToSubmit" class="btn btn-primary btn-submit" @click="submitPredictions"
+              :disabled="saving">
+              {{ saving ? 'Guardando...' : 'Guardar Pronósticos' }}
+            </button>
+
+          </div>
+
+          <!-- POSICIONES -->
+          <div v-if="view === 'posiciones'" class="posiciones-view" key="posiciones">
+            <div v-if="rankingsLoading" class="loading-screen" style="min-height:200px">
+              <div class="spinner"></div>
+              <p>Cargando...</p>
+            </div>
+            <div v-else-if="rankingsData.length === 0" class="empty-state">
+              <p>Aún no hay posiciones.</p>
+              <p class="empty-sub">Los puntajes aparecen cuando haya partidos finalizados.</p>
+            </div>
+            <div v-else class="rankings-table-wrapper">
+              <table class="rankings-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Participante</th>
+                    <th>Puntos</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(r, i) in rankingsData" :key="r.id" :class="{ highlight: r.id === user?.id }">
+                    <td class="rank-num">{{ i + 1 }}</td>
+                    <td class="rank-name">{{ r.name }}</td>
+                    <td class="rank-pts">{{ r.points }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- HISTORIAL -->
+          <div v-if="view === 'historial'" class="historial-view" key="historial">
+            <div v-if="historyGroups.length === 0" class="empty-state">
+              <p>No hay partidos pasados.</p>
+            </div>
+            <div v-for="group in historyGroups" :key="group.date" class="date-group">
+              <h2 class="date-header">{{ formatDate(group.date) }}</h2>
+              <div class="match-list">
+                <div v-for="match in group.matches" :key="match.id" class="match-card"
+                  :class="{ votado: predictions[match.id]?.id }">
+                  <div class="match-header">
+                    <div class="match-header-left">
+                      <span v-if="match.round" class="match-round">{{ roundLabel(match.round) }}</span>
+                      <span class="match-time">{{ match.time }}</span>
+                    </div>
+                    <span :class="['match-status', getMatchStatus(match)]">{{ getMatchStatusLabel(match) }}</span>
+                  </div>
+                  <div class="match-teams">
+                    <div class="team home">
+                      <span class="team-name">{{ getFlag(match.home_team) }} {{ match.home_team }}</span>
+                    </div>
+                    <div v-if="predictions[match.id]?.id" class="score-display">
+                      <span class="score-value">{{ predHome(match.id) }}</span>
+                      <span class="score-sep">-</span>
+                      <span class="score-value">{{ predAway(match.id) }}</span>
+                      <span v-if="predictions[match.id]?.comodin" class="comodin-activo">⭐</span>
+                      <span v-if="predDetail(match.id)" :class="['pts-badge', predDetail(match.id).type]">
+                        {{ predDetail(match.id).pts }}pts
+                        <span v-if="predDetail(match.id).comodin" class="pts-x2">×2</span>
+                      </span>
+                      <div v-if="match.status === 'finished'" class="actual-result">
+                        Real: {{ match.home_score }}-{{ match.away_score }}
+                      </div>
+                    </div>
+                    <div v-else class="score-display no-vote">
+                      <span class="no-vote-text">No votaste</span>
+                      <div v-if="match.status === 'finished'" class="actual-result">
+                        {{ match.home_score }}-{{ match.away_score }}
+                      </div>
+                    </div>
+                    <div class="team away">
+                      <span class="team-name">{{ getFlag(match.away_team) }} {{ match.away_team }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ADMIN -->
+          <div v-if="view === 'admin'" class="admin-view" key="admin">
+            <section class="admin-section">
+              <h2>Agregar Partido</h2>
+              <form class="match-form" @submit.prevent="addMatch">
+                <div class="form-row">
+                  <label>Fecha <input type="date" v-model="matchForm.date" required></label>
+                  <label>Hora <input type="time" v-model="matchForm.time" required></label>
+                </div>
+                <div class="form-row">
+                  <label>Local
+                    <input type="text" v-model="matchForm.home_team" placeholder="Ej: Argentina" required
+                      list="home-team-list" class="champion-input">
+                    <datalist id="home-team-list">
+                      <option v-for="c in countryNames" :key="c" :value="c">
+                    </datalist>
+                  </label>
+                  <label>Visitante
+                    <input type="text" v-model="matchForm.away_team" placeholder="Ej: Brasil" required
+                      list="away-team-list" class="champion-input">
+                    <datalist id="away-team-list">
+                      <option v-for="c in countryNames" :key="c" :value="c">
+                    </datalist>
+                  </label>
+                </div>
+                <div class="form-row">
+                  <label>Ronda
+                    <select v-model="matchForm.round">
+                      <option value="">--</option>
+                      <option value="group">Grupos</option>
+                      <option value="round_32">32vos</option>
+                      <option value="round_16">16vos</option>
+                      <option value="quarter">Cuartos</option>
+                      <option value="semi">Semis</option>
+                      <option value="final">Final</option>
+                    </select>
+                  </label>
+                </div>
+                <button type="submit" class="btn btn-primary">{{ editingMatch ? 'Actualizar' : 'Agregar' }}</button>
+                <button v-if="editingMatch" type="button" class="btn btn-ghost" @click="cancelEdit">Cancelar</button>
+              </form>
+            </section>
+
+            <section class="admin-section">
+              <h2>Campeón Real</h2>
+              <div class="champion-form">
+                <input type="text" v-model="settings.actual_champion" placeholder="Ej: Argentina" class="champion-input"
+                  list="actual-champion-list">
+                <datalist id="actual-champion-list">
+                  <option v-for="c in countryNames" :key="c" :value="c">
+                </datalist>
+                <button class="btn btn-primary btn-sm" @click="saveSetting('actual_champion')">Guardar</button>
+              </div>
+            </section>
+
+            <section class="admin-section">
+              <h2>WhatsApp</h2>
+              <p class="empty-sub">Configura el grupo de WhatsApp para compartir pronósticos.</p>
+              <div class="champion-form">
+                <input type="text" v-model="settings.whatsapp_group"
+                  placeholder="Ej: 5491123456789 (código país + número)" class="champion-input">
+                <input type="text" v-model="settings.whatsapp_group_name"
+                  placeholder="Nombre del grupo (ej: Polla Mundial 2026)" class="champion-input">
+                <button class="btn btn-primary btn-sm"
+                  @click="saveSetting('whatsapp_group'); saveSetting('whatsapp_group_name')">Guardar</button>
+              </div>
+            </section>
+
+            <section class="admin-section">
+              <h2>Exportar todo</h2>
+              <p class="empty-sub">Descarga un CSV con todos los participantes, pronósticos, puntajes y campeón. Incluye
+                todos los partidos.</p>
+              <button class="btn btn-primary btn-sm" @click="exportFullCSV">📥 Descargar CSV completo</button>
+            </section>
+
+            <section class="admin-section">
+              <h2>Partidos</h2>
+              <div v-if="sortedAdminMatches.length === 0" class="empty-state">
+                <p>No hay partidos.</p>
+              </div>
+              <div v-for="match in sortedAdminMatches" :key="match.id" class="admin-match-item">
+                <div class="admin-match-info">
+                  <strong>{{ match.home_team }} vs {{ match.away_team }}</strong>
+                  <span class="admin-match-meta">{{ match.date }} {{ match.time }}</span>
+                </div>
+                <div class="admin-match-actions">
+                  <button class="btn-sm btn-outline" @click="toggleMatchStatus(match)">
+                    {{ match.status === 'open' ? 'Cerrar' : match.status === 'closed' ? 'Finalizar' : 'Reabrir' }}
+                  </button>
+                  <button class="btn-sm btn-outline" @click="editMatch(match)">Editar</button>
+                  <button class="btn-sm btn-danger" @click="deleteMatch(match.id)">✕</button>
+                </div>
+                <div class="admin-actual-score">
+                  <span class="label">Resultado real:</span>
+                  <input type="number" min="0" max="99" v-model.number="match.home_score" class="score-input-sm">
+                  <span class="score-sep">-</span>
+                  <input type="number" min="0" max="99" v-model.number="match.away_score" class="score-input-sm">
+                  <button class="btn-sm btn-primary" @click="saveActualScore(match)"
+                    :disabled="match.home_score==null || match.away_score==null">{{ match.status === 'finished' ? 'Actualizar' : 'Guardar' }}</button>
+                </div>
+                <button class="btn-sm btn-link" @click="toggleExport(match)">
+                  {{ selectedExport === match.id ? 'Ocultar' : 'Ver pronósticos' }}
+                </button>
+                <button class="btn-sm btn-outline" @click="exportMatchCSV(match)">📋 CSV</button>
+                <div v-if="selectedExport === match.id" class="admin-match-predictions">
+                  <div v-if="matchPredictions.length === 0" class="empty-sub">Sin pronósticos</div>
+                  <table v-else class="pred-table">
+                    <thead>
+                      <tr>
+                        <th>Participante</th>
+                        <th>{{ match.home_team }}</th>
+                        <th>{{ match.away_team }}</th>
+                        <th>Pts</th>
+                        <th>⭐</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="p in matchPredictions" :key="p.id">
+                        <td>{{ p.expand?.user?.email?.split('@')[0] || '?' }}</td>
+                        <td>{{ p.home_score }}</td>
+                        <td>{{ p.away_score }}</td>
+                        <td>{{ calcPts(p, match) !== null ? calcPts(p, match) : '-' }}</td>
+                        <td>{{ p.comodin ? '⭐' : '' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          </div>
+        </main>
+
+        <footer v-if="view === 'votar' && totalVoted > 0" class="app-footer">
+          <span>{{ totalVoted }} / {{ allMatches.length }} partidos</span>
+        </footer>
+      </div>
+    </template>
+  </div>
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.25.2/dist/pocketbase.umd.min.js"></script>
+  <script src="/config.js"></script>
+  <script src="/paises.js"></script>
+  <script src="/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+</body>
+
+</html>

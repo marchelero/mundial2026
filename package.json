@@ -1,0 +1,17 @@
+{
+  "name": "mundial2026-polla",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Polla Mundial 2026 - SPA con PocketBase",
+  "scripts": {
+    "dev": "bash start.sh",
+    "start": "bash start.sh",
+    "setup": "node setup.js",
+    "setup:dev": "node setup.js admin@example.com 1234567890",
+    "clean": "rm -rf pb_data pb_migrations",
+    "reset": "npm run clean && npm run dev"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

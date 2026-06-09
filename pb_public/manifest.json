@@ -1,0 +1,9 @@
+{
+  "name": "Mundial 2026 - Polla",
+  "short_name": "Mundial2026",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#16a34a",
+  "icons": []
+}
