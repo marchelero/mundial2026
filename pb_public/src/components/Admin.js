@@ -1,6 +1,6 @@
 export default {
   props: ['matches', 'settings', 'isAdmin', 'countries'],
-  emits: ['save-score', 'delete-match', 'add-match', 'export-csv', 'save-setting'],
+  emits: ['save-score', 'delete-match', 'add-match', 'export-csv', 'export-match', 'save-setting'],
   data() {
     return {
       newMatch: {
@@ -122,30 +122,35 @@ export default {
           <button class="tab-btn" :class="{active: adminTab === 'antiguos'}" @click="adminTab = 'antiguos'">FINALIZADOS</button>
         </div>
         
-        <div v-for="match in filteredMatches" :key="match.id" class="admin-match-row">
-           <div class="admin-col-time">
-             <div style="font-size: 0.6rem; opacity: 0.6;">{{ compactDate(match.date) }}</div>
-             <div style="font-size: 0.75rem;">{{ match.time }}</div>
+        <div v-for="match in filteredMatches" :key="match.id" class="admin-match-row" :class="{'admin-match-finished': match.status === 'finished'}" style="flex-direction: column; align-items: stretch;">
+           <div style="display: flex; align-items: center; width: 100%;">
+             <div class="admin-col-time">
+               <div style="font-size: 0.6rem; opacity: 0.6;">{{ compactDate(match.date) }}</div>
+               <div style="font-size: 0.75rem;">{{ match.time }}</div>
+             </div>
+             <div class="admin-col-team home">
+                <span class="admin-team-name">{{ match.home_team }}</span>
+                <span class="admin-team-flag">{{ match.home_flag }}</span>
+             </div>
+             
+              <div class="admin-col-score">
+                 <input type="number" class="input-score" v-model="match.home_score" @focus="$event.target.select()" min="0" max="30" style="width: 30px; height: 30px; font-size: 0.85rem;">
+                 <span style="font-size: 0.85rem;">-</span>
+                 <input type="number" class="input-score" v-model="match.away_score" @focus="$event.target.select()" min="0" max="30" style="width: 30px; height: 30px; font-size: 0.85rem;">
+              </div>
+  
+             <div class="admin-col-team away">
+                <span class="admin-team-flag">{{ match.away_flag }}</span>
+                <span class="admin-team-name">{{ match.away_team }}</span>
+             </div>
+  
+             <div class="admin-col-actions">
+                <button class="btn btn-primary" @click="$emit('save-score', match)" style="padding: 0.3rem 0.4rem; font-size: 0.65rem;">💾</button>
+                <button class="btn" @click="$emit('delete-match', match.id)" style="padding: 0.3rem 0.4rem; font-size: 0.65rem; background: var(--color-red); color: white;">🗑️</button>
+             </div>
            </div>
-           <div class="admin-col-team home">
-              <span class="admin-team-name">{{ match.home_team }}</span>
-              <span class="admin-team-flag">{{ match.home_flag }}</span>
-           </div>
-           
-           <div class="admin-col-score">
-              <input type="number" class="input-score" v-model="match.home_score" style="width: 30px; height: 30px; font-size: 0.85rem;">
-              <span style="font-size: 0.85rem;">-</span>
-              <input type="number" class="input-score" v-model="match.away_score" style="width: 30px; height: 30px; font-size: 0.85rem;">
-           </div>
-
-           <div class="admin-col-team away">
-              <span class="admin-team-flag">{{ match.away_flag }}</span>
-              <span class="admin-team-name">{{ match.away_team }}</span>
-           </div>
-
-           <div class="admin-col-actions">
-              <button class="btn btn-primary" @click="$emit('save-score', match)" style="padding: 0.3rem 0.4rem; font-size: 0.65rem;">💾</button>
-              <button class="btn" @click="$emit('delete-match', match.id)" style="padding: 0.3rem 0.4rem; font-size: 0.65rem; background: var(--color-red); color: white;">🗑️</button>
+           <div v-if="match.status === 'finished'" style="width: 100%; text-align: center; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed rgba(0,0,0,0.1);">
+             <span style="font-size: 0.6rem; color: var(--color-green); cursor: pointer; font-weight: 600;" @click="$emit('export-match', match)">📥 Exportar predicciones</span>
            </div>
         </div>
       </div>

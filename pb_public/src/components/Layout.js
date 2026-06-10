@@ -1,6 +1,29 @@
 export default {
     props: ['user', 'currentView', 'isAdmin', 'notification'],
     emits: ['change-view', 'logout', 'clear-notification'],
+    data() {
+        return { deferredPrompt: null, showInstallBtn: false };
+    },
+    mounted() {
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            this.deferredPrompt = e;
+            this.showInstallBtn = true;
+        });
+        window.addEventListener('appinstalled', () => {
+            this.showInstallBtn = false;
+            this.deferredPrompt = null;
+        });
+    },
+    methods: {
+        async installApp() {
+            if (!this.deferredPrompt) return;
+            this.deferredPrompt.prompt();
+            const { outcome } = await this.deferredPrompt.userChoice;
+            if (outcome === 'accepted') this.showInstallBtn = false;
+            this.deferredPrompt = null;
+        }
+    },
     template: `
     <div class="app-layout">
       <div v-if="notification.visible" class="toast" :class="'toast-' + notification.type" @click="$emit('clear-notification')">
@@ -12,6 +35,7 @@ export default {
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 1rem;">
            <img src="/assets/logo.png" alt="Logo" style="height: 40px;">
            <div style="display: flex; align-items: center; gap: 0.75rem;">
+             <button v-if="showInstallBtn" @click="installApp" class="install-btn" title="Instalar app">📲</button>
              <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.2rem 0.5rem; border-radius: 4px; background: var(--color-dark); color: white;">{{ isAdmin ? 'ADMIN' : 'INVITADO' }}</span>
              <div style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;" @click="$emit('logout')">
                <span style="font-size: 0.8rem; font-weight: bold;">{{ user?.name || user?.email?.split('@')[0] }}</span>

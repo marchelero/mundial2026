@@ -3,6 +3,7 @@ import { loginGoogle, logout, refreshAuth } from './src/services/auth.js';
 import {
   loadMatches,
   loadPredictions,
+  loadMatchPredictions,
   loadSettings,
   loadChampionPick,
   savePrediction,
@@ -61,7 +62,8 @@ createApp({
 
           <Ranking v-else-if="view === 'posiciones'"
             :rankings-data="rankingsData"
-            :rankings-loading="rankingsLoading" />
+            :rankings-loading="rankingsLoading"
+            :all-matches="allMatches" />
 
           <Admin v-else-if="view === 'admin' && isAdmin"
             :matches="allMatches"
@@ -72,6 +74,7 @@ createApp({
             @add-match="addMatch"
             @delete-match="deleteMatch"
             @export-csv="exportToCSV"
+            @export-match="exportMatchCSV"
             @save-setting="handleSaveSetting" />
         </transition>
       </Layout>
@@ -118,6 +121,7 @@ createApp({
       this.authLoading = true;
       try {
         this.user = await loginGoogle();
+        this.view = 'votar';
         await this.loadAllData();
       } catch (e) {
         this.authError = e.message;
@@ -150,7 +154,10 @@ createApp({
     },
     setScore(matchId, side, val) {
       if (!this.predictions[matchId]) this.predictions[matchId] = { home: null, away: null };
-      this.predictions[matchId][side] = val === '' ? null : Number(val);
+      let num = val === '' ? null : Number(val);
+      if (num !== null && num < 0) num = 0;
+      if (num !== null && num > 30) num = 30;
+      this.predictions[matchId][side] = num;
     },
     toggleComodin(matchId) {
       const p = this.predictions[matchId] || { home: null, away: null };
@@ -273,6 +280,40 @@ createApp({
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+      } catch (e) {
+        this.notify('Error al exportar: ' + e.message, 'error');
+      }
+    },
+    async exportMatchCSV(match) {
+      try {
+        const records = await loadMatchPredictions(match.id);
+        if (records.length === 0) {
+          this.notify('No hay predicciones para este partido.', 'error');
+          return;
+        }
+        const matchName = `${match.home_team}_vs_${match.away_team}`;
+        const realScore = `${match.home_score}-${match.away_score}`;
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Usuario,Pronóstico Local,Pronóstico Visitante,Comodín,Puntos\n";
+
+        records.forEach(r => {
+          const user = r.expand?.user?.email?.split('@')[0] || 'N/A';
+          const pts = calcPoints({ home_score: r.home_score, away_score: r.away_score, comodin: r.comodin }, match);
+          const comodin = r.comodin ? 'Sí' : 'No';
+
+          csvContent += `"${user}","${r.home_score}","${r.away_score}","${comodin}","${pts}"\n`;
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `${matchName}_${realScore}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        this.notify(`Exportado: ${match.home_team} vs ${match.away_team} (${records.length} predicciones)`, 'success');
       } catch (e) {
         this.notify('Error al exportar: ' + e.message, 'error');
       }

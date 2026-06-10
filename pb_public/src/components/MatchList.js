@@ -1,4 +1,4 @@
-import { roundLabel, formatDate } from '../utils/helpers.js';
+import { roundLabel, formatDate, calcPoints } from '../utils/helpers.js';
 
 export default {
   props: ['matchGroups', 'predictions', 'user', 'saving', 'comodinUsado', 'comodinMatchName', 'countries', 'settings', 'championPick'],
@@ -51,6 +51,42 @@ export default {
       if (!dateStr) return '';
       const parts = dateStr.split('-');
       return parts[2] + '/' + parts[1];
+    },
+    isMatchPast(match) {
+      if (!match.date || !match.time) return false;
+      return new Date(match.date + 'T' + match.time) < new Date();
+    },
+    matchState(match) {
+      if (this.predictions[match.id]?.id) return 'submitted';
+      if (match.status === 'finished') return 'finished';
+      if (match.status === 'closed' || this.isMatchPast(match)) return 'closed';
+      return 'open';
+    },
+    canPredict(match) {
+      return this.matchState(match) === 'open';
+    },
+    hasUnsavedPredictions() {
+      return this.filteredGroups.some(g =>
+        g.matches.some(m => this.canPredict(m) && !this.predictions[m.id]?.id)
+      );
+    },
+    getPoints(match) {
+      const p = this.predictions[match.id];
+      if (!p) return null;
+      return calcPoints({ home_score: p.home, away_score: p.away, comodin: p.comodin }, match);
+    },
+    groupPoints(group) {
+      return group.matches.reduce((sum, m) => {
+        const pts = this.getPoints(m);
+        return pts !== null ? sum + pts : sum;
+      }, 0);
+    },
+    ptsClass(match) {
+      const pts = this.getPoints(match);
+      if (pts === null) return '';
+      if (pts >= 3) return 'exact';
+      if (pts > 0) return 'winner';
+      return 'wrong';
     },
     saveChampionPick() {
       if (!this.championSelected) return;
@@ -114,12 +150,15 @@ export default {
       </div>
 
       <div v-for="group in filteredGroups" :key="group.date" class="date-section">
-        <h3 class="form-label" style="margin-bottom: 1rem; color: var(--color-gray);">{{ formatDate(group.date) }}</h3>
+        <div class="date-header">
+          <span>{{ formatDate(group.date) }}</span>
+          <span v-if="groupPoints(group) > 0" class="pts-total">{{ groupPoints(group) }} PTS</span>
+        </div>
         
-        <div v-for="match in group.matches" :key="match.id" class="card" style="margin-bottom: 1rem; position: relative;">
-          <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--color-gray); margin-bottom: 0.5rem;">
-            <span>{{ match.time }}</span>
-            <span>{{ roundLabel(match.round) }}</span>
+        <div v-for="match in group.matches" :key="match.id" class="card" :class="'card-' + matchState(match)" style="margin-bottom: 0.75rem; position: relative;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.7rem; color: var(--color-gray);">{{ match.time }}</span>
+            <span class="round-badge" :class="'round-' + (match.round || 'group')">{{ roundLabel(match.round) }}</span>
           </div>
 
           <div class="match-row" style="border: none;">
@@ -129,39 +168,49 @@ export default {
             </div>
 
             <div class="score-box">
-              <input type="number" class="input-score" 
-                :value="predictions[match.id]?.home" 
+              <input type="number" class="input-score"
+                :value="predictions[match.id]?.home"
                 @input="$emit('set-score', match.id, 'home', $event.target.value)"
-                :disabled="predictions[match.id]?.id">
+                @focus="$event.target.select()"
+                :disabled="!canPredict(match)"
+                min="0" max="30">
               <span>-</span>
-              <input type="number" class="input-score" 
-                :value="predictions[match.id]?.away" 
+              <input type="number" class="input-score"
+                :value="predictions[match.id]?.away"
                 @input="$emit('set-score', match.id, 'away', $event.target.value)"
-                :disabled="predictions[match.id]?.id">
+                @focus="$event.target.select()"
+                :disabled="!canPredict(match)"
+                min="0" max="30">
             </div>
 
             <div class="team-info away">
               <span class="team-flag">{{ match.away_flag }}</span>
               <span class="team-name">{{ match.away_team }}</span>
             </div>
+          </div>
             
-            <div v-if="!predictions[match.id]?.id" style="position: absolute; right: 10px; top: 10px;">
-              <span v-if="predictions[match.id]?.comodin" @click="$emit('toggle-comodin', match.id)">🍀</span>
-              <span v-else-if="!comodinUsado" @click="$emit('toggle-comodin', match.id)" style="opacity: 0.3;">🍀</span>
-            </div>
-            <div v-else style="position: absolute; right: 10px; top: 10px;">
-               <span v-if="predictions[match.id]?.comodin">🍀</span>
-               <span>✅</span>
-            </div>
+          <div v-if="matchState(match) === 'open'" style="margin-top: 0.5rem; text-align: center;">
+            <button class="comodin-btn" :class="{'comodin-active': predictions[match.id]?.comodin}" @click="$emit('toggle-comodin', match.id)" :disabled="!predictions[match.id]?.comodin && comodinUsado">
+              🍀 {{ predictions[match.id]?.comodin ? 'Comodín Activo' : 'Usar Comodín' }}
+            </button>
+          </div>
+          <div v-else-if="matchState(match) === 'submitted' && predictions[match.id]?.comodin" style="margin-top: 0.5rem; text-align: center;">
+            <span class="comodin-btn comodin-active" style="cursor: default;">🍀 Comodín Activo</span>
+          </div>
+
+          <div v-if="match.status === 'finished' && predictions[match.id]?.id" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.06); font-size: 0.75rem;">
+            <span style="color: var(--color-gray);">Real: {{ match.home_score }} - {{ match.away_score }}</span>
+            <span class="pts-badge" :class="ptsClass(match)">{{ getPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }}</span>
           </div>
         </div>
       </div>
 
-      <button class="btn btn-primary w-full" @click="$emit('submit')" :disabled="saving">
+      <button class="btn btn-primary w-full" @click="$emit('submit')" :disabled="saving || !hasUnsavedPredictions()">
          {{ saving ? 'GUARDANDO...' : 'ENVIAR PRONÓSTICOS' }}
       </button>
       <p style="font-size: 0.7rem; text-align: center; margin-top: 0.5rem; color: var(--color-gray);">
-        Envía tus pronósticos antes de 1 minuto del inicio de cada partido.
+        <template v-if="!hasUnsavedPredictions() && !saving">Completá los marcadores para enviar.</template>
+        <template v-else>Envía tus pronósticos antes de 1 minuto del inicio de cada partido.</template>
       </p>
     </div>
   `

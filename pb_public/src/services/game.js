@@ -10,6 +10,13 @@ export async function loadPredictions(userId) {
     });
 }
 
+export async function loadMatchPredictions(matchId) {
+    return await pb.collection('predictions').getFullList({
+        filter: `match="${matchId}"`,
+        expand: 'user',
+    });
+}
+
 export async function loadSettings() {
     const records = await pb.collection('settings').getFullList();
     const settings = {};
