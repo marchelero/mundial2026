@@ -1,5 +1,5 @@
-import { pb } from './src/services/pb.js';
-import { loginGoogle, logout, refreshAuth } from './src/services/auth.js';
+import { api } from './src/services/api.js';
+import { logout, refreshAuth } from './src/services/auth.js';
 import {
   loadMatches,
   loadPredictions,
@@ -37,7 +37,7 @@ createApp({
     </div>
 
     <template v-else>
-      <Login v-if="!user" :auth-loading="authLoading" :auth-error="authError" @login="handleLogin" />
+      <Login v-if="!user" :auth-error="authError" />
       
       <Layout v-else :user="user" :current-view="view" :is-admin="isAdmin" :notification="notification" @change-view="view = $event" @logout="handleLogout" @clear-notification="notification.visible = false">
         <transition name="fade" mode="out-in">
@@ -82,7 +82,7 @@ createApp({
   `,
   data() {
     return {
-      loading: true, authLoading: false, authError: '', user: null,
+      loading: true, authError: '', user: null,
       view: 'votar', allMatches: [], predictions: {},
       saving: false, championPick: { champion: '' },
       settings: {}, rankingsData: [], rankingsLoading: false,
@@ -117,16 +117,10 @@ createApp({
         this.notification.visible = false;
       }, 4000);
     },
-    async handleLogin() {
-      this.authLoading = true;
-      try {
-        this.user = await loginGoogle();
-        this.view = 'votar';
-        await this.loadAllData();
-      } catch (e) {
-        this.authError = e.message;
-      }
-      this.authLoading = false;
+    handleLoginSuccess(user) {
+      this.user = user;
+      this.view = 'votar';
+      this.loadAllData();
     },
     async handleLogout() {
       logout();
@@ -150,7 +144,7 @@ createApp({
         this.predictions[p.match] = { home: p.home_score, away: p.away_score, id: p.id, comodin: !!p.comodin };
       });
       this.settings = await loadSettings();
-      this.championPick = await loadChampionPick(this.user.id);
+      this.championPick = await loadChampionPick();
     },
     setScore(matchId, side, val) {
       if (!this.predictions[matchId]) this.predictions[matchId] = { home: null, away: null };
@@ -170,7 +164,6 @@ createApp({
         for (const [matchId, p] of Object.entries(this.predictions)) {
           if (!p.id && p.home !== null && p.away !== null) {
             await savePrediction({
-              user: this.user.id,
               match: matchId,
               home_score: p.home,
               away_score: p.away,
@@ -179,13 +172,14 @@ createApp({
           }
         }
         await this.loadAllData();
-      } catch (e) { console.error(e); }
+        this.notify('Pronósticos guardados');
+      } catch (e) { console.error(e); this.notify(e.message || 'Error al guardar', 'error'); }
       this.saving = false;
     },
     async loadRankings() {
       this.rankingsLoading = true;
       const finished = this.allMatches.filter(m => m.status === 'finished');
-      const { records, champPicks } = await loadAllRankings(finished, this.settings.actual_champion, 5);
+      const { records, champPicks } = await loadAllRankings();
 
       const pointsMap = {};
       const userMap = {};
@@ -206,7 +200,7 @@ createApp({
     },
     async saveActualScore(match) {
       try {
-        await pb.collection('matches').update(match.id, {
+        await api.patch('/matches/' + match.id, {
           home_score: match.home_score,
           away_score: match.away_score,
           status: 'finished'
@@ -219,7 +213,7 @@ createApp({
     },
     async addMatch(newMatch) {
       try {
-        await pb.collection('matches').create(newMatch);
+        await api.post('/matches', newMatch);
         this.notify('Partido registrado con éxito');
         await this.loadAllData();
       } catch (e) {
@@ -229,7 +223,7 @@ createApp({
     async deleteMatch(id) {
       if (!confirm('¿Estás seguro de eliminar este partido?')) return;
       try {
-        await pb.collection('matches').delete(id);
+        await api.delete('/matches/' + id);
         await this.loadAllData();
       } catch (e) {
         this.notify(e.message || 'Error al eliminar', 'error');
@@ -237,7 +231,7 @@ createApp({
     },
     async handleSaveChampionPick(champion) {
       try {
-        await saveChampionPick(this.user.id, champion);
+        await saveChampionPick(champion);
         this.notify('Campeón registrado correctamente');
         await this.loadAllData();
       } catch (e) {
@@ -255,9 +249,7 @@ createApp({
     },
     async exportToCSV() {
       try {
-        const records = await pb.collection('predictions').getFullList({
-          expand: 'user,match',
-        });
+        const records = await api.get('/predictions/export');
 
         let csvContent = "data:text/csv;charset=utf-8,";
         csvContent += "Usuario,Partido,Pronóstico Home,Pronóstico Away,Resultado Real,Puntos\n";
@@ -267,7 +259,6 @@ createApp({
           const match = r.expand?.match ? `${r.expand.match.home_team} vs ${r.expand.match.away_team}` : 'N/A';
           const pred = `${r.home_score}-${r.away_score}`;
           const actual = r.expand?.match ? `${r.expand.match.home_score}-${r.expand.match.away_score}` : 'N/A';
-          // Simple points calc for export
           const pts = calcPoints({ home_score: r.home_score, away_score: r.away_score, comodin: r.comodin }, r.expand?.match);
 
           csvContent += `"${user}","${match}","${r.home_score}","${r.away_score}","${actual}","${pts}"\n`;
@@ -328,6 +319,10 @@ createApp({
     }
   },
   async mounted() {
+    window.addEventListener('google-login-success', (e) => {
+      this.handleLoginSuccess(e.detail);
+    });
+    
     this.user = await refreshAuth();
     if (this.user) await this.loadAllData();
     this.loading = false;

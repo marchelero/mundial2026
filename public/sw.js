@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mundial2026-v1';
+const CACHE_NAME = 'mundial2026-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -16,7 +16,7 @@ const STATIC_ASSETS = [
   '/src/components/Admin.js',
   '/src/components/Ranking.js',
   '/src/components/MyPredictions.js',
-  '/src/services/pb.js',
+  '/src/services/api.js',
   '/src/services/auth.js',
   '/src/services/game.js',
   '/src/utils/helpers.js'
@@ -47,10 +47,8 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/pb_')) {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
-    );
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(event.request));
     return;
   }
 

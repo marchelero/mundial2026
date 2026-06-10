@@ -1,15 +1,23 @@
 {
   "name": "mundial2026-polla",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Polla Mundial 2026 - SPA con PocketBase",
+  "description": "Polla Mundial 2026 - Express + SQLite",
+  "main": "server.js",
   "scripts": {
-    "dev": "bash start.sh",
-    "start": "bash start.sh",
-    "setup": "node setup.js",
-    "setup:dev": "node setup.js admin@example.com 1234567890",
-    "clean": "rm -rf pb_data pb_migrations",
-    "reset": "npm run clean && npm run dev"
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "curl -s http://localhost:3000/api/health"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "compression": "^1.8.1",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "google-auth-library": "^9.14.2",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2"
   },
   "engines": {
     "node": ">=18"
