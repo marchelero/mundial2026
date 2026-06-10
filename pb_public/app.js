@@ -1,513 +1,294 @@
+import { pb } from './src/services/pb.js';
+import { loginGoogle, logout, refreshAuth } from './src/services/auth.js';
+import {
+  loadMatches,
+  loadPredictions,
+  loadSettings,
+  loadChampionPick,
+  savePrediction,
+  saveChampionPick,
+  saveSetting,
+  loadAllRankings
+} from './src/services/game.js';
+import { calcPoints } from './src/utils/helpers.js';
+
+import Login from './src/components/Login.js';
+import Layout from './src/components/Layout.js';
+import MatchList from './src/components/MatchList.js';
+import Ranking from './src/components/Ranking.js';
+import Admin from './src/components/Admin.js';
+import MyPredictions from './src/components/MyPredictions.js';
+
 const { createApp } = Vue;
 
-const pb = new PocketBase(window.location.origin);
-
-function todayStr() {
-  const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-}
-function parseDateTime(dateStr, timeStr) {
-  let d = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (d) return new Date(d[1] + '-' + d[2] + '-' + d[3] + 'T' + (timeStr || '12:00'));
-  d = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (d) return new Date(d[3] + '-' + d[2] + '-' + d[1] + 'T' + (timeStr || '12:00'));
-  return null;
-}
-function calcPoints(pred, match) {
-  if (match.status !== 'finished' || match.home_score == null || match.away_score == null) return null;
-  if (pred.home_score == null || pred.away_score == null) return null;
-  let pts = 0;
-  if (pred.home_score === match.home_score && pred.away_score === match.away_score) { pts = 3; }
-  else {
-    const pd = pred.home_score - pred.away_score;
-    const rd = match.home_score - match.away_score;
-    if (pd === rd && rd === 0) pts = 1;
-    else if ((pd > 0 && rd > 0) || (pd < 0 && rd < 0)) pts = 1;
-  }
-  return pred.comodin ? pts * 2 : pts;
-}
-
 createApp({
+  components: {
+    Login,
+    Layout,
+    Matchlist: MatchList,
+    Mypredictions: MyPredictions,
+    Ranking,
+    Admin
+  },
+  template: `
+    <div v-if="loading" class="loading-screen" style="display: flex; align-items: center; justify-content: center; height: 100vh;">
+      <p style="font-family: var(--font-brush); font-size: 1.5rem;">Cargando...</p>
+    </div>
+
+    <template v-else>
+      <Login v-if="!user" :auth-loading="authLoading" :auth-error="authError" @login="handleLogin" />
+      
+      <Layout v-else :user="user" :current-view="view" :is-admin="isAdmin" :notification="notification" @change-view="view = $event" @logout="handleLogout" @clear-notification="notification.visible = false">
+        <transition name="fade" mode="out-in">
+          <Matchlist v-if="view === 'votar'" 
+            :match-groups="matchGroups" 
+            :predictions="predictions" 
+            :user="user" 
+            :saving="saving"
+            :comodin-usado="comodinUsado"
+            :countries="countries"
+            :settings="settings"
+            :champion-pick="championPick"
+            @set-score="setScore"
+            @toggle-comodin="toggleComodin"
+            @submit="submitPredictions"
+            @save-champion-pick="handleSaveChampionPick" />
+            
+          <Mypredictions v-else-if="view === 'historial'"
+            :match-groups="matchGroups"
+            :predictions="predictions"
+            :all-matches="allMatches" />
+
+          <Ranking v-else-if="view === 'posiciones'"
+            :rankings-data="rankingsData"
+            :rankings-loading="rankingsLoading" />
+
+          <Admin v-else-if="view === 'admin' && isAdmin"
+            :matches="allMatches"
+            :settings="settings"
+            :is-admin="isAdmin"
+            :countries="countries"
+            @save-score="saveActualScore"
+            @add-match="addMatch"
+            @delete-match="deleteMatch"
+            @export-csv="exportToCSV"
+            @save-setting="handleSaveSetting" />
+        </transition>
+      </Layout>
+    </template>
+  `,
   data() {
     return {
       loading: true, authLoading: false, authError: '', user: null,
-      view: 'votar', allMatches: [], predictions: {}, alert: '', alertType: 'info',
-      saving: false, championPick: { champion: '' }, championLoading: false,
+      view: 'votar', allMatches: [], predictions: {},
+      saving: false, championPick: { champion: '' },
       settings: {}, rankingsData: [], rankingsLoading: false,
       countries: typeof PAISES_MUNDIAL2026 !== 'undefined' ? PAISES_MUNDIAL2026 : [],
-      countryNames: typeof PAISES_NOMBRES !== 'undefined' ? PAISES_NOMBRES : [],
-      matchForm: { date: todayStr(), time: '', home_team: '', away_team: '', round: '' },
-      editingMatch: null, selectedExport: null, matchPredictions: [],
+      notification: { message: '', type: 'success', visible: false },
+      notificationTimer: null,
     };
   },
   computed: {
     isAdmin() {
-      if (!this.user) return false;
+      const email = this.user?.email || '';
       return (typeof ADMIN_EMAILS !== 'undefined' ? ADMIN_EMAILS : [])
-        .some(e => e.toLowerCase() === (this.user.email || '').toLowerCase());
+        .some(e => e.toLowerCase() === email.toLowerCase());
     },
-    userName() { return this.user?.name || this.user?.email?.split('@')[0] || 'User'; },
-    matchGroups() { return this._groupMatches(this.recentMatches); },
-    historyGroups() { return this._groupMatches(this.historyMatches); },
-    recentMatches() {
-      const now = new Date();
-      const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
-      return this.allMatches.filter(m => {
-        const dt = parseDateTime(m.date, m.time);
-        return !dt || dt >= new Date(yesterday.toDateString());
-      });
-    },
-    historyMatches() {
-      const now = new Date();
-      const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
-      return this.allMatches.filter(m => {
-        const dt = parseDateTime(m.date, m.time);
-        return dt && dt < new Date(yesterday.toDateString());
-      });
-    },
-    totalVoted() { return Object.values(this.predictions).filter(p => p.home !== null && p.away !== null).length; },
-    hasPredictionsToSubmit() { return Object.values(this.predictions).some(p => p.home !== null && p.away !== null && !p.id); },
-    hasSavedPredictions() { return Object.values(this.predictions).some(p => p.id); },
-    sortedAdminMatches() { return [...this.allMatches].sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)); },
-    comodinUsado() { return Object.values(this.predictions).some(p => p.comodin); },
-    comodinMatchId() {
-      const entry = Object.entries(this.predictions).find(([, p]) => p.comodin);
-      return entry ? entry[0] : null;
-    },
-    comodinMatchName() {
-      const m = this.allMatches.find(m => m.id === this.comodinMatchId);
-      return m ? `${m.home_team} vs ${m.away_team}` : '';
-    },
-    actualChampion() { return this.settings.actual_champion || null; },
-    championBonus() { return 5; },
-    whatsappText() {
-      const saved = Object.entries(this.predictions)
-        .filter(([, p]) => p.id)
-        .map(([matchId, p]) => {
-          const m = this.allMatches.find(x => x.id === matchId);
-          if (!m) return '';
-          const comodin = p.comodin ? ' ⭐' : '';
-          return `• ${m.home_team} ${p.home}-${p.away} ${m.away_team}${comodin}`;
-        }).filter(Boolean);
-      if (!saved.length) return '';
-      const name = this.userName;
-      const champion = this.championPick?.champion ? `\n🏆 Campeón: ${this.championPick.champion}` : '';
-      return `🏆 *Mundial 2026 - Pronósticos de ${name}*\n${saved.join('\n')}${champion}`;
-    },
-    whatsappLink() {
-      if (!this.whatsappText) return '';
-      const num = this.settings.whatsapp_group || '';
-      return `https://wa.me/${num}?text=${encodeURIComponent(this.whatsappText)}`;
-    },
-    championDeadline() {
-      if (!this.allMatches.length) return null;
-      const future = this.allMatches
-        .map(m => ({ m, dt: parseDateTime(m.date, m.time) }))
-        .filter(x => x.dt && x.dt > new Date())
-        .sort((a, b) => a.dt - b.dt);
-      const target = future.find(x => x.m.round && x.m.round !== 'group') || future[0];
-      if (!target) return null;
-      const d = new Date(target.dt.getTime() - 60000);
-      return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
-    },
+    matchGroups() { return this._groupMatches(this.allMatches); },
+    comodinUsado() {
+      return Object.values(this.predictions).some(p => p.comodin);
+    }
+  },
+  watch: {
+    async view(newView) {
+      if (newView === 'posiciones') {
+        await this.loadRankings();
+      }
+    }
   },
   methods: {
-    _groupMatches(matches) {
-      const groups = {};
-      for (const m of matches) {
-        if (!groups[m.date]) groups[m.date] = { date: m.date, matches: [] };
-        groups[m.date].matches.push(m);
-      }
-      return Object.values(groups).sort((a, b) => a.date.localeCompare(b.date));
+    notify(message, type = 'success') {
+      if (this.notificationTimer) clearTimeout(this.notificationTimer);
+      this.notification = { message, type, visible: true };
+      this.notificationTimer = setTimeout(() => {
+        this.notification.visible = false;
+      }, 4000);
     },
-    async loginGoogle() {
-      this.authLoading = true; this.authError = '';
+    async handleLogin() {
+      this.authLoading = true;
       try {
-        const authData = await pb.collection('users').authWithOAuth2({ provider: 'google' });
-        this.user = authData.record;
+        this.user = await loginGoogle();
         await this.loadAllData();
       } catch (e) {
-        console.error('Login error:', e);
-        this.authError = e.message?.includes('popup') ? 'Bloqueador de popups detectado.' : (e.message || 'Error al conectar');
+        this.authError = e.message;
       }
-      this.authLoading = false; this.loading = false;
+      this.authLoading = false;
     },
-    logout() { pb.authStore.clear(); this.user = null; this.allMatches = []; this.predictions = {}; this.championPick = { champion: '' }; },
+    async handleLogout() {
+      logout();
+      this.user = null;
+      this.view = 'login';
+    },
     async loadAllData() {
-      await Promise.all([this.loadMatches(), this.loadSettings(), this.loadChampionPick()]);
+      if (!this.user) return;
+      this.allMatches = (await loadMatches()).map(m => {
+        const country = this.countries.find(c => c.name === m.home_team);
+        const countryAway = this.countries.find(c => c.name === m.away_team);
+        return {
+          ...m,
+          home_flag: country?.flag || '🏴',
+          away_flag: countryAway?.flag || '🏴'
+        };
+      });
+      const preds = await loadPredictions(this.user.id);
+      this.predictions = {};
+      preds.forEach(p => {
+        this.predictions[p.match] = { home: p.home_score, away: p.away_score, id: p.id, comodin: !!p.comodin };
+      });
+      this.settings = await loadSettings();
+      this.championPick = await loadChampionPick(this.user.id);
     },
-    async loadMatches() {
-      try {
-        this.allMatches = await pb.collection('matches').getFullList({ sort: 'date,time' });
-        await this.loadMyPredictions();
-      } catch (e) { console.error('Error loading matches:', e); this.showAlert('Error al cargar partidos', 'error'); }
-    },
-    async loadAllMatches() {
-      try { this.allMatches = await pb.collection('matches').getFullList({ sort: 'date,time' }); }
-      catch (e) { console.error(e); }
-    },
-    async loadMyPredictions() {
-      if (this.allMatches.length === 0) return;
-      try {
-        const ids = this.allMatches.map(m => m.id);
-        const clauses = ids.map(id => `match="${id}"`).join('||');
-        const records = await pb.collection('predictions').getFullList({
-          filter: `user="${this.user.id}" && (${clauses})`,
-        });
-        for (const p of records) {
-          this.predictions[p.match] = { home: p.home_score, away: p.away_score, id: p.id, comodin: !!p.comodin };
-        }
-      } catch (e) { if (e.status !== 404) console.error(e); }
-    },
-    async loadSettings() {
-      try {
-        const records = await pb.collection('settings').getFullList();
-        for (const r of records) this.settings[r.key] = r.value;
-      } catch (e) { /* settings collection may not exist yet */ }
-    },
-    async loadChampionPick() {
-      this.championLoading = true;
-      try {
-        const records = await pb.collection('champion_picks').getFullList({
-          filter: `user="${this.user.id}"`,
-        });
-        this.championPick = records[0] || { champion: '' };
-      } catch (e) { if (e.status !== 404) console.error(e); }
-      this.championLoading = false;
-    },
-    predHome(matchId) { return this.predictions[matchId]?.home ?? null; },
-    predAway(matchId) { return this.predictions[matchId]?.away ?? null; },
-    setPredHome(matchId, val) {
+    setScore(matchId, side, val) {
       if (!this.predictions[matchId]) this.predictions[matchId] = { home: null, away: null };
-      const n = val === '' || val == null ? null : Math.round(Number(val));
-      this.predictions[matchId].home = n != null ? Math.max(0, Math.min(99, n)) : null;
-    },
-    setPredAway(matchId, val) {
-      if (!this.predictions[matchId]) this.predictions[matchId] = { home: null, away: null };
-      const n = val === '' || val == null ? null : Math.round(Number(val));
-      this.predictions[matchId].away = n != null ? Math.max(0, Math.min(99, n)) : null;
-    },
-    canVote(match) {
-      if (match.status !== 'open') return false;
-      if (this.predictions[match.id]?.id) return false;
-      return this.matchNotStarted(match);
-    },
-    matchNotStarted(match) {
-      const matchDt = parseDateTime(match.date, match.time);
-      if (!matchDt) return false;
-      return new Date() < new Date(matchDt.getTime() - 60000);
-    },
-
-    getMatchStatus(match) {
-      if (match.status === 'finished') return 'finished';
-      if (!this.canVote(match) && !this.predictions[match.id]?.id) return 'closed';
-      return match.status === 'open' ? 'open' : match.status;
-    },
-    getMatchStatusLabel(match) {
-      if (match.status === 'finished') return 'Finalizado';
-      if (this.predictions[match.id]?.id && match.status === 'open') return 'Votado';
-      if (!this.canVote(match)) return 'Cerrado';
-      return 'Abierto';
+      this.predictions[matchId][side] = val === '' ? null : Number(val);
     },
     toggleComodin(matchId) {
       const p = this.predictions[matchId] || { home: null, away: null };
-      if (p.id) return;
-      if (this.comodinUsado && !p.comodin) {
-        this.showAlert('Ya usaste tu comodín en otro partido', 'error');
-        return;
-      }
+      if (this.comodinUsado && !p.comodin) return;
       this.predictions[matchId] = { ...p, comodin: !p.comodin };
     },
-    shareWhatsApp() {
-      if (this.whatsappLink) window.open(this.whatsappLink, '_blank');
-    },
-    getFlag(teamName) {
-      const c = this.countries.find(p => p.name === teamName);
-      return c ? c.flag : '';
-    },
-    roundLabel(r) {
-      return { group: 'Fase Grupos', round_32: '32vos', round_16: '16vos', quarter: 'Cuartos', semi: 'Semis', final: 'Final' }[r] || r;
-    },
-    formatDate(dateStr) {
-      const d = parseDateTime(dateStr, '12:00');
-      return d ? d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' }) : dateStr;
-    },
-    calcPts(pred, match) { return calcPoints(pred, match); },
-    predDetail(matchId) {
-      const pred = this.predictions[matchId];
-      const match = this.allMatches.find(m => m.id === matchId);
-      if (!pred?.id || !match || match.status !== 'finished') return null;
-      const pts = calcPoints(pred, match);
-      let type = '';
-      if (pts === null || pts === 0) type = 'wrong';
-      else if (pts >= 3) type = 'exact';
-      else type = 'winner';
-      return { pts, type, comodin: !!pred.comodin, basePts: pred.comodin ? pts / 2 : pts };
-    },
-    predPoints(matchId) {
-      const pred = this.predictions[matchId];
-      if (!pred?.id) return null;
-      const match = this.allMatches.find(m => m.id === matchId);
-      if (!match) return null;
-      return calcPoints(pred, match);
-    },
     async submitPredictions() {
-      const toSubmit = Object.values(this.predictions).filter(p => p.home !== null && p.away !== null && !p.id);
-      if (!toSubmit.length) return;
-      if (!confirm(`¿Guardar ${toSubmit.length} pronóstico(s)? No podrás editarlos después.`)) return;
       this.saving = true;
-      let count = 0;
       try {
-        for (const [matchId, pred] of Object.entries(this.predictions)) {
-          if (pred.home === null || pred.away === null || pred.id) continue;
-          const match = this.allMatches.find(m => m.id === matchId);
-          if (!match || !this.canVote(match)) continue;
-          const result = await pb.collection('predictions').create({
-            user: this.user.id, match: matchId, home_score: pred.home, away_score: pred.away, comodin: !!pred.comodin,
-          });
-          pred.id = result.id;
-          count++;
+        for (const [matchId, p] of Object.entries(this.predictions)) {
+          if (!p.id && p.home !== null && p.away !== null) {
+            await savePrediction({
+              user: this.user.id,
+              match: matchId,
+              home_score: p.home,
+              away_score: p.away,
+              comodin: !!p.comodin
+            });
+          }
         }
-        this.showAlert(`${count} pronóstico(s) guardado(s)`, 'success');
-      } catch (e) { this.showAlert(e.message || 'Error al guardar', 'error'); }
+        await this.loadAllData();
+      } catch (e) { console.error(e); }
       this.saving = false;
-    },
-    async saveChampion() {
-      if (!this.championPick || !this.championPick.champion) return;
-      this.championLoading = true;
-      try {
-        const r = await pb.collection('champion_picks').create({
-          user: this.user.id, champion: this.championPick.champion,
-        });
-        this.championPick = { ...this.championPick, id: r.id };
-        this.showAlert('Campeón guardado', 'success');
-      } catch (e) { this.showAlert(e.message || 'Error', 'error'); }
-      this.championLoading = false;
-    },
-    canEditChampion() {
-      if (this.championPick?.id) return false;
-      if (!this.allMatches.length) return true;
-      const now = new Date();
-      const future = m => {
-        const dt = parseDateTime(m.date, m.time);
-        return dt && dt > now;
-      };
-      const upcoming = this.allMatches.filter(future).sort((a, b) =>
-        (a.date + a.time).localeCompare(b.date + b.time));
-      if (!upcoming.length) return false;
-      const firstNonGroup = upcoming.find(m => m.round && m.round !== 'group');
-      const target = firstNonGroup || upcoming[0];
-      const dt = parseDateTime(target.date, target.time);
-      return dt ? now < new Date(dt.getTime() - 60000) : true;
     },
     async loadRankings() {
       this.rankingsLoading = true;
-      try {
-        const finishedMatches = this.allMatches.filter(m => m.status === 'finished' && m.home_score != null && m.away_score != null);
-        const finishedIds = finishedMatches.map(m => m.id);
-        if (finishedIds.length === 0) { this.rankingsData = []; this.rankingsLoading = false; return; }
+      const finished = this.allMatches.filter(m => m.status === 'finished');
+      const { records, champPicks } = await loadAllRankings(finished, this.settings.actual_champion, 5);
 
-        const clauses = finishedIds.map(id => `match="${id}"`).join('||');
-        const records = await pb.collection('predictions').getFullList({
-          filter: `(${clauses})`, expand: 'user',
-        });
+      const pointsMap = {};
+      const userMap = {};
 
-        // Champion picks for bonus
-        let champPicks = [];
-        try { champPicks = await pb.collection('champion_picks').getFullList({ expand: 'user' }); }
-        catch (_) { }
+      records.forEach(p => {
+        const uid = p.user;
+        const match = finished.find(m => m.id === p.match);
+        const pts = calcPoints({ home_score: p.home_score, away_score: p.away_score, comodin: p.comodin }, match);
+        pointsMap[uid] = (pointsMap[uid] || 0) + (pts || 0);
+        userMap[uid] = p.expand?.user?.email?.split('@')[0] || uid;
+      });
 
-        const pointsMap = {};
-        const userMap = {};
-        for (const p of records) {
-          const uid = p.user;
-          const match = finishedMatches.find(m => m.id === p.match);
-          if (!match) continue;
-          const pts = calcPoints({ home_score: p.home_score, away_score: p.away_score, comodin: p.comodin }, match);
-          if (pts === null) continue;
-          if (!pointsMap[uid]) pointsMap[uid] = 0;
-          pointsMap[uid] += pts;
-          if (!userMap[uid]) userMap[uid] = p.expand?.user?.email?.split('@')[0] || uid;
-        }
+      this.rankingsData = Object.entries(pointsMap)
+        .map(([id, pts]) => ({ id, name: userMap[id], points: pts }))
+        .sort((a, b) => b.points - a.points);
 
-        // Champion bonus
-        for (const cp of champPicks) {
-          const uid = cp.user;
-          if (this.actualChampion && cp.champion?.toLowerCase() === this.actualChampion.toLowerCase()) {
-            if (!pointsMap[uid]) pointsMap[uid] = 0;
-            pointsMap[uid] += this.championBonus;
-          }
-          if (!userMap[uid]) userMap[uid] = cp.expand?.user?.email?.split('@')[0] || uid;
-        }
-
-        this.rankingsData = Object.entries(pointsMap)
-          .map(([id, pts]) => ({ id, name: userMap[id] || id, points: pts }))
-          .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
-      } catch (e) { console.error(e); this.showAlert('Error al cargar posiciones', 'error'); }
       this.rankingsLoading = false;
-    },
-    // Admin
-    async addMatch() {
-      const data = { ...this.matchForm, status: 'open' };
-      if (!data.round) delete data.round;
-      if (!data.date || !data.time || !data.home_team || !data.away_team) {
-        this.showAlert('Completa todos los campos', 'error'); return;
-      }
-      try {
-        if (this.editingMatch) {
-          await pb.collection('matches').update(this.editingMatch.id, data);
-          this.showAlert('Partido actualizado', 'success'); this.cancelEdit();
-        } else {
-          await pb.collection('matches').create(data);
-          this.showAlert('Partido agregado', 'success');
-          this.matchForm = { date: todayStr(), time: '', home_team: '', away_team: '', round: '' };
-        }
-        await this.loadAllMatches();
-      } catch (e) { this.showAlert(e.message || 'Error', 'error'); }
-    },
-    editMatch(match) {
-      this.editingMatch = match;
-      this.matchForm = { date: match.date, time: match.time?.slice(0, 5), home_team: match.home_team, away_team: match.away_team, round: match.round || '' };
-    },
-    cancelEdit() { this.editingMatch = null; this.matchForm = { date: todayStr(), time: '', home_team: '', away_team: '', round: '' }; },
-    async deleteMatch(id) {
-      if (!confirm('¿Eliminar este partido?')) return;
-      try { await pb.collection('matches').delete(id); this.showAlert('Eliminado', 'success'); await this.loadAllMatches(); }
-      catch (e) { this.showAlert(e.message || 'Error', 'error'); }
-    },
-    async toggleMatchStatus(match) {
-      const newStatus = match.status === 'open' ? 'closed' : match.status === 'closed' ? 'finished' : 'open';
-      try { await pb.collection('matches').update(match.id, { status: newStatus }); await this.loadAllMatches(); }
-      catch (e) { this.showAlert(e.message || 'Error', 'error'); }
     },
     async saveActualScore(match) {
       try {
-        await pb.collection('matches').update(match.id, { home_score: match.home_score, away_score: match.away_score, status: 'finished' });
-        this.showAlert('Resultado guardado', 'success');
-        await this.loadAllMatches();
-      } catch (e) { this.showAlert(e.message || 'Error', 'error'); }
-    },
-    async saveSetting(key) {
-      if (!key) return;
-      try {
-        const records = await pb.collection('settings').getFullList({ filter: `key="${key}"` });
-        if (records.length > 0) {
-          await pb.collection('settings').update(records[0].id, { value: this.settings[key] || '' });
-        } else {
-          await pb.collection('settings').create({ key, value: this.settings[key] || '' });
-        }
-        const label = { actual_champion: 'Campeón real', whatsapp_group: 'WhatsApp', whatsapp_group_name: 'WhatsApp' }[key] || key;
-        this.showAlert(`${label} guardado`, 'success');
-      } catch (e) { this.showAlert(e.message || 'Error', 'error'); }
-    },
-    async toggleExport(match) {
-      if (this.selectedExport === match.id) { this.selectedExport = null; return; }
-      this.selectedExport = match.id; await this.loadPredictions(match);
-    },
-    async loadPredictions(match) {
-      try {
-        this.matchPredictions = await pb.collection('predictions').getFullList({
-          filter: `match="${match.id}"`, expand: 'user',
+        await pb.collection('matches').update(match.id, {
+          home_score: match.home_score,
+          away_score: match.away_score,
+          status: 'finished'
         });
-      } catch (e) { this.matchPredictions = []; }
+        this.notify('Resultado guardado');
+        await this.loadAllData();
+      } catch (e) {
+        this.notify(e.message || 'Error al guardar', 'error');
+      }
     },
-    async exportMatchCSV(match) {
+    async addMatch(newMatch) {
+      try {
+        await pb.collection('matches').create(newMatch);
+        this.notify('Partido registrado con éxito');
+        await this.loadAllData();
+      } catch (e) {
+        this.notify(e.message || 'Error al registrar partido', 'error');
+      }
+    },
+    async deleteMatch(id) {
+      if (!confirm('¿Estás seguro de eliminar este partido?')) return;
+      try {
+        await pb.collection('matches').delete(id);
+        await this.loadAllData();
+      } catch (e) {
+        this.notify(e.message || 'Error al eliminar', 'error');
+      }
+    },
+    async handleSaveChampionPick(champion) {
+      try {
+        await saveChampionPick(this.user.id, champion);
+        this.notify('Campeón registrado correctamente');
+        await this.loadAllData();
+      } catch (e) {
+        this.notify(e.message || 'Error al guardar campeón', 'error');
+      }
+    },
+    async handleSaveSetting({ key, value }) {
+      try {
+        await saveSetting(key, value);
+        this.settings = await loadSettings();
+        this.notify('Configuración actualizada');
+      } catch (e) {
+        this.notify(e.message || 'Error al guardar configuración', 'error');
+      }
+    },
+    async exportToCSV() {
       try {
         const records = await pb.collection('predictions').getFullList({
-          filter: `match="${match.id}"`, expand: 'user',
+          expand: 'user,match',
         });
-        const header = ['Participante', `${match.home_team}_pred`, `${match.away_team}_pred`,
-          `${match.home_team}_real`, `${match.away_team}_real`, 'Comodín', 'Puntos'].join(',');
-        const rows = records.map(p => {
-          const name = p.expand?.user?.email?.split('@')[0] || '?';
-          const pts = calcPoints(p, match);
-          const rHome = match.status === 'finished' && match.home_score != null ? match.home_score : '';
-          const rAway = match.status === 'finished' && match.away_score != null ? match.away_score : '';
-          return [name, p.home_score, p.away_score, rHome, rAway, p.comodin ? 'Sí' : 'No', pts !== null ? pts : ''].join(',');
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Usuario,Partido,Pronóstico Home,Pronóstico Away,Resultado Real,Puntos\n";
+
+        records.forEach(r => {
+          const user = r.expand?.user?.email || 'N/A';
+          const match = r.expand?.match ? `${r.expand.match.home_team} vs ${r.expand.match.away_team}` : 'N/A';
+          const pred = `${r.home_score}-${r.away_score}`;
+          const actual = r.expand?.match ? `${r.expand.match.home_score}-${r.expand.match.away_score}` : 'N/A';
+          // Simple points calc for export
+          const pts = calcPoints({ home_score: r.home_score, away_score: r.away_score, comodin: r.comodin }, r.expand?.match);
+
+          csvContent += `"${user}","${match}","${r.home_score}","${r.away_score}","${actual}","${pts}"\n`;
         });
-        if (!rows.length) { this.showAlert('Sin pronósticos para este partido', 'error'); return; }
-        const safe = `${match.home_team.replace(/\s+/g,'_')}_vs_${match.away_team.replace(/\s+/g,'_')}`;
-        this.downloadCSV(`pronosticos_${safe}.csv`, [header, ...rows].join('\n'));
-        this.showAlert('CSV descargado', 'success');
-      } catch (e) { this.showAlert(e.message || 'Error', 'error'); }
-    },
 
-    async exportFullCSV() {
-      try {
-        const matches = [...this.allMatches].sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-        if (!matches.length) { this.showAlert('No hay partidos', 'error'); return; }
-        const matchIds = matches.map(m => m.id);
-        const clauses = matchIds.map(id => `match="${id}"`).join('||');
-        const records = await pb.collection('predictions').getFullList({
-          filter: `(${clauses})`, expand: 'user',
-        });
-        let champPicks = [];
-        try { champPicks = await pb.collection('champion_picks').getFullList({ expand: 'user' }); }
-        catch (_) { }
-        const champMap = {};
-        for (const cp of champPicks) champMap[cp.user] = { champion: cp.champion, name: cp.expand?.user?.email?.split('@')[0] || '?' };
-
-        // Index predictions by user
-        const userData = {};
-        for (const r of records) {
-          const uid = r.user;
-          if (!userData[uid]) {
-            userData[uid] = {
-              name: r.expand?.user?.email?.split('@')[0] || uid,
-              predictions: {}, champion: champMap[uid]?.champion || '',
-            };
-          }
-          userData[uid].predictions[r.match] = r;
-        }
-        for (const [uid, cp] of Object.entries(champMap)) {
-          if (!userData[uid]) userData[uid] = { name: cp.name, predictions: {}, champion: cp.champion || '' };
-        }
-
-        // Wide format: each team in its own pred/real column per match
-        const cols = ['Participante', 'Campeón', 'Comodín'];
-        for (let i = 0; i < matches.length; i++) {
-          const m = matches[i];
-          const n = i + 1;
-          cols.push(`M${n}_${m.home_team}_L`);
-          cols.push(`M${n}_${m.away_team}_V`);
-          cols.push(`M${n}_${m.home_team}_R`);
-          cols.push(`M${n}_${m.away_team}_R`);
-        }
-        const rows = [cols.join(',')];
-        for (const [uid, u] of Object.entries(userData)) {
-          const row = [u.name, u.champion, u.predictions && Object.values(u.predictions).some(p => p.comodin) ? 'Sí' : 'No'];
-          for (const m of matches) {
-            const p = u.predictions[m.id];
-            row.push(p != null ? p.home_score : '');
-            row.push(p != null ? p.away_score : '');
-            row.push(m.status === 'finished' && m.home_score != null ? m.home_score : '');
-            row.push(m.status === 'finished' && m.away_score != null ? m.away_score : '');
-          }
-          rows.push(row.join(','));
-        }
-        this.downloadCSV('mundial2026_completo.csv', rows.join('\n'));
-        this.showAlert('CSV descargado', 'success');
-      } catch (e) { this.showAlert(e.message || 'Error al exportar', 'error'); }
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `predicciones_mundial_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (e) {
+        this.notify('Error al exportar: ' + e.message, 'error');
+      }
     },
-    downloadCSV(filename, text) {
-      const BOM = '\uFEFF';
-      const blob = new Blob([BOM + text], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = filename;
-      document.body.appendChild(a); a.click();
-      document.body.removeChild(a); URL.revokeObjectURL(url);
-    },
-    showAlert(msg, type) { this.alert = msg; this.alertType = type || 'info'; setTimeout(() => { this.alert = ''; }, 4000); },
+    _groupMatches(matches) {
+      const groups = {};
+      matches.forEach(m => {
+        if (!groups[m.date]) groups[m.date] = { date: m.date, matches: [] };
+        groups[m.date].matches.push(m);
+      });
+      return Object.values(groups).sort((a, b) => a.date.localeCompare(b.date));
+    }
   },
   async mounted() {
-    if (pb.authStore.isValid) {
-      try {
-        const { record } = await pb.collection('users').authRefresh();
-        this.user = record;
-        await this.loadAllData();
-      } catch (_) { pb.authStore.clear(); }
-    }
+    this.user = await refreshAuth();
+    if (this.user) await this.loadAllData();
     this.loading = false;
-  },
+  }
 }).mount('#app');
