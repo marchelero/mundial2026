@@ -2,357 +2,403 @@
 
 App web para gestionar una **polla (quiniela) del Mundial 2026**. Los usuarios registran sus pronósticos, se calculan puntos automáticamente y el admin exporta todo a CSV.
 
-## Stack
+**Stack:** Vue 3 (CDN) + Express.js + SQLite + Google OAuth + JWT + PWA
 
-- **Frontend:** Vue 3 (CDN) — SPA sin build step
-- **Backend:** Express.js + SQLite (better-sqlite3) — un solo proceso Node
-- **Auth:** Google OAuth2 (Google Identity Services) + JWT propio
-- **Seguridad:** Helmet, Rate Limiting
-- **Performance:** Compresión gzip, índices en BD
-- **PWA:** Instalable en celular (manifest.json + service worker)
-- **Despliegue target:** cPanel con "Setup Node.js App" (Passenger)
+---
 
-## Requisitos
+## Tabla de contenidos
 
-- Node.js 18 o superior
-- cPanel con "Setup Node.js App" habilitado (para producción)
-- Un proyecto de Google Cloud con OAuth Client ID configurado
+- [Desarrollo local (paso a paso)](#desarrollo-local-paso-a-paso)
+- [Despliegue en cPanel](#despliegue-en-cpanel)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [API Endpoints](#api-endpoints)
+- [Sistema de puntos](#sistema-de-puntos)
 
-## Cómo levantar el proyecto (local)
+---
 
-### 1. Clonar y entrar
+## Desarrollo local (paso a paso)
+
+### Requisitos
+
+- **Node.js 18 o superior** — [descargar](https://nodejs.org/)
+- **Git** — [descargar](https://git-scm.com/)
+- Una cuenta de **Google** para crear el OAuth Client ID
+- **Navegador moderno** (Chrome, Edge, Firefox)
+
+### Paso 1: Clonar el repositorio
 
 ```bash
-git clone <repo> mundial2026
+git clone <url-del-repositorio> mundial2026
 cd mundial2026
 ```
 
-### 2. Instalar dependencias
+### Paso 2: Instalar dependencias
 
 ```bash
 npm install
 ```
 
-### 3. Configurar variables de entorno del backend
+Esto instala Express, better-sqlite3, jsonwebtoken, google-auth-library, helmet, compression, express-rate-limit, dotenv.
+
+> **Posible error con `better-sqlite3`**: Si falla la compilación del módulo nativo en Windows, instalá primero `node-gyp`:
+> ```bash
+> npm install -g windows-build-tools
+> ```
+> O usá una versión precompilada: `npm install better-sqlite3 --build-from-source=false`.
+
+### Paso 3: Crear el archivo `.env` (backend)
 
 ```bash
 cp .env.example .env
 ```
 
-Editar `.env` con tus valores:
+Abrí `.env` con cualquier editor y completá los valores. El archivo se ve así:
 
-```bash
+```ini
+# Backend API (modo desarrollo separado)
+BACKEND_PORT=3001
+
+# Frontend (modo desarrollo separado)
+FRONTEND_PORT=3000
+BACKEND_URL=http://localhost:3001
+
+# Puerto combinado (produccion)
 PORT=3000
+
 NODE_ENV=development
-JWT_SECRET=un-string-aleatorio-largo-y-seguro
+JWT_SECRET=aca-va-un-string-seguro-y-largo
 GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
-ADMIN_EMAILS=tu@email.com
+ADMIN_EMAILS=tuemail@gmail.com
 ```
 
-> El `JWT_SECRET` lo generás con `node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"`.
+**Qué va en cada campo:**
 
-### 4. Configurar el frontend
+| Variable | Explicación |
+|---|---|
+| `JWT_SECRET` | Secreto para firmar los tokens JWT. Generalo con: `node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"` |
+| `GOOGLE_CLIENT_ID` | El Client ID que vas a crear en Google Cloud Console (Paso 5). **Es el mismo valor que va en `frontend/public/config.js`** |
+| `ADMIN_EMAILS` | Tu email de Google (el que usás para loguearte). Si son varios, separalos con coma: `admin1@gmail.com,admin2@gmail.com` |
+| `NODE_ENV` | En desarrollo dejalo como `development`. En producción (cPanel) va `production` |
+| `BACKEND_PORT` / `FRONTEND_PORT` | Puertos para desarrollo separado. **No tocar si no sabés lo que hacés** |
+
+### Paso 4: Crear el archivo `config.js` (frontend)
 
 ```bash
-cp public/config.example.js public/config.js
+cp frontend/public/config.example.js frontend/public/config.js
 ```
 
-Editar `public/config.js`:
+Abrí `frontend/public/config.js` y editá:
 
 ```js
-var ADMIN_EMAILS = ['tu@email.com'];
+var ADMIN_EMAILS = ['tuemail@gmail.com'];
 var GOOGLE_CLIENT_ID = 'tu-client-id.apps.googleusercontent.com';
 ```
 
-> El `GOOGLE_CLIENT_ID` tiene que ser **el mismo** que está en `.env`. Solo los usuarios con emails en `ADMIN_EMAILS` ven la solapa **Admin**.
+> **IMPORTANTE:** El `GOOGLE_CLIENT_ID` debe ser **exactamente el mismo** que pusiste en `.env`. Si no coinciden, el login falla.
 
-### 5. Iniciar el servidor
+### Paso 5: Crear el Client ID en Google Cloud Console
+
+Este es el paso más importante. Seguí exactamente:
+
+#### 5.1. Crear proyecto
+
+1. Andá a [Google Cloud Console](https://console.cloud.google.com/)
+2. Arriba a la izquierda, click en el selector de proyectos → **NUEVO PROYECTO**
+3. Ponele un nombre como "Mundial 2026"
+4. Click en **CREAR**
+5. Esperá que se cree y seleccioná el proyecto
+
+#### 5.2. Habilitar la pantalla de consentimiento
+
+1. En el menú de la izquierda, andá a **APIs y servicios** → **Pantalla de consentimiento de OAuth**
+2. Seleccioná **Externo** (es la única opción si no tenés Workspace)
+3. Click en **CREAR**
+4. Completá:
+   - **Nombre de la aplicación:** `Mundial 2026 Polla`
+   - **Correo electrónico de soporte:** tu email
+   - **Correo electrónico de contacto:** tu email
+5. Click en **GUARDAR Y CONTINUAR** (en scopes y usuarios de prueba no toques nada, dejá por defecto)
+6. Click en **VOLVER AL PANEL**
+
+#### 5.3. Crear el Client ID
+
+1. En el menú de la izquierda, andá a **APIs y servicios** → **Credenciales**
+2. Click en **+ CREAR CREDENCIALES** → **ID de cliente de OAuth**
+3. Tipo de aplicación: **Aplicación web**
+4. **Nombre:** `Mundial 2026 Local`
+5. En **Orígenes de JavaScript autorizados**, click en **AGREGAR URI** y agregá **UNO POR LÍNEA**:
+   ```
+   http://localhost:3000
+   http://127.0.0.1:3000
+   ```
+6. En **URIs de redireccionamiento autorizados**, NO AGREGUES NADA (no se necesita para este flujo)
+7. Click en **CREAR**
+
+#### 5.4. Copiar el Client ID
+
+1. Aparece un modal con **Tu ID de cliente** y **Secreto del cliente**
+2. Copiá solo el **ID de cliente** (es algo como `123456789-abc123.apps.googleusercontent.com`)
+3. Pegálo en **dos archivos**:
+   - **`.env`** → `GOOGLE_CLIENT_ID=<lo-que-copiaste>`
+   - **`frontend/public/config.js`** → `var GOOGLE_CLIENT_ID = '<lo-que-copiaste>';`
+4. Click en **OK** para cerrar el modal
+
+#### 5.5. Publicar la app (opcional pero recomendado)
+
+Si dejás la pantalla de consentimiento en "Testing", solo los usuarios que agregues como "testers" van a poder loguearse.
+
+1. Andá a **APIs y servicios** → **Pantalla de consentimiento de OAuth**
+2. Click en **PUBLICAR APLICACIÓN** → **CONFIRMAR**
+3. Esto permite que **cualquier usuario con cuenta de Google** pueda loguearse
+
+### Paso 6: Iniciar la app
 
 ```bash
 npm run dev
 ```
 
-Esto inicia el servidor en `http://localhost:3000` con hot-reload.
+Esto arranca **dos servidores**:
+- **Backend API** → `http://localhost:3001` (maneja la lógica y la base de datos)
+- **Frontend SPA** → `http://localhost:3000` (proxea automáticamente `/api/*` al backend)
 
-### 6. Configurar Google OAuth
-
-En [Google Cloud Console](https://console.cloud.google.com/apis/credentials):
-
-1. Crear proyecto → "Credentials" → "Create OAuth client ID"
-2. Tipo: **Web application**
-3. **Authorized JavaScript origins:** agregar las URLs desde donde se va a usar la app, una por línea:
-   - `http://localhost:3000` (desarrollo)
-   - `https://tudominio.com` y/o `https://www.tudominio.com` (producción)
-4. Copiar el **Client ID** y pegarlo en `.env` y `public/config.js`
-5. Guardar y esperar 1-2 minutos para que propague
-
-### 7. Probar
-
-Abrir `http://localhost:3000/`, hacer clic en el botón de Google, elegir tu cuenta. Debería llevarte a la pantalla principal de la app.
-
-## Cómo se usa
-
-### Usuario normal
-
-1. **Login** con Google
-2. **Pronóstico campeón** — elegir el campeón del mundial (+5 pts bonus)
-3. **Votar** — ingresar resultados de cada partido
-   - Se puede usar el **comodín** en 1 partido (duplica puntos)
-   - Los pronósticos se guardan y **no se pueden editar**
-4. **Posiciones** — tabla de puntajes actualizada automáticamente
-5. **Pronósticos** — historial de partidos pasados con puntos
-
-### Admin
-
-El admin además ve la solapa **Admin** donde puede:
-
-1. **Agregar partidos** — selector con los 48 países clasificados, fecha, hora y ronda
-2. **Cargar resultados** — ingresar scores reales (los puntos se calculan automáticamente)
-3. **Exportar CSV** — descargar todo en formato tabla para Google Sheets
-4. **Exportar por partido** — descargar predicciones de un partido específico
-
-### Sistema de puntos
-
-| Situación | Puntos |
-|-----------|--------|
-| Resultado exacto | 3 |
-| Acierto de ganador/empate | 1 |
-| Error | 0 |
-| Comodín | ×2 |
-| Campeón acertado | +5 |
-
-## Estructura del proyecto
-
-```
-mundial2026/
-├── server.js              ← Entry point
-├── package.json
-├── db.js                  ← SQLite: crea tablas automáticamente
-├── middleware/
-│   └── auth.js            ← JWT: authRequired + adminRequired
-├── routes/
-│   ├── auth.js            ← Google OAuth → JWT
-│   ├── matches.js         ← CRUD partidos
-│   ├── predictions.js     ← CRUD pronósticos + rankings
-│   ├── champion.js        ← Pronóstico campeón
-│   └── settings.js        ← Configuración admin
-├── data/                  ← SQLite DB (se crea sola, gitignored)
-├── public/                ← Frontend estático
-│   ├── index.html
-│   ├── config.js          ← Configuración frontend (gitignored)
-│   ├── app.js             ← Vue 3 app principal
-│   ├── style.css
-│   ├── paises.js          ← 48 países clasificados
-│   ├── manifest.json
-│   ├── sw.js              ← Service Worker
-│   └── src/
-│       ├── components/    ← Componentes Vue
-│       ├── services/      ← API client + auth
-│       └── utils/         ← Helpers
-└── .env                   ← Variables de entorno (gitignored)
+También podés arrancarlos por separado:
+```bash
+npm run backend   # solo backend en :3001
+npm run frontend  # solo frontend en :3000
 ```
 
-## API Endpoints
+### Paso 7: Probar
 
-### Auth
-- `POST /api/auth/google` — Verifica token Google, retorna JWT
-- `GET /api/auth/me` — Retorna usuario actual (requiere token)
-- `POST /api/auth/refresh` — Refresca token JWT
+1. Abrí `http://localhost:3000` en el navegador
+2. Hacé click en el botón **Iniciar sesión con Google**
+3. Elegí tu cuenta
+4. Si todo funciona, ves la pantalla principal con las solapas **Votar**, **Historial**, **Posiciones**
 
-### Matches
-- `GET /api/matches` — Lista todos los partidos
-- `POST /api/matches` — Crea partido (admin)
-- `PATCH /api/matches/:id` — Actualiza partido (admin)
-- `DELETE /api/matches/:id` — Elimina partido (admin)
+### Solución de problemas (desarrollo)
 
-### Predictions
-- `GET /api/predictions?user=<userId>` — Pronósticos del usuario
-- `GET /api/predictions/match/:matchId` — Pronósticos de un partido
-- `GET /api/predictions/rankings` — Todos los pronósticos de partidos finalizados
-- `GET /api/predictions/export` — Export completo (admin)
-- `POST /api/predictions` — Crear pronóstico
+| Problema | Causa y solución |
+|---|---|
+| El botón de Google no aparece | Abrí F12 → Console. Si dice "GOOGLE_CLIENT_ID no configurado", revisá `frontend/public/config.js`. Si dice "Google Identity Services no cargado", revisá tu internet o bloqueador de scripts |
+| Después de elegir mi cuenta, redirige a `accounts.google.com/gsi/transform` y queda en blanco | El `GOOGLE_CLIENT_ID` no está autorizado para `http://localhost:3000`. Revisá el paso 5.3 (Orígenes de JavaScript autorizados). Si ya lo agregaste, esperá 2 minutos y refrescá con **Ctrl+Shift+R** |
+| La página carga datos viejos | El service worker cacheó archivos viejos. Hacé **Ctrl+Shift+R** (recarga forzada) o andá a Aplicación → Service Workers y desregistralo |
+| No veo la solapa Admin | Tu email no está en `ADMIN_EMAILS`. Revisá `.env` y `frontend/public/config.js` |
+| Error en consola: `Failed to load resource: the server responded with a status of 502` | El backend no está corriendo. Ejecutá `npm run backend` en otra terminal |
 
-### Champion Picks
-- `GET /api/champion-picks` — Pronóstico del campeón del usuario
-- `GET /api/champion-picks/all` — Todos los pronósticos de campeón
-- `POST /api/champion-picks` — Crear/actualizar pronóstico de campeón
-
-### Settings
-- `GET /api/settings` — Lista configuración
-- `POST /api/settings` — Crear/actualizar setting (admin)
+---
 
 ## Despliegue en cPanel
 
-### 1. Subir archivos
+### Requisitos en cPanel
 
-Subir todo al servidor **excepto** `node_modules/`, `data/`, `.env`, `public/config.js`. El `.gitignore` ya excluye estos.
+- **Setup Node.js App** habilitado (la mayoría de hosts con cPanel lo tienen)
+- **Node.js 18 o superior** (se selecciona al crear la app)
+- **SSL/HTTPS** activo (el service worker y Google OAuth lo requieren)
+
+### Paso 1: Subir archivos al servidor
+
+Excluí **siempre** `node_modules/`, `data/`, `.env`, `frontend/public/config.js` (contienen secretos o se generan en el servidor).
 
 ```bash
-# Opción A: clonar
-git clone <repo> /home/usuario/mundial2026
+# Subir por SCP
+scp -r mundial2026/ usuario@tudominio.com:/home/usuario/
 
-# Opción B: SCP
-scp -r mundial2026/ usuario@host:/home/usuario/
+# O clonar directo en el servidor (si tenés SSH)
+git clone <url-del-repo> /home/usuario/mundial2026
 ```
 
-### 2. Crear la app en cPanel
+### Paso 2: Crear la app en cPanel (UI)
 
-Ir a **Setup Node.js App** > **Create Application**:
+1. En cPanel, buscá y entrá a **Setup Node.js App**
+2. Click en **Create Application**
+3. Completá:
+   - **Node.js version:** 18.x.x o superior
+   - **Application mode:** Production
+   - **Application root:** `/home/usuario/mundial2026`
+   - **Application URL:** Elegí el dominio o subdominio (ej: `mundial.tudominio.com`)
+   - **Application startup file:** `server.js`
+4. Click en **Create**
+5. **Anotá el puerto** que te asigna (ej: 3000). Lo vas a necesitar.
 
-- **Node version:** 18 o superior
-- **Application mode:** Production
-- **Application root:** `/home/usuario/mundial2026`
-- **Application URL:** tu-dominio.com (o subdominio)
-- **Application startup file:** `server.js`
+### Paso 3: Configurar variables de entorno
 
-Anotá el **puerto** que cPanel le asigna (ej: 3000).
-
-### 3. Configurar variables de entorno
-
-Crear/editar `.env` en el root de la app (NO la subas por git, tiene secretos):
+En el root de la app (`/home/usuario/mundial2026/`), creá el archivo `.env`:
 
 ```bash
-PORT=<puerto_que_asigno_cpanel>
+PORT=3000                    # ← el puerto que te asignó cPanel
 NODE_ENV=production
-JWT_SECRET=<string-aleatorio-largo-generado-con-crypto>
-GOOGLE_CLIENT_ID=<tu-client-id>.apps.googleusercontent.com
-ADMIN_EMAILS=tu@email.com
+JWT_SECRET=<generalo-con-el-comando-de-abajo>
+GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
+ADMIN_EMAILS=tuemail@gmail.com
 ```
 
-También copiá el config del frontend (puede ser el mismo client_id y los mismos emails):
+Generá el `JWT_SECRET` (ejecutalo en tu PC local, no en cPanel):
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
+```
+
+### Paso 4: Configurar el frontend
 
 ```bash
-cp public/config.example.js public/config.js
-# editar con los mismos valores que en .env
+cp frontend/public/config.example.js frontend/public/config.js
 ```
 
-### 4. Instalar dependencias
+Editá `frontend/public/config.js` con los **mismos valores** que en `.env`:
 
-Opción A (SSH):
+```js
+var ADMIN_EMAILS = ['tuemail@gmail.com'];
+var GOOGLE_CLIENT_ID = 'tu-client-id.apps.googleusercontent.com';
+```
+
+### Paso 5: Configurar Google OAuth para producción
+
+**Este paso es obligatorio para que funcione en tu dominio.**
+
+1. Andá a [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Seleccioná el mismo proyecto que usaste para desarrollo
+3. Entrá al Client ID que creaste
+4. En **Orígenes de JavaScript autorizados**, **AGREGÁ** (además de los que ya tenés):
+   ```
+   https://tudominio.com
+   https://www.tudominio.com
+   ```
+   (reemplazá `tudominio.com` con la URL exacta que usás en cPanel)
+5. Click en **GUARDAR**
+
+### Paso 6: Instalar dependencias
+
+Desde la UI de cPanel:
+1. En **Setup Node.js App**, buscá la app que creaste
+2. Click en **Run NPM Install**
+
+O por SSH:
 ```bash
 cd /home/usuario/mundial2026
 npm install --production
 ```
 
-Opción B (cPanel UI): seleccionar la app y clic en **Run NPM Install**.
+> Si `better-sqlite3` falla: pedile al soporte del hosting que active `gcc`/`g++`/`make`/`python3`, o cambiá a Node 18 LTS que tiene prebuilt binaries.
 
-> Si `better-sqlite3` falla al compilar (módulo nativo), pedile al hosting que active el build toolchain (python, make, g++) o que use un Node con prebuilt binaries disponibles.
+### Paso 7: Iniciar la app
 
-### 5. Reiniciar la app
+1. En **Setup Node.js App**, click en **Start App** o **Restart**
+2. Esperá unos segundos
+3. Abrí `https://tudominio.com` (o el subdominio que elegiste)
 
-En cPanel UI: seleccionar la app > **Restart**.
+### Paso 8: Verificar
 
-Por SSH:
-```bash
-touch /home/usuario/mundial2026/tmp/restart.txt
-```
+- ✅ La página carga correctamente
+- ✅ El botón de Google aparece y permite loguearse
+- ✅ Si tu email está en `ADMIN_EMAILS`, ves la solapa Admin
+- ✅ Podés crear partidos, cargar resultados y exportar CSV
 
-### 6. Verificar
-
-- Abrir `https://tu-dominio.com` — debería cargar la app
-- Probar el login con Google — si redirige a `accounts.google.com/gsi/transform` y queda en blanco, revisá los **Authorized JavaScript origins** del Client ID en Google Cloud (debe incluir tu dominio EXACTO con https)
-- Probar el admin: entrar con un email que esté en `ADMIN_EMAILS` y verificar que aparezca la solapa Admin
-
-### 7. SSL
-
-El service worker y Google OAuth requieren HTTPS. Activá el certificado SSL de cPanel (Let's Encrypt es gratuito) antes de probar el login.
-
-## Backups
-
-La base de datos es un archivo SQLite en `data/mundial2026.db`.
-
-Para hacer backup:
-
-```bash
-cp data/mundial2026.db /ruta/backup/mundial2026_$(date +%Y%m%d).db
-```
-
-Automatizar con cron:
-
-```bash
-0 3 * * * cp /ruta/mundial2026/data/mundial2026.db /ruta/backups/mundial2026_$(date +\%Y\%m\%d).db
-```
-
-## Comandos útiles
-
-```bash
-# Desarrollo (con hot reload)
-npm run dev
-
-# Producción
-npm start
-
-# Test de salud
-npm test
-# → hace curl a /api/health y muestra la respuesta
-
-# Generar un JWT_SECRET seguro
-node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
-```
-
-## Características de seguridad
-
-- **Helmet:** Headers HTTP seguros + CSP estricto
-- **Rate Limiting:**
-  - 1000 requests/15min para API general
-  - 20 requests/15min para `/api/auth/*`
-- **JWT:** Tokens con expiración de 7 días, firmados con `JWT_SECRET`
-- **Validación:** Todos los inputs se validan en backend
-- **Compresión:** gzip para mejor performance
-- **Archivos sensibles protegidos:** `.htaccess` bloquea acceso a `.env`, `server.js`, `db.js`, `data/`, `node_modules/`
+---
 
 ## Estructura del proyecto
 
 ```
 mundial2026/
-├── server.js              ← Entry point Express
-├── db.js                  ← SQLite: crea tablas automáticamente
+├── server.js              ← Entry point (modo combinado para cPanel)
+├── dev.js                 ← Inicia backend + frontend (modo desarrollo)
 ├── package.json
-├── app.json               ← Metadata para cPanel Passenger
-├── passengerfile.json     ← Configuración Passenger
+├── .env
 ├── .env.example
-├── middleware/
-│   └── auth.js            ← JWT: authRequired + adminRequired
-├── routes/
-│   ├── auth.js            ← Google OAuth → JWT
-│   ├── matches.js         ← CRUD partidos
-│   ├── predictions.js     ← CRUD pronósticos + rankings
-│   ├── champion.js        ← Pronóstico campeón
-│   └── settings.js        ← Configuración admin
-├── data/                  ← SQLite DB (se crea sola, gitignored)
-├── public/                ← Frontend estático
-│   ├── .htaccess          ← Apache rules (cPanel)
-│   ├── index.html
-│   ├── config.js          ← Configuración frontend (gitignored)
-│   ├── app.js             ← Vue 3 app principal
-│   ├── style.css
-│   ├── paises.js          ← 48 países clasificados
-│   ├── manifest.json
-│   ├── sw.js              ← Service Worker
-│   └── src/
-│       ├── components/    ← Componentes Vue
-│       ├── services/      ← API client + auth
-│       └── utils/         ← Helpers
-├── deploy.sh              ← Script de despliegue
-└── .env                   ← Variables de entorno (gitignored)
+│
+├── backend/               ← Código del servidor API
+│   ├── server.js          ← Backend standalone (puerto 3001)
+│   ├── db.js              ← SQLite: schema + inicialización
+│   ├── middleware/
+│   │   └── auth.js        ← JWT: authRequired + adminRequired
+│   └── routes/
+│       ├── auth.js        ← Google OAuth → JWT
+│       ├── matches.js     ← CRUD partidos
+│       ├── predictions.js ← CRUD pronósticos + rankings + export
+│       ├── champion.js    ← Pronóstico campeón
+│       └── settings.js    ← Configuración admin
+│
+├── frontend/              ← Código del frontend
+│   ├── server.js          ← Frontend standalone (puerto 3000, proxy a backend)
+│   └── public/            ← Archivos estáticos
+│       ├── index.html     ← Punto de entrada SPA
+│       ├── config.js      ← Config frontend (gitignored)
+│       ├── config.example.js
+│       ├── app.js         ← Vue 3 app principal
+│       ├── style.css
+│       ├── paises.js      ← 48 países + banderas emoji
+│       ├── manifest.json  ← PWA manifest
+│       ├── sw.js          ← Service Worker
+│       ├── .htaccess      ← Reglas Apache (cPanel)
+│       ├── assets/
+│       ├── icons/
+│       └── src/
+│           ├── components/ ← Login, Layout, MatchList, Admin, Ranking, MyPredictions
+│           ├── services/   ← api.js, auth.js, game.js
+│           └── utils/      ← helpers.js (calcPoints, flagUrl, formatDate)
+│
+└── data/                  ← SQLite DB (se crea sola, gitignored)
 ```
 
-## Posibles problemas
+---
 
-- **Login queda en blanco en `accounts.google.com/gsi/transform`**
-  → El Client ID de `public/config.js` no coincide con el de `.env`, o el dominio no está en "Authorized JavaScript origins" de Google Cloud Console.
+## API Endpoints
 
-- **No se ve la solapa Admin**
-  → El email con el que logueás no está en `ADMIN_EMAILS` (en `.env`) ni en `public/config.js`. Comparar case-insensitive.
+| Método | Ruta | Auth | Descripción |
+|---|---|---|---|
+| `POST` | `/api/auth/google` | No | Login con Google (recibe credential, devuelve JWT) |
+| `GET` | `/api/auth/me` | JWT | Datos del usuario autenticado |
+| `POST` | `/api/auth/refresh` | JWT | Refresca el JWT |
+| `GET` | `/api/matches` | No | Lista todos los partidos |
+| `POST` | `/api/matches` | JWT+Admin | Crea un partido |
+| `PATCH` | `/api/matches/:id` | JWT+Admin | Actualiza un partido |
+| `DELETE` | `/api/matches/:id` | JWT+Admin | Elimina un partido |
+| `GET` | `/api/predictions?user=X` | JWT | Pronósticos de un usuario |
+| `GET` | `/api/predictions/match/:id` | JWT | Pronósticos de un partido |
+| `GET` | `/api/predictions/rankings` | JWT | Todos los pronósticos de partidos finalizados |
+| `GET` | `/api/predictions/export` | JWT+Admin | Export completo |
+| `POST` | `/api/predictions` | JWT | Crear pronóstico |
+| `GET` | `/api/champion-picks` | JWT | Pronóstico del campeón (usuario actual) |
+| `GET` | `/api/champion-picks/all` | JWT | Todos los pronósticos de campeón |
+| `POST` | `/api/champion-picks` | JWT | Crear/actualizar pronóstico de campeón |
+| `GET` | `/api/settings` | No | Lista settings |
+| `POST` | `/api/settings` | JWT+Admin | Crear/actualizar setting |
+| `GET` | `/api/health` | No | Health check |
 
-- **Error 502 en cPanel**
-  → El `PORT` en `.env` no coincide con el puerto que cPanel asignó. O la app no terminó de iniciar (revisar logs).
+---
 
-- **`better-sqlite3` no instala**
-  → El hosting no tiene build tools. Pedir python + make + g++, o usar un Node que tenga prebuilt binaries (Node 18 LTS suele tenerlos).
+## Sistema de puntos
 
-- **La base de datos se borró tras un deploy**
-  → Asegurate de no subir/eliminar la carpeta `data/`. El `.gitignore` la excluye, pero si re-subís todo el contenido, se borra. Hacer backup antes de cualquier deploy (`cp data/mundial2026.db backup.db`).
+| Situación | Puntos |
+|---|---|
+| Resultado exacto | 3 |
+| Acierto de ganador/empate (no exacto) | 1 |
+| Error | 0 |
+| Comodín activado | ×2 |
+| Campeón acertado | +5 |
 
-- **Error de CORS en consola del navegador**
-  → El frontend usa `window.location.origin` para llamar al backend, así que CORS no debería ser problema si están en el mismo dominio. Si usás subdominios distintos, ajustá el CSP en `server.js`.
+El comodín se puede usar en **un solo partido** por usuario en todo el torneo. Si el partido con comodín da 3 puntos, el usuario recibe 6.
+
+---
+
+## Comandos útiles
+
+```bash
+# Desarrollo (backend :3001 + frontend :3000)
+npm run dev
+
+# Solo backend
+npm run backend
+
+# Solo frontend (con proxy a backend)
+npm run frontend
+
+# Producción (modo combinado, un solo proceso)
+npm start
+
+# Health check
+npm test
+
+# Generar JWT_SECRET
+node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
+
+# Backup de la base de datos
+cp data/mundial2026.db data/backup_$(date +%Y%m%d).db
+```
