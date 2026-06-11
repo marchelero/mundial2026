@@ -7,6 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node dev.js",
+    "reset": "node scripts/reset.js",
+    "seed": "node scripts/seed_groups.js",
     "backend": "node backend/server.js",
     "frontend": "node frontend/server.js",
     "test": "curl -s http://localhost:3000/api/health"

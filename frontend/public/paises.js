@@ -55,6 +55,7 @@ var PAISES_MUNDIAL2026 = [
   { name: 'España', flag: '🇪🇸', confederation: 'UEFA' },
   { name: 'Francia', flag: '🇫🇷', confederation: 'UEFA' },
   { name: 'Inglaterra', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', confederation: 'UEFA' },
+  { name: 'Italia', flag: '🇮🇹', confederation: 'UEFA' },
   { name: 'Noruega', flag: '🇳🇴', confederation: 'UEFA' },
   { name: 'Países Bajos', flag: '🇳🇱', confederation: 'UEFA' },
   { name: 'Portugal', flag: '🇵🇹', confederation: 'UEFA' },

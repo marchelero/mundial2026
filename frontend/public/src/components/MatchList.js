@@ -1,4 +1,4 @@
-import { roundLabel, formatDate, calcPoints } from '../utils/helpers.js';
+import { roundLabel, formatDate, calcPoints, flagUrl } from '../utils/helpers.js';
 
 export default {
   props: ['matchGroups', 'predictions', 'user', 'saving', 'comodinUsado', 'comodinMatchName', 'countries', 'settings', 'championPick'],
@@ -11,15 +11,32 @@ export default {
   },
   computed: {
     championPickOpen() {
-      return this.settings?.champion_pick_open === 'true';
+      if (this.settings?.champion_pick_open === 'false') return false;
+      if (!this.matchGroups || this.matchGroups.length === 0) return true;
+      const now = new Date();
+      const nowStr = now.getFullYear() + '-' +
+        String(now.getMonth() + 1).padStart(2, '0') + '-' +
+        String(now.getDate()).padStart(2, '0') + ' ' +
+        String(now.getHours()).padStart(2, '0') + ':' +
+        String(now.getMinutes()).padStart(2, '0');
+      for (const g of this.matchGroups) {
+        for (const m of g.matches) {
+          const matchDt = m.date + ' ' + (m.time || '00:00');
+          if (matchDt > nowStr) return true;
+        }
+      }
+      return false;
     },
     hasChampionPick() {
       return this.championPick && this.championPick.champion;
     },
+    championPickFlagUrl() {
+      const c = this.countries.find(x => x.name === this.championPick?.champion);
+      return c ? flagUrl(c.flag) : '';
+    },
     championPickLabel() {
       if (!this.hasChampionPick) return '';
-      const c = this.countries.find(c => c.name === this.championPick.champion);
-      return c ? `${c.flag} ${c.name}` : this.championPick.champion;
+      return this.championPick.champion;
     },
     todayStr() {
       return new Date().toISOString().split('T')[0];
@@ -116,8 +133,10 @@ export default {
           <h3 class="form-label" style="font-size: 0.8rem; margin: 0;">PRONÓSTICO DEL CAMPEÓN</h3>
           <template v-if="hasChampionPick">
             <p style="font-size: 0.6rem; color: var(--color-gray); margin-bottom: 0.5rem;">Tu pronóstico está registrado.</p>
-            <div style="padding: 0.5rem; background: #f0fdf4; border-radius: 4px; text-align: center; font-weight: 600;">
-              {{ championPickLabel }} ✅
+            <div style="padding: 0.5rem; background: #f0fdf4; border-radius: 4px; text-align: center; font-weight: 600; display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+              <img v-if="championPickFlagUrl" :src="championPickFlagUrl" alt="" style="width:24px;height:18px;border-radius:2px;">
+              <span>🏆</span>
+              <span>{{ championPickLabel }}</span> ✅
             </div>
           </template>
           <template v-else-if="championPickOpen">
@@ -125,7 +144,7 @@ export default {
             <div style="display: flex; gap: 0.5rem;">
               <select v-model="championSelected" style="flex: 1; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-family: var(--font-main);">
                  <option value="">Seleccionar...</option>
-                 <option v-for="c in countries" :key="c.name" :value="c.name">{{ c.flag }} {{ c.name }}</option>
+                 <option v-for="c in countries" :key="c.name" :value="c.name">{{ c.name }}</option>
               </select>
               <button class="btn btn-primary" @click="saveChampionPick" :disabled="!championSelected" style="padding: 0.5rem 1rem; font-size: 0.8rem;">GUARDAR</button>
             </div>

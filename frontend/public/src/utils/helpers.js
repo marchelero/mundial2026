@@ -45,7 +45,18 @@ export function roundLabel(r) {
 export function flagUrl(emojiFlag) {
     if (!emojiFlag || emojiFlag.length < 2) return '';
     try {
-        const codes = [...emojiFlag].map(c => {
+        const chars = [...emojiFlag];
+        const first = chars[0].codePointAt(0);
+        if (first === 0x1F3F4) {
+            const tags = chars.slice(1, -1).map(c => {
+                const code = c.codePointAt(0);
+                if (code >= 0xE0061 && code <= 0xE007A) return String.fromCharCode(code - 0xE0061 + 97);
+                return null;
+            }).filter(Boolean).join('');
+            if (tags.length >= 4) return 'https://flagcdn.com/24x18/' + tags.slice(0, 2) + '-' + tags.slice(2) + '.png';
+            return '';
+        }
+        const codes = chars.map(c => {
             const code = c.codePointAt(0);
             if (!code || code < 127462) return null;
             return String.fromCharCode(code - 127397).toLowerCase();
