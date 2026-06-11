@@ -3,7 +3,7 @@ import { api } from '../services/api.js';
 
 export default {
   props: ['matches', 'settings', 'isAdmin', 'countries'],
-  emits: ['save-score', 'delete-match', 'add-match', 'export-csv', 'export-match', 'save-setting'],
+  emits: ['save-score', 'finish-match', 'add-match', 'export-csv', 'export-match', 'save-setting'],
   data() {
     return {
       newMatch: {
@@ -24,8 +24,29 @@ export default {
       whitelist: [],
       whitelistInput: '',
       whitelistSaved: false,
-      whitelistLoaded: false
+      whitelistLoaded: false,
+      totalUsers: 0,
+      showFinishModal: false,
+      finishMatchData: null
     };
+  },
+  async created() {
+    try {
+      const records = await api.get('/predictions/rankings');
+      const users = new Set(records.map(r => r.user));
+      this.totalUsers = users.size;
+    } catch (_) { this.totalUsers = 0; }
+
+    let raw = this.settings?.allowed_emails;
+    if (!raw) {
+      try {
+        const r = await api.get('/settings');
+        const s = {};
+        for (const item of r) s[item.key] = item.value;
+        raw = s.allowed_emails;
+      } catch (_) { }
+    }
+    this._loadWhitelist(raw);
   },
   computed: {
     flagMap() {
@@ -44,26 +65,11 @@ export default {
         this.newMatch.timeMinute !== '';
     },
     filteredMatches() {
-      const today = new Date().toISOString().split('T')[0];
-      return this.matches
-        .filter(m => {
-          if (this.adminTab === 'nuevos') return m.date >= today;
-          return m.date < today;
-        })
-        .sort((a, b) => (b.date + ' ' + (b.time || '00:00')).localeCompare(a.date + ' ' + (a.time || '00:00')));
+      return this.matches.filter(m => {
+        if (this.adminTab === 'nuevos') return m.status !== 'finished';
+        return m.status === 'finished';
+      }).sort((a, b) => (b.date + ' ' + (b.time || '00:00')).localeCompare(a.date + ' ' + (a.time || '00:00')));
     }
-  },
-  async created() {
-    let raw = this.settings?.allowed_emails;
-    if (!raw) {
-      try {
-        const records = await api.get('/settings');
-        const s = {};
-        for (const r of records) s[r.key] = r.value;
-        raw = s.allowed_emails;
-      } catch (_) { }
-    }
-    this._loadWhitelist(raw);
   },
   methods: {
     roundLabel,
@@ -94,6 +100,17 @@ export default {
       this.$emit('save-setting', { key: 'allowed_emails', value: JSON.stringify(this.whitelist) });
       this.whitelistSaved = true;
       setTimeout(() => this.whitelistSaved = false, 3000);
+    },
+    openFinishModal(match) {
+      this.finishMatchData = match;
+      this.showFinishModal = true;
+    },
+    confirmFinish() {
+      if (this.finishMatchData) {
+        this.$emit('finish-match', this.finishMatchData);
+      }
+      this.showFinishModal = false;
+      this.finishMatchData = null;
     },
     compactDate(dateStr) {
       const parts = dateStr.split('-');
@@ -131,14 +148,14 @@ export default {
       </div>
 
       <div class="stats-row">
-        <div class="stat-box" @click="showAddForm = !showAddForm" style="cursor: pointer; background: var(--color-dark); color: white; border: none;">
+        <div class="stat-box" style="background: var(--color-dark); color: white; border: none;">
           <div class="stat-icon" style="color: white;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
+            <svg viewBox="0 0 24 24" fill="currentColor" style="width:24px;height:24px;">
+              <path d="M4.5 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM14.25 8.625a3.375 3.375 0 1 1 6.75 0 3.375 3.375 0 0 1-6.75 0ZM1.5 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122Z" />
             </svg>
           </div>
-          <span class="stat-label" style="color: rgba(255,255,255,0.7);">Nuevo Partido</span>
+          <span class="stat-label" style="color: rgba(255,255,255,0.7);">Participantes</span>
+          <span class="stat-value" style="color: white; font-size: 1rem; margin-top: 0.15rem;">{{ totalUsers }}</span>
         </div>
         <div class="stat-box" @click="$emit('export-csv')" style="cursor: pointer; background: var(--color-green); color: white; border: none;">
           <div class="stat-icon" style="color: white;">
@@ -230,6 +247,7 @@ export default {
               <div class="admin-col-time">
                 <div style="font-size: 0.6rem; opacity: 0.6;">{{ compactDate(match.date) }}</div>
                 <div class="match-time-badge">{{ match.time }}</div>
+                <span v-if="match.status === 'finished'" style="font-size:0.55rem;font-weight:700;color:var(--color-dark);background:#e2e8f0;padding:0.1rem 0.3rem;border-radius:4px;margin-top:2px;display:inline-block;">FINALIZADO</span>
                 <div style="font-size:0.55rem;opacity:0.5;margin-top:2px;">{{ roundLabel(match.round) }}</div>
               </div>
               <div class="admin-col-team home">
@@ -250,14 +268,17 @@ export default {
                  <span class="admin-team-name">{{ match.away_team }}</span>
               </div>
   
-             <div class="admin-col-actions">
-                <button class="btn btn-primary" @click="$emit('save-score', match)" style="padding: 0.3rem 0.4rem; font-size: 0.65rem;">💾</button>
-                <button class="btn" @click="$emit('delete-match', match.id)" style="padding: 0.3rem 0.4rem; font-size: 0.65rem; background: var(--color-red); color: white;">🗑️</button>
-             </div>
-           </div>
-           <div v-if="match.status === 'finished'" style="width: 100%; text-align: center; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed rgba(0,0,0,0.1);">
-             <span style="font-size: 0.6rem; color: var(--color-green); cursor: pointer; font-weight: 600;" @click="$emit('export-match', match)">📥 Exportar predicciones</span>
-           </div>
+              <div v-if="match.status !== 'finished'" class="admin-col-actions">
+                 <button class="btn btn-primary" @click="$emit('save-score', match)" style="padding: 0.3rem 0.4rem; font-size: 0.65rem;" title="Guardar score">💾</button>
+                 <button class="btn" @click="openFinishModal(match)" style="padding: 0.3rem 0.4rem; font-size: 0.65rem; background: var(--color-accent); color: white;" title="Finalizar partido">🏁</button>
+               </div>
+            </div>
+            <div v-if="match.status === 'finished'" style="width: 100%; text-align: center; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed rgba(0,0,0,0.1);">
+              <span style="font-size: 0.6rem; color: var(--color-green); cursor: pointer; font-weight: 600;" @click="$emit('export-match', match)">📥 Exportar predicciones</span>
+            </div>
+            <div v-else style="width: 100%; text-align: center; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed rgba(0,0,0,0.05); font-size: 0.55rem; color: var(--color-gray);">
+              {{ match.date }} — {{ match.time }}
+            </div>
         </div>
       </div>
       <div class="card">
@@ -302,9 +323,30 @@ export default {
         <span v-if="whitelistSaved" style="color:var(--color-green);font-size:0.75rem;margin-top:0.3rem;display:block;">✅ Guardado</span>
       </div>
 
+      <!-- Finish Modal -->
+      <div v-if="showFinishModal && finishMatchData" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;" @click.self="showFinishModal = false">
+        <div style="background:white;border-radius:12px;padding:1.5rem;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+          <div style="text-align:center;margin-bottom:1rem;">
+            <div style="font-size:2rem;margin-bottom:0.5rem;">🏁</div>
+            <h3 style="font-family:var(--font-header);font-size:1.1rem;margin:0 0 0.25rem;">FINALIZAR PARTIDO</h3>
+            <p style="font-size:0.75rem;color:var(--color-gray);margin:0;">Se cerrará el marcador y se calcularán los puntos.</p>
+          </div>
+          <div style="background:#f8fafc;border-radius:8px;padding:0.75rem;margin-bottom:1rem;text-align:center;">
+            <div style="font-weight:700;font-size:1rem;margin-bottom:0.5rem;">{{ finishMatchData.home_team }} vs {{ finishMatchData.away_team }}</div>
+            <div style="font-size:2rem;font-weight:800;color:var(--color-dark);background:white;display:inline-block;padding:0.5rem 1.5rem;border-radius:8px;border:1px solid #e2e8f0;">
+              {{ finishMatchData.home_score ?? '?' }} - {{ finishMatchData.away_score ?? '?' }}
+            </div>
+          </div>
+          <div style="display:flex;gap:0.5rem;">
+            <button @click="showFinishModal = false" style="flex:1;padding:0.65rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;">CANCELAR</button>
+            <button @click="confirmFinish" style="flex:1;padding:0.65rem;border:none;border-radius:8px;background:var(--color-accent);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;">FINALIZAR</button>
+          </div>
+        </div>
+      </div>
+
       <div class="card" style="background: #fffbeb; border: 1px solid #fcd34d;">
         <p style="font-size: 0.75rem; color: #92400e;">
-          ⚠️ <strong>ADMIN:</strong> Al guardar un resultado, el partido se marca como "finalizado" y se activará el cálculo de puntos para los usuarios.
+          ⚠️ <strong>ADMIN:</strong> 💾 guarda el score sin cerrar el partido. 🏁 finaliza y activa el cálculo de puntos.
         </p>
       </div>
     </div>

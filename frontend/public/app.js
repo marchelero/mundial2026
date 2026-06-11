@@ -72,7 +72,8 @@ createApp({
             :settings="settings"
             :is-admin="isAdmin"
             :countries="countries"
-            @save-score="saveActualScore"
+            @save-score="saveScore"
+            @finish-match="finishMatch"
             @add-match="addMatch"
             @delete-match="deleteMatch"
             @export-csv="exportToCSV"
@@ -236,17 +237,28 @@ createApp({
 
       this.rankingsLoading = false;
     },
-    async saveActualScore(match) {
+    async saveScore(match) {
+      try {
+        await api.patch('/matches/' + match.id, {
+          home_score: match.home_score,
+          away_score: match.away_score,
+        });
+        this.notify('Score guardado');
+      } catch (e) {
+        this.notify(e.message || 'Error al guardar', 'error');
+      }
+    },
+    async finishMatch(match) {
       try {
         await api.patch('/matches/' + match.id, {
           home_score: match.home_score,
           away_score: match.away_score,
           status: 'finished'
         });
-        this.notify('Resultado guardado');
+        this.notify('Partido finalizado');
         await this.loadAllData();
       } catch (e) {
-        this.notify(e.message || 'Error al guardar', 'error');
+        this.notify(e.message || 'Error al finalizar', 'error');
       }
     },
     async addMatch(newMatch) {

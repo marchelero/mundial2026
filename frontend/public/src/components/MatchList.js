@@ -8,6 +8,8 @@ export default {
     return {
       activeTab: 'HOY',
       championSelected: '',
+      showConfirmModal: false,
+      pendingMatches: [],
     };
   },
   computed: {
@@ -118,6 +120,23 @@ export default {
         this.$emit('save-error', e.message || 'Error al guardar');
       }
     },
+    openSubmitModal() {
+      const pending = [];
+      this.matchGroups.forEach(g => {
+        g.matches.forEach(m => {
+          if (this.canPredict(m) && !this.predictions[m.id]?.id && this.predictions[m.id]?.home != null && this.predictions[m.id]?.away != null) {
+            pending.push(m);
+          }
+        });
+      });
+      if (pending.length === 0) return;
+      this.pendingMatches = pending;
+      this.showConfirmModal = true;
+    },
+    closeModal() {
+      this.showConfirmModal = false;
+      this.pendingMatches = [];
+    },
   },
   template: `
     <div class="view-container">
@@ -202,7 +221,11 @@ export default {
         
         <div v-for="match in group.matches" :key="match.id" class="card" :class="'card-' + matchState(match)" style="margin-bottom: 0.75rem; position: relative;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <span class="match-time-badge">🕒 {{ match.time }}</span>
+            <div style="display:flex;align-items:center;gap:0.35rem;">
+              <span class="match-time-badge">🕒 {{ match.time }}</span>
+              <span v-if="match.status === 'finished'" style="font-size:0.55rem;font-weight:700;color:var(--color-dark);background:#e2e8f0;padding:0.1rem 0.3rem;border-radius:4px;">FINALIZADO</span>
+              <span v-else-if="isMatchPast(match)" style="font-size:0.55rem;font-weight:700;color:#dc2626;background:#fef2f2;padding:0.1rem 0.3rem;border-radius:4px;animation:pulse 1.5s infinite;">🔴 JUGANDO</span>
+            </div>
             <span v-if="predictions[match.id]?.comodin && !predictions[match.id]?.id" style="display:flex;align-items:center;gap:0.25rem;font-size:0.7rem;font-weight:700;color:#d97706;background:#fef3c7;padding:0.1rem 0.4rem;border-radius:4px;">
               ⭐ COMODÍN
               <span @click="$emit('toggle-comodin', match.id)" style="cursor:pointer;font-size:0.8rem;color:#92400e;margin-left:2px;" title="Quitar comodín">✕</span>
@@ -262,13 +285,34 @@ export default {
         </div>
       </div>
 
-      <button class="btn btn-primary w-full" @click="$emit('submit')" :disabled="saving || !hasUnsavedPredictions()">
+      <button class="btn btn-primary w-full" @click="openSubmitModal" :disabled="saving || !hasUnsavedPredictions()">
          {{ saving ? 'GUARDANDO...' : 'ENVIAR PRONÓSTICOS' }}
       </button>
       <p style="font-size: 0.7rem; text-align: center; margin-top: 0.5rem; color: var(--color-gray);">
         <template v-if="!hasUnsavedPredictions() && !saving">Completá los marcadores para enviar.</template>
         <template v-else>Envía tus pronósticos antes de 1 minuto del inicio de cada partido.</template>
       </p>
+
+      <!-- Confirm Modal -->
+      <div v-if="showConfirmModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;" @click.self="closeModal">
+        <div style="background:white;border-radius:12px;padding:1.5rem;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+          <div style="text-align:center;margin-bottom:1rem;">
+            <div style="font-size:2rem;margin-bottom:0.5rem;">📋</div>
+            <h3 style="font-family:var(--font-header);font-size:1.2rem;margin:0 0 0.25rem;">CONFIRMAR ENVÍO</h3>
+            <p style="font-size:0.75rem;color:var(--color-gray);margin:0;">Una vez enviados no podrás modificarlos.</p>
+          </div>
+          <div style="background:#f8fafc;border-radius:8px;padding:0.75rem;margin-bottom:1rem;max-height:200px;overflow-y:auto;">
+            <div v-for="m in pendingMatches" :key="m.id" style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;font-size:0.8rem;border-bottom:1px solid rgba(0,0,0,0.05);">
+              <span style="font-weight:600;flex:1;">{{ m.home_team }} vs {{ m.away_team }}</span>
+              <span style="font-weight:700;background:var(--color-dark);color:white;padding:0.1rem 0.4rem;border-radius:4px;font-size:0.75rem;">{{ predictions[m.id]?.home }} - {{ predictions[m.id]?.away }}</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.5rem;">
+            <button @click="closeModal" style="flex:1;padding:0.65rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;">CANCELAR</button>
+            <button @click="$emit('submit'); closeModal()" style="flex:1;padding:0.65rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;">ACEPTAR</button>
+          </div>
+        </div>
+      </div>
     </div>
   `
 };

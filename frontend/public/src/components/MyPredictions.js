@@ -6,25 +6,14 @@ export default {
     totalPredicted() {
       return this.allMatches.filter(m => this.predictions[m.id]?.id).length;
     },
-    exactScores() {
-      return this.allMatches.filter(m => {
-        if (m.status !== 'finished') return false;
+    totalPoints() {
+      return this.allMatches.reduce((sum, m) => {
+        if (m.status !== 'finished') return sum;
         const p = this.predictions[m.id];
-        if (!p?.id) return false;
-        // Calculate points WITHOUT comodin for the stat count
-        const pts = calcPoints({ home_score: p.home, away_score: p.away, comodin: false }, m);
-        return pts === 3;
-      }).length;
-    },
-    resultsOnly() {
-      return this.allMatches.filter(m => {
-        if (m.status !== 'finished') return false;
-        const p = this.predictions[m.id];
-        if (!p?.id) return false;
-        // Calculate points WITHOUT comodin for the stat count
-        const pts = calcPoints({ home_score: p.home, away_score: p.away, comodin: false }, m);
-        return pts === 1;
-      }).length;
+        if (!p?.id) return sum;
+        const pts = calcPoints({ home_score: p.home, away_score: p.away, comodin: p.comodin }, m);
+        return sum + (pts || 0);
+      }, 0);
     },
     jokersUsed() {
       return Object.values(this.predictions).filter(p => p.comodin).length;
@@ -61,7 +50,7 @@ export default {
         </div>
       </div>
 
-      <!-- Stats Summary (Unified with Ranking Style) -->
+      <!-- Stats Summary -->
       <div class="ranking-stats-grid">
         <!-- Partidos -->
         <div class="ranking-stat-card">
@@ -76,29 +65,16 @@ export default {
           </div>
         </div>
 
-        <!-- Score Exacto -->
+        <!-- Puntos -->
         <div class="ranking-stat-card">
-          <div class="ranking-stat-icon-box">
-             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 24px; height: 24px;">
-              <path fill-rule="evenodd" d="M12 2.25a.75.75 0 0 1 .75.75v.756a8.25 8.25 0 0 1 7.244 7.244h.756a.75.75 0 0 1 0 1.5h-.756a8.25 8.25 0 0 1-7.244 7.244v.756a.75.75 0 0 1-1.5 0v-.756a8.25 8.25 0 0 1-7.244-7.244h-.756a.75.75 0 0 1 0-1.5h.756a8.25 8.25 0 0 1 7.244-7.244V3a.75.75 0 0 1 .75-.75ZM5.25 12a6.75 6.75 0 1 1 13.5 0 6.75 6.75 0 0 1-13.5 0Zm6.75-4.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Zm0 1.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6Zm0 1.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z" clip-rule="evenodd" />
-            </svg>
-          </div>
-          <div class="ranking-stat-info">
-            <div class="ranking-stat-label">EXACTOS <span style="font-size: 0.6rem; opacity: 0.7;">(+3)</span></div>
-            <div class="ranking-stat-value">{{ exactScores }}</div>
-          </div>
-        </div>
-
-        <!-- Resultado -->
-        <div class="ranking-stat-card">
-          <div class="ranking-stat-icon-box">
+          <div class="ranking-stat-icon-box" style="color: var(--color-accent);">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 24px; height: 24px;">
-              <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clip-rule="evenodd" />
+              <path fill-rule="evenodd" d="M12 2.25a.75.75 0 0 1 .75.75v.756a8.25 8.25 0 0 1 7.244 7.244h.756a.75.75 0 0 1 0 1.5h-.756a8.25 8.25 0 0 1-7.244 7.244v.756a.75.75 0 0 1-1.5 0v-.756a8.25 8.25 0 0 1-7.244-7.244h-.756a.75.75 0 0 1 0-1.5h.756a8.25 8.25 0 0 1 7.244-7.244V3a.75.75 0 0 1 .75-.75ZM5.25 12a6.75 6.75 0 1 1 13.5 0 6.75 6.75 0 0 1-13.5 0Z" clip-rule="evenodd" />
             </svg>
           </div>
           <div class="ranking-stat-info">
-            <div class="ranking-stat-label">RESULTADOS <span style="font-size: 0.6rem; opacity: 0.7;">(+1)</span></div>
-            <div class="ranking-stat-value">{{ resultsOnly }}</div>
+            <div class="ranking-stat-label">PUNTOS</div>
+            <div class="ranking-stat-value">{{ totalPoints }}</div>
           </div>
         </div>
 

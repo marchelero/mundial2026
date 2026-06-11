@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mundial2026-v4';
+const CACHE_NAME = 'mundial2026-v6';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -44,9 +44,14 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+
+  // Ignorar esquemas no soportados (extensiones, etc.)
+  if (!event.request.url.startsWith('http')) return;
+
   const url = new URL(event.request.url);
 
-  if (url.pathname.startsWith('/api/')) {
+  // No cachear API ni config.js (config.js es dinámico)
+  if (url.pathname.startsWith('/api/') || url.pathname === '/config.js') {
     event.respondWith(fetch(event.request));
     return;
   }
@@ -54,13 +59,20 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
+
       return fetch(event.request).then(response => {
-        if (response.ok) {
+        // Solo cachear respuestas válidas de nuestro dominio
+        if (response.ok && url.origin === self.location.origin) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => caches.match('/index.html'));
+      }).catch(() => {
+        // Fallback solo para navegación (HTML)
+        if (event.request.mode === 'navigate') {
+          return caches.match('/index.html');
+        }
+      });
     })
   );
 });
