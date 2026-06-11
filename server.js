@@ -19,11 +19,11 @@ const PORT = process.env.PORT || 3000;
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'", "https://accounts.google.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://accounts.google.com", "https://unpkg.com"],
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://accounts.google.com", "https://unpkg.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://accounts.google.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
+      imgSrc: ["'self'", "data:", "https://flagcdn.com"],
       connectSrc: ["'self'", "https://accounts.google.com"],
       frameSrc: ["https://accounts.google.com"],
     },

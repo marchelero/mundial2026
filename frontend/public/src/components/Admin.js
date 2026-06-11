@@ -66,6 +66,7 @@ export default {
     this._loadWhitelist(raw);
   },
   methods: {
+    roundLabel,
     _loadWhitelist(raw) {
       if (!raw || raw === '[]') { this.whitelist = []; this.whitelistLoaded = true; return; }
       try {
@@ -94,7 +95,6 @@ export default {
       this.whitelistSaved = true;
       setTimeout(() => this.whitelistSaved = false, 3000);
     },
-    roundLabel(r) { return roundLabel(r); },
     compactDate(dateStr) {
       const parts = dateStr.split('-');
       return parts[2] + '/' + parts[1];
@@ -247,20 +247,18 @@ export default {
            </div>
         </div>
       </div>
-<!--  SECCION OCULTA DEUDA TECNICA PARA MEJORAR A FUTURO NO BORRAR:..
       <div class="card">
         <div style="display: flex; align-items: center; gap: 1rem;">
           <span style="font-size: 1.5rem;">🏆</span>
           <div style="flex: 1;">
             <h3 class="form-label" style="font-size: 0.8rem; margin: 0;">PRONÓSTICO DEL CAMPEÓN</h3>
-            <p style="font-size: 0.6rem; color: var(--color-gray);">Permitir a los usuarios seleccionar su campeón.</p>
+            <p style="font-size: 0.6rem; color: var(--color-gray);">Forzar apertura/cierre de la selección del campeón.</p>
           </div>
-          <button class="btn" :style="settings.champion_pick_open === 'true' ? 'background: var(--color-green); color: white;' : 'background: var(--color-gray); color: white;'" @click="$emit('save-setting', { key: 'champion_pick_open', value: settings.champion_pick_open === 'true' ? 'false' : 'true' })" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; min-width: 70px;">
-            {{ settings.champion_pick_open === 'true' ? 'ACTIVO' : 'INACTIVO' }}
+          <button class="btn" :style="settings.champion_pick_open === 'false' ? 'background: var(--color-gray); color: white;' : 'background: var(--color-green); color: white;'" @click="$emit('save-setting', { key: 'champion_pick_open', value: settings.champion_pick_open === 'false' ? '' : 'false' })" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; min-width: 70px;">
+            {{ settings.champion_pick_open === 'false' ? 'INACTIVO' : 'ACTIVO' }}
           </button>
         </div>
       </div>
--->
       <div class="card">
         <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem;">
           <span style="font-size: 1.5rem;">📋</span>

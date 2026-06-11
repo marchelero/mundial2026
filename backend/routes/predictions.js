@@ -97,7 +97,7 @@ router.post('/', authRequired, (req, res) => {
       String(now.getDate()).padStart(2, '0') + ' ' +
       String(now.getHours()).padStart(2, '0') + ':' +
       String(now.getMinutes()).padStart(2, '0');
-    if ((match.date + ' ' + match.time) <= nowStr) {
+    if ((match.date + ' ' + (match.time || '23:59')) <= nowStr) {
       return res.status(400).json({ error: 'Tiempo expirado' });
     }
     const existing = db.prepare('SELECT * FROM predictions WHERE user_id = ? AND match_id = ?').get(req.user.id, matchId);

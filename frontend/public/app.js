@@ -133,15 +133,16 @@ createApp({
         this.notification.visible = false;
       }, 4000);
     },
-    handleLoginSuccess(user) {
+    async handleLoginSuccess(user) {
+      this.loading = true;
       this.user = user;
       this.view = 'votar';
-      this.loadAllData();
+      await this.loadAllData();
+      this.loading = false;
     },
     async handleLogout() {
       logout();
       this.user = null;
-      this.view = 'login';
     },
     async loadAllData() {
       if (!this.user) return;

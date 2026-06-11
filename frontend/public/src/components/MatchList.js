@@ -1,7 +1,7 @@
 import { roundLabel, formatDate, calcPoints, flagUrl } from '../utils/helpers.js';
 
 export default {
-  props: ['matchGroups', 'predictions', 'user', 'saving', 'comodinUsado', 'comodinMatchName', 'countries', 'settings', 'championPick'],
+  props: ['matchGroups', 'predictions', 'user', 'saving', 'comodinUsado', 'countries', 'settings', 'championPick'],
   emits: ['set-score', 'toggle-comodin', 'submit', 'save-champion-pick'],
   data() {
     return {
