@@ -18,7 +18,33 @@ const seedData = JSON.parse(fs.readFileSync(
 // =====================================================
 // EDITÁ ACÁ LOS CORREOS PERMITIDOS
 // =====================================================
-const whitelistEmails = ['marcheloalbis@gmail.com', 'juanqui.cay@gmail.com'];
+const whitelistEmails = [
+  'alejandroquea25@gmail.com',
+  'andrefer.13.8@gmail.com',
+  'andresbr763@gmail.com',
+  'azumy24k@gmail.com',
+  'danielpinto9001@gmail.com',
+  'ardennmar@gmail.com',
+  'ecanaza232@gmail.com',
+  'franco.harold.yllatarco.castillo@gmail.com',
+  'g.gerson51@gmail.com',
+  'scabelhrf@gmail.com',
+  'johnnycarmelo17@gmail.com',
+  'jonasmaidana47@gmail.com',
+  'juanqui.cay@gmail.com',
+  'lizzysanchez1550@gmail.com',
+  'marcheloalbis@gmail.com',
+  'maribelpatziv2@gmail.com',
+  'miltonchirinos45@gmail.com',
+  'norsargo@gmail.com',
+  'pabloivanc5@gmail.com',
+  'renergueta@gmail.com',
+  'wr71albarracin@gmail.com',
+  'rmachaca.anb@gmail.com',
+  'rucocool@gmail.com',
+  'eiquipito160381@gmail.com',
+  'alvaro.quena1@gmail.com',
+];
 
 // =====================================================
 // 1. INSERTAR GRUPOS
