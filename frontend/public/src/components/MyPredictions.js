@@ -84,7 +84,7 @@ export default {
             </svg>
           </div>
           <div class="ranking-stat-info">
-            <div class="ranking-stat-label">SCORE EXACTO <span style="font-size: 0.6rem; opacity: 0.7;">(+3)</span></div>
+            <div class="ranking-stat-label">EXACTOS <span style="font-size: 0.6rem; opacity: 0.7;">(+3)</span></div>
             <div class="ranking-stat-value">{{ exactScores }}</div>
           </div>
         </div>
@@ -97,7 +97,7 @@ export default {
             </svg>
           </div>
           <div class="ranking-stat-info">
-            <div class="ranking-stat-label">RESULTADO <span style="font-size: 0.6rem; opacity: 0.7;">(+1)</span></div>
+            <div class="ranking-stat-label">RESULTADOS <span style="font-size: 0.6rem; opacity: 0.7;">(+1)</span></div>
             <div class="ranking-stat-value">{{ resultsOnly }}</div>
           </div>
         </div>

@@ -55,7 +55,7 @@ router.post('/google', async (req, res) => {
     const token = jwt.sign(
       { id: user.id, email: user.email, name: user.name },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     res.json({
@@ -85,10 +85,11 @@ router.post('/refresh', authRequired, (req, res) => {
     const token = jwt.sign(
       { id: user.id, email: user.email, name: user.name },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
     res.json({ token, user });
   } catch (e) {
+    console.error('Error refreshing token:', e.message);
     res.status(500).json({ error: 'Error al refrescar token' });
   }
 });

@@ -1,8 +1,9 @@
 import { roundLabel, formatDate, calcPoints, flagUrl } from '../utils/helpers.js';
+import { api } from '../services/api.js';
 
 export default {
   props: ['matchGroups', 'predictions', 'user', 'saving', 'comodinUsado', 'countries', 'settings', 'championPick'],
-  emits: ['set-score', 'toggle-comodin', 'submit', 'save-champion-pick'],
+  emits: ['set-score', 'toggle-comodin', 'submit', 'save-champion-pick', 'saved', 'save-error'],
   data() {
     return {
       activeTab: 'HOY',
@@ -10,33 +11,29 @@ export default {
     };
   },
   computed: {
-    championPickOpen() {
-      if (this.settings?.champion_pick_open === 'false') return false;
-      if (!this.matchGroups || this.matchGroups.length === 0) return true;
+    championDeadlinePassed() {
       const now = new Date();
-      const nowStr = now.getFullYear() + '-' +
-        String(now.getMonth() + 1).padStart(2, '0') + '-' +
-        String(now.getDate()).padStart(2, '0') + ' ' +
-        String(now.getHours()).padStart(2, '0') + ':' +
-        String(now.getMinutes()).padStart(2, '0');
-      for (const g of this.matchGroups) {
-        for (const m of g.matches) {
-          const matchDt = m.date + ' ' + (m.time || '00:00');
-          if (matchDt > nowStr) return true;
-        }
+      // Domingo 28 de junio de 2026 15:00 hora Bolivia
+      const deadline = new Date('2026-06-28T15:00:00');
+      return now >= deadline;
+    },
+    championPickOpen() {
+      if (this.championDeadlinePassed) return false;
+      if (this.settings && this.settings.champion_pick_open !== undefined) {
+        return String(this.settings.champion_pick_open) === 'true';
       }
       return false;
     },
     hasChampionPick() {
-      return this.championPick && this.championPick.champion;
-    },
-    championPickFlagUrl() {
-      const c = this.countries.find(x => x.name === this.championPick?.champion);
-      return c ? flagUrl(c.flag) : '';
+      return this.championPick && this.championPick.champion && this.championPick.champion !== '';
     },
     championPickLabel() {
-      if (!this.hasChampionPick) return '';
-      return this.championPick.champion;
+      return this.championPick?.champion || '';
+    },
+    championPickFlagUrl() {
+      if (!this.championPickLabel) return '';
+      const c = this.countries.find(x => x.name === this.championPickLabel);
+      return c ? flagUrl(c.flag) : '';
     },
     todayStr() {
       return new Date().toISOString().split('T')[0];
@@ -111,9 +108,15 @@ export default {
       if (pts > 0) return 'winner';
       return 'wrong';
     },
-    saveChampionPick() {
+    async saveChampionPick() {
       if (!this.championSelected) return;
       if (!confirm(`¿Estás seguro de que "${this.championSelected}" será el campeón?\n\n⚠️ Solo podrás hacer esto UNA VEZ. No podrás cambiarlo después.`)) return;
+      try {
+        await api.post('/champion-picks', { champion: this.championSelected });
+        this.$emit('saved');
+      } catch (e) {
+        this.$emit('save-error', e.message || 'Error al guardar');
+      }
     },
   },
   template: `
@@ -127,32 +130,49 @@ export default {
       </div>
 
       <!-- Champion Pick -->
-      <div class="card" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
-        <span style="font-size: 2rem;">🏆</span>
+      <div class="card" style="display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem; padding: 1.25rem;">
+        <div class="stat-icon" style="width: 48px; height: 48px; background: #fffcf0; border: 1px solid #fee2e2; border-radius: 12px; font-size: 2rem;">🏆</div>
         <div style="flex: 1;">
-          <h3 class="form-label" style="font-size: 0.8rem; margin: 0;">PRONÓSTICO DEL CAMPEÓN</h3>
+          <h3 class="stat-label" style="margin-bottom: 0.25rem; color: var(--color-dark);">PRONÓSTICO DEL CAMPEÓN</h3>
+          
+          <!-- STATE 1: ALREADY PICKED -->
           <template v-if="hasChampionPick">
-            <p style="font-size: 0.6rem; color: var(--color-gray); margin-bottom: 0.5rem;">Tu pronóstico está registrado.</p>
-            <div style="padding: 0.5rem; background: #f0fdf4; border-radius: 4px; text-align: center; font-weight: 600; display:flex;align-items:center;justify-content:center;gap:0.5rem;">
-              <img v-if="championPickFlagUrl" :src="championPickFlagUrl" alt="" style="width:24px;height:18px;border-radius:2px;">
-              <span>🏆</span>
-              <span>{{ championPickLabel }}</span> ✅
+            <p style="font-size: 0.65rem; color: var(--color-gray); margin-bottom: 0.75rem; font-family: var(--font-main);">Tu pronóstico está registrado y asegurado.</p>
+            <div style="padding: 0.75rem; background: #f0fdf4; border: 1px solid #dcfce7; border-radius: 8px; display:flex; align-items:center; gap:0.75rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+              <img v-if="championPickFlagUrl" :src="championPickFlagUrl" alt="" style="width:28px; height:20px; border-radius:3px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <div style="flex: 1;">
+                <div style="font-size: 0.55rem; color: #15803d; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">MI CAMPEÓN</div>
+                <div style="font-family: var(--font-header); font-size: 1.25rem; color: #166534; line-height: 1;">{{ championPickLabel }}</div>
+              </div>
+              <span style="color: #22c55e; font-size: 1.2rem;">✓</span>
             </div>
           </template>
+
+          <!-- STATE 2: OPEN FOR PICKING -->
           <template v-else-if="championPickOpen">
-            <p style="font-size: 0.6rem; color: var(--color-gray); margin-bottom: 0.5rem;">Selecciona tu campeón del mundial.</p>
-            <div style="display: flex; gap: 0.5rem;">
-              <select v-model="championSelected" style="flex: 1; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-family: var(--font-main);">
+            <p style="font-size: 0.65rem; color: var(--color-gray); margin-bottom: 0.75rem; font-family: var(--font-main);">Selecciona el equipo que crees que ganará la copa.</p>
+            <div style="display: flex; gap: 0.5rem; align-items: stretch;">
+              <select v-model="championSelected" style="flex: 1; padding: 0.65rem; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: var(--font-main); font-size: 0.9rem; background: #f8fafc; color: var(--color-dark); cursor: pointer;">
                  <option value="">Seleccionar...</option>
                  <option v-for="c in countries" :key="c.name" :value="c.name">{{ c.name }}</option>
               </select>
-              <button class="btn btn-primary" @click="saveChampionPick" :disabled="!championSelected" style="padding: 0.5rem 1rem; font-size: 0.8rem;">GUARDAR</button>
+              <button class="btn btn-primary" @click="saveChampionPick" :disabled="!championSelected" style="padding: 0 1.25rem; font-family: var(--font-header); font-size: 1rem; border-radius: 8px; letter-spacing: 0.05em;">GUARDAR</button>
             </div>
           </template>
+
+          <!-- STATE 3: COMING SOON -->
+          <template v-else-if="!championDeadlinePassed">
+            <p style="font-size: 0.65rem; color: var(--color-gray); margin-bottom: 0.75rem; font-family: var(--font-main);">La selección del campeón se habilitará pronto según las reglas del admin.</p>
+            <div style="padding: 0.75rem; background: #f1f5f9; border-radius: 8px; text-align: center; color: #64748b; font-size: 0.85rem; font-family: var(--font-header); letter-spacing: 0.05em; opacity: 0.7;">
+              ⏳ PRÓXIMAMENTE
+            </div>
+          </template>
+
+          <!-- STATE 4: CLOSED BY RULES (PAST DEADLINE &amp; NO PICK) -->
           <template v-else>
-            <p style="font-size: 0.6rem; color: var(--color-gray); margin-bottom: 0.5rem;">La selección del campeón se habilitará próximamente.</p>
-            <div style="padding: 0.5rem; background: #f5f5f5; border-radius: 4px; text-align: center; color: var(--color-gray); font-size: 0.85rem;">
-              ⏳ No disponible
+            <p style="font-size: 0.65rem; color: #ef4444; margin-bottom: 0.75rem; font-family: var(--font-main); font-weight: 500;">La fecha límite para el pronóstico del campeón ya pasó.</p>
+            <div style="padding: 0.75rem; background: #fef2f2; border: 1px solid #fee2e2; border-radius: 8px; text-align: center; color: #991b1b; font-size: 0.85rem; font-family: var(--font-header); letter-spacing: 0.05em;">
+              🚫 TE PERDISTE EL PRONÓSTICO DEL CAMPEÓN
             </div>
           </template>
         </div>
@@ -182,7 +202,12 @@ export default {
         
         <div v-for="match in group.matches" :key="match.id" class="card" :class="'card-' + matchState(match)" style="margin-bottom: 0.75rem; position: relative;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <span style="font-size: 0.7rem; color: var(--color-gray);">{{ match.time }}</span>
+            <span class="match-time-badge">🕒 {{ match.time }}</span>
+            <span v-if="predictions[match.id]?.comodin && !predictions[match.id]?.id" style="display:flex;align-items:center;gap:0.25rem;font-size:0.7rem;font-weight:700;color:#d97706;background:#fef3c7;padding:0.1rem 0.4rem;border-radius:4px;">
+              ⭐ COMODÍN
+              <span @click="$emit('toggle-comodin', match.id)" style="cursor:pointer;font-size:0.8rem;color:#92400e;margin-left:2px;" title="Quitar comodín">✕</span>
+            </span>
+            <span v-else-if="predictions[match.id]?.comodin" style="font-size:0.7rem;font-weight:700;color:#166534;background:#dcfce7;padding:0.1rem 0.4rem;border-radius:4px;">⭐ COMODÍN</span>
             <span class="round-badge" :class="'round-' + (match.round || 'group')">{{ roundLabel(match.round) }}</span>
           </div>
 
@@ -194,19 +219,26 @@ export default {
             </div>
 
             <div class="score-box">
-              <input type="number" class="input-score"
-                :value="predictions[match.id]?.home"
-                @input="$emit('set-score', match.id, 'home', $event.target.value)"
-                @focus="$event.target.select()"
-                :disabled="!canPredict(match)"
-                min="0" max="30">
-              <span>-</span>
-              <input type="number" class="input-score"
-                :value="predictions[match.id]?.away"
-                @input="$emit('set-score', match.id, 'away', $event.target.value)"
-                @focus="$event.target.select()"
-                :disabled="!canPredict(match)"
-                min="0" max="30">
+              <template v-if="predictions[match.id]?.id || !canPredict(match)">
+                <span class="input-score" style="line-height: 35px; background: #f1f5f9; cursor: default;">{{ predictions[match.id]?.home ?? '-' }}</span>
+                <span>-</span>
+                <span class="input-score" style="line-height: 35px; background: #f1f5f9; cursor: default;">{{ predictions[match.id]?.away ?? '-' }}</span>
+              </template>
+              <template v-else>
+                <input type="text" class="input-score"
+                  :value="predictions[match.id]?.home"
+                  @input="$emit('set-score', match.id, 'home', $event.target.value)"
+                  @focus="$event.target.select()"
+                  :disabled="!canPredict(match)"
+                  inputmode="numeric">
+                <span>-</span>
+                <input type="text" class="input-score"
+                  :value="predictions[match.id]?.away"
+                  @input="$emit('set-score', match.id, 'away', $event.target.value)"
+                  @focus="$event.target.select()"
+                  :disabled="!canPredict(match)"
+                  inputmode="numeric">
+              </template>
             </div>
 
             <div class="team-info away">
@@ -216,13 +248,10 @@ export default {
             </div>
           </div>
             
-          <div v-if="matchState(match) === 'open'" style="margin-top: 0.5rem; text-align: center;">
-            <button class="comodin-btn" :class="{'comodin-active': predictions[match.id]?.comodin}" @click="$emit('toggle-comodin', match.id)" :disabled="!predictions[match.id]?.comodin && comodinUsado">
-              🍀 {{ predictions[match.id]?.comodin ? 'Comodín Activo' : 'Usar Comodín' }}
+          <div v-if="matchState(match) === 'open' && !predictions[match.id]?.comodin && !comodinUsado" style="margin-top: 0.5rem; text-align: center;">
+            <button class="comodin-btn" @click="$emit('toggle-comodin', match.id)">
+              🍀 Usar Comodín
             </button>
-          </div>
-          <div v-else-if="matchState(match) === 'submitted' && predictions[match.id]?.comodin" style="margin-top: 0.5rem; text-align: center;">
-            <span class="comodin-btn comodin-active" style="cursor: default;">🍀 Comodín Activo</span>
           </div>
 
           <div v-if="match.status === 'finished'" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.06); font-size: 0.75rem;">

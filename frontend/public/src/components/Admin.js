@@ -61,7 +61,7 @@ export default {
         const s = {};
         for (const r of records) s[r.key] = r.value;
         raw = s.allowed_emails;
-      } catch (_) {}
+      } catch (_) { }
     }
     this._loadWhitelist(raw);
   },
@@ -131,17 +131,30 @@ export default {
       </div>
 
       <div class="stats-row">
-        <div class="stat-box" @click="showAddForm = !showAddForm" style="cursor: pointer; background: var(--color-dark); color: white;">
-          <span class="stat-label" style="color: white;">Nuevo Partido</span>
-          <span class="stat-value">➕</span>
+        <div class="stat-box" @click="showAddForm = !showAddForm" style="cursor: pointer; background: var(--color-dark); color: white; border: none;">
+          <div class="stat-icon" style="color: white;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </div>
+          <span class="stat-label" style="color: rgba(255,255,255,0.7);">Nuevo Partido</span>
         </div>
-        <div class="stat-box" @click="$emit('export-csv')" style="cursor: pointer; background: var(--color-green); color: white;">
-          <span class="stat-label" style="color: white;">Exportar Excel</span>
-          <span class="stat-value">📊</span>
+        <div class="stat-box" @click="$emit('export-csv')" style="cursor: pointer; background: var(--color-green); color: white; border: none;">
+          <div class="stat-icon" style="color: white;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <span class="stat-label" style="color: rgba(255,255,255,0.85);">Exportar Excel</span>
         </div>
         <div class="stat-box">
-          <span class="stat-label">Total Partidos</span>
-          <span class="stat-value">{{ matches.length }}</span>
+          <span class="stat-value" style="line-height:1; margin-bottom: 0.2rem;">{{ matches.length }}</span>
+          <span class="stat-label">PARTIDOS</span>
         </div>
       </div>
 
@@ -216,7 +229,7 @@ export default {
            <div style="display: flex; align-items: center; width: 100%;">
               <div class="admin-col-time">
                 <div style="font-size: 0.6rem; opacity: 0.6;">{{ compactDate(match.date) }}</div>
-                <div style="font-size: 0.75rem;">{{ match.time }}</div>
+                <div class="match-time-badge">{{ match.time }}</div>
                 <div style="font-size:0.55rem;opacity:0.5;margin-top:2px;">{{ roundLabel(match.round) }}</div>
               </div>
               <div class="admin-col-team home">
@@ -226,9 +239,9 @@ export default {
               </div>
               
                <div class="admin-col-score">
-                  <input type="number" class="input-score" v-model="match.home_score" @focus="$event.target.select()" min="0" max="30" style="width: 30px; height: 30px; font-size: 0.85rem;">
+                  <input type="text" class="input-score" v-model="match.home_score" @focus="$event.target.select()" inputmode="numeric">
                   <span style="font-size: 0.85rem;">-</span>
-                  <input type="number" class="input-score" v-model="match.away_score" @focus="$event.target.select()" min="0" max="30" style="width: 30px; height: 30px; font-size: 0.85rem;">
+                  <input type="text" class="input-score" v-model="match.away_score" @focus="$event.target.select()" inputmode="numeric">
                </div>
    
               <div class="admin-col-team away">
@@ -252,11 +265,14 @@ export default {
           <span style="font-size: 1.5rem;">🏆</span>
           <div style="flex: 1;">
             <h3 class="form-label" style="font-size: 0.8rem; margin: 0;">PRONÓSTICO DEL CAMPEÓN</h3>
-            <p style="font-size: 0.6rem; color: var(--color-gray);">Forzar apertura/cierre de la selección del campeón.</p>
+            <p style="font-size: 0.6rem; color: var(--color-gray);">Cierre: Dom 28 jun 2026, 15:00.</p>
           </div>
-          <button class="btn" :style="settings.champion_pick_open === 'false' ? 'background: var(--color-gray); color: white;' : 'background: var(--color-green); color: white;'" @click="$emit('save-setting', { key: 'champion_pick_open', value: settings.champion_pick_open === 'false' ? '' : 'false' })" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; min-width: 70px;">
-            {{ settings.champion_pick_open === 'false' ? 'INACTIVO' : 'ACTIVO' }}
-          </button>
+          <div style="text-align: right;">
+            <div :style="{fontSize:'0.55rem', fontWeight:700, textTransform:'uppercase', marginBottom:'0.15rem', color: settings.champion_pick_open === 'false' ? '#ef4444' : '#16a34a'}">{{ settings.champion_pick_open === 'false' ? 'DESHABILITADO' : 'HABILITADO' }}</div>
+            <button @click="$emit('save-setting', { key: 'champion_pick_open', value: settings.champion_pick_open === 'false' ? 'true' : 'false' })" :style="{padding:'0.3rem 0.6rem', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:600, fontSize:'0.7rem', background: settings.champion_pick_open === 'false' ? '#16a34a' : '#ef4444', color:'white'}">
+              {{ settings.champion_pick_open === 'false' ? 'HABILITAR' : 'DESHABILITAR' }}
+            </button>
+          </div>
         </div>
       </div>
       <div class="card">

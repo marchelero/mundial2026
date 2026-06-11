@@ -93,7 +93,9 @@ export async function refreshAuth() {
   const token = localStorage.getItem('token');
   if (!token) return null;
   try {
-    const result = await api.get('/auth/me');
+    // Intentar refrescar el token primero
+    const result = await api.post('/auth/refresh');
+    if (result.token) localStorage.setItem('token', result.token);
     return result.user;
   } catch (_) {
     localStorage.removeItem('token');

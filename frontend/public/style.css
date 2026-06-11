@@ -69,31 +69,40 @@ body {
 /* Tab buttons refinement */
 .tabs-container {
   display: flex;
-  background: #f1f5f9;
-  padding: 4px;
-  border-radius: 8px;
+  background: #eef2f6;
+  padding: 5px;
+  border-radius: 14px;
   margin-bottom: 1.5rem;
-  gap: 4px;
+  gap: 5px;
+  border: 1px solid rgba(0, 0, 0, 0.03);
 }
 
 .tab-btn {
   flex: 1;
-  padding: 0.65rem 0.5rem;
+  padding: 0.8rem 0.4rem;
   border: none;
   background: none;
-  font-family: var(--font-header);
-  font-size: 1rem;
-  color: var(--color-gray);
+  font-family: var(--font-main);
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #64748b;
   cursor: pointer;
-  transition: all 0.2s;
-  border-radius: 6px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 10px;
   text-transform: uppercase;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  letter-spacing: 0.02em;
 }
 
 .tab-btn.active {
   background: var(--color-dark);
   color: white !important;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
+  transform: translateY(-1px);
 }
 
 /* Animations */
@@ -354,6 +363,20 @@ body {
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
+.match-time-badge {
+  font-family: var(--font-header);
+  font-size: 0.95rem;
+  color: var(--color-dark);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(15, 23, 42, 0.05);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  line-height: 1;
+}
+
 .match-time {
   font-size: 0.8rem;
   color: var(--color-gray);
@@ -381,6 +404,7 @@ body {
   font-size: 1.25rem;
   vertical-align: middle;
 }
+
 .team-flag img,
 img.team-flag {
   width: 24px;
@@ -500,14 +524,29 @@ img.team-flag {
 }
 
 .input-score {
-  width: 35px;
-  height: 35px;
+  width: 40px;
+  height: 40px;
   text-align: center;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-weight: bold;
-  font-size: 1rem;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1.1rem;
   background: white;
+  appearance: textfield;
+  -moz-appearance: textfield;
+  transition: all 0.2s;
+}
+
+.input-score:focus {
+  outline: none;
+  border-color: var(--color-green);
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+}
+
+.input-score::-webkit-outer-spin-button,
+.input-score::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 /* Stats PREMIUM (Based on image) */
@@ -765,11 +804,11 @@ img.team-flag {
 }
 
 .admin-col-team {
-  width: 115px;
+  width: 110px;
   flex: none;
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 }
 
 .admin-col-team.home {
@@ -781,12 +820,13 @@ img.team-flag {
 }
 
 .admin-col-score {
-  width: 80px;
+  width: 100px;
   flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 4px;
+  margin: 0 2px;
 }
 
 .admin-col-actions {
@@ -813,6 +853,7 @@ img.team-flag {
   width: 24px;
   text-align: center;
 }
+
 .admin-team-flag img,
 img.admin-team-flag {
   width: 20px;
@@ -836,25 +877,21 @@ img.admin-team-flag {
 .ranking-stat-card {
   flex: 1;
   min-width: 0;
-  /* Allow shrinking below content */
-  background: #f8f6f2;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: white;
+  border: 1.5px solid rgba(0, 0, 0, 0.05);
   border-radius: 12px;
-  padding: 0.4rem;
-  /* Significantly reduced padding */
+  padding: 0.5rem;
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  /* Reduced inner gap */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  gap: 0.4rem;
+  transition: transform 0.2s;
 }
 
 .ranking-stat-icon-box {
-  width: 32px;
-  /* Smaller icon box */
-  height: 32px;
+  width: 34px;
+  height: 34px;
   flex: none;
-  background: white;
+  background: #f8fafc;
   border: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: 8px;
   display: flex;
@@ -864,9 +901,8 @@ img.admin-team-flag {
 }
 
 .ranking-stat-icon-box svg {
-  width: 18px;
-  /* Smaller svg */
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
 
 .ranking-stat-icon-box.dark {
@@ -881,22 +917,25 @@ img.admin-team-flag {
 }
 
 .ranking-stat-label {
-  font-family: var(--font-header);
-  font-size: 0.55rem;
-  /* Smaller labels */
-  color: var(--color-text);
-  line-height: 1;
-  margin-bottom: 0.15rem;
+  font-family: var(--font-main);
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: var(--color-gray);
+  line-height: 1.1;
+  margin-bottom: 0.1rem;
   text-transform: uppercase;
-  white-space: nowrap;
+  white-space: normal;
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
 }
 
 .ranking-stat-value {
   font-family: var(--font-header);
-  font-size: 1.1rem;
-  /* Slightly smaller values */
+  font-size: 1.35rem;
   font-weight: 700;
   color: var(--color-dark);
   line-height: 1;
@@ -929,33 +968,52 @@ img.admin-team-flag {
 .stat-box {
   flex: 1;
   background: white;
-  padding: 0.75rem;
-  border-radius: 10px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 0.85rem 0.5rem;
+  border-radius: 12px;
+  border: 1.5px solid rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  transition: transform 0.1s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s;
+  min-height: 85px;
+  gap: 0.35rem;
 }
 
 .stat-box:active {
   transform: scale(0.96);
 }
 
+.stat-icon {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
 .stat-label {
-  font-family: var(--font-header);
-  font-size: 0.65rem;
+  font-family: var(--font-main);
+  font-size: 0.7rem;
+  font-weight: 700;
   text-transform: uppercase;
   color: var(--color-gray);
-  line-height: 1.2;
+  line-height: 1;
+  letter-spacing: 0.02em;
 }
 
 .stat-value {
   font-family: var(--font-header);
-  font-size: 1.2rem;
+  font-size: 2.2rem;
   color: var(--color-dark);
   font-weight: 700;
+  line-height: 0.8;
 }

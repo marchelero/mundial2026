@@ -53,7 +53,9 @@ createApp({
             @set-score="setScore"
             @toggle-comodin="toggleComodin"
             @submit="submitPredictions"
-            @save-champion-pick="handleSaveChampionPick" />
+            @save-champion-pick="handleSaveChampionPick"
+            @saved="handleChampionSaved"
+            @save-error="handleChampionError" />
             
           <Mypredictions v-else-if="view === 'historial'"
             :match-groups="historyGroups"
@@ -265,15 +267,13 @@ createApp({
         this.notify(e.message || 'Error al eliminar', 'error');
       }
     },
-    async handleSaveChampionPick(champion) {
-      if (!confirm('¿Estás seguro de que "' + champion + '" será el campeón?\n\nATENCIÓN: Solo podrás hacer esto UNA VEZ. No podrás cambiarlo después.')) return;
-      try {
-        await saveChampionPick(champion);
-        await this.loadAllData();
-        this.notify('Campeón registrado correctamente ¡Suerte!', 'success');
-      } catch (e) {
-        this.notify(e.message || 'Error al guardar campeón', 'error');
-      }
+    async handleChampionSaved() {
+      await this.loadAllData();
+      this.notify('Campeón registrado correctamente ¡Suerte!', 'success');
+    },
+    async handleChampionError(msg) {
+      await this.loadAllData();
+      this.notify(msg, 'error');
     },
     async handleSaveSetting({ key, value }) {
       try {
