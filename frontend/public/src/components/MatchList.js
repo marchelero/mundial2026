@@ -54,7 +54,13 @@ export default {
     },
     isMatchPast(match) {
       if (!match.date || !match.time) return false;
-      return new Date(match.date + 'T' + match.time) < new Date();
+      const now = new Date();
+      const nowStr = now.getFullYear() + '-' +
+        String(now.getMonth() + 1).padStart(2, '0') + '-' +
+        String(now.getDate()).padStart(2, '0') + ' ' +
+        String(now.getHours()).padStart(2, '0') + ':' +
+        String(now.getMinutes()).padStart(2, '0');
+      return (match.date + ' ' + match.time) < nowStr;
     },
     matchState(match) {
       if (this.predictions[match.id]?.id) return 'submitted';
@@ -200,9 +206,10 @@ export default {
             <span class="comodin-btn comodin-active" style="cursor: default;">🍀 Comodín Activo</span>
           </div>
 
-          <div v-if="match.status === 'finished' && predictions[match.id]?.id" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.06); font-size: 0.75rem;">
-            <span style="color: var(--color-gray);">Real: {{ match.home_score }} - {{ match.away_score }}</span>
-            <span class="pts-badge" :class="ptsClass(match)">{{ getPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }}</span>
+          <div v-if="match.status === 'finished'" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.06); font-size: 0.75rem;">
+            <span style="color: var(--color-gray);">Resultado: {{ match.home_score }} - {{ match.away_score }}</span>
+            <span v-if="predictions[match.id]?.id" class="pts-badge" :class="ptsClass(match)">{{ getPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }}</span>
+            <span v-else class="pts-badge wrong">0 PTS</span>
           </div>
         </div>
       </div>

@@ -56,7 +56,7 @@ createApp({
             @save-champion-pick="handleSaveChampionPick" />
             
           <Mypredictions v-else-if="view === 'historial'"
-            :match-groups="matchGroups"
+            :match-groups="historyGroups"
             :predictions="predictions"
             :all-matches="allMatches" />
 
@@ -98,6 +98,22 @@ createApp({
         .some(e => e.toLowerCase() === email.toLowerCase());
     },
     matchGroups() { return this._groupMatches(this.allMatches); },
+    historyGroups() {
+      const hasPred = id => this.predictions[id]?.id;
+      const now = new Date();
+      const nowStr = now.getFullYear() + '-' +
+        String(now.getMonth() + 1).padStart(2, '0') + '-' +
+        String(now.getDate()).padStart(2, '0') + ' ' +
+        String(now.getHours()).padStart(2, '0') + ':' +
+        String(now.getMinutes()).padStart(2, '0');
+      const groups = this._groupMatches(this.allMatches.filter(m => {
+        const matchDt = m.date + ' ' + (m.time || '00:00');
+        const isFuture = matchDt >= nowStr;
+        return !(m.status === 'open' && !hasPred(m.id) && isFuture);
+      }));
+      groups.forEach(g => g.matches.sort((a, b) => (b.time || '00:00').localeCompare(a.time || '00:00')));
+      return groups.sort((a, b) => b.date.localeCompare(a.date));
+    },
     comodinUsado() {
       return Object.values(this.predictions).some(p => p.comodin);
     }
@@ -328,6 +344,9 @@ createApp({
       matches.forEach(m => {
         if (!groups[m.date]) groups[m.date] = { date: m.date, matches: [] };
         groups[m.date].matches.push(m);
+      });
+      Object.values(groups).forEach(g => {
+        g.matches.sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
       });
       return Object.values(groups).sort((a, b) => a.date.localeCompare(b.date));
     }

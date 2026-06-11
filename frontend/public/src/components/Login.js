@@ -18,13 +18,7 @@ export default {
 
         <div id="google-signin-btn" style="display: flex; justify-content: center; min-height: 44px;"></div>
 
-        <div v-if="originInfo" style="margin-top:1.2rem;padding:0.8rem;background:#fef3c7;border-radius:8px;font-size:0.8rem;color:#92400e;text-align:left;line-height:1.5">
-          <b>⚠️ Login sin resolver</b><br>
-          Si el botón de Google no funciona, abrí la <b>Consola (F12)</b> y fijate qué dice.<br>
-          El error más común es que en <b>Google Cloud Console</b> falte agregar:<br>
-          <code style="display:inline-block;background:#fff;padding:0.2rem 0.5rem;border-radius:4px;margin:0.3rem 0;font-size:0.85rem">{{ originInfo }}</code><br>
-          en "Authorized JavaScript origins" del Client ID.
-        </div>
+      
 
         <p v-if="authError" class="error-text" style="color: var(--color-red); margin-top: 1rem;">{{ authError }}</p>
       </div>

@@ -1,4 +1,5 @@
-import { flagUrl } from '../utils/helpers.js';
+import { flagUrl, roundLabel } from '../utils/helpers.js';
+import { api } from '../services/api.js';
 
 export default {
   props: ['matches', 'settings', 'isAdmin', 'countries'],
@@ -19,7 +20,11 @@ export default {
       },
       showAddForm: false,
       errors: {},
-      adminTab: 'nuevos'
+      adminTab: 'nuevos',
+      whitelist: [],
+      whitelistInput: '',
+      whitelistSaved: false,
+      whitelistLoaded: false
     };
   },
   computed: {
@@ -40,13 +45,56 @@ export default {
     },
     filteredMatches() {
       const today = new Date().toISOString().split('T')[0];
-      return this.matches.filter(m => {
-        if (this.adminTab === 'nuevos') return m.date >= today;
-        return m.date < today;
-      });
+      return this.matches
+        .filter(m => {
+          if (this.adminTab === 'nuevos') return m.date >= today;
+          return m.date < today;
+        })
+        .sort((a, b) => (b.date + ' ' + (b.time || '00:00')).localeCompare(a.date + ' ' + (a.time || '00:00')));
     }
   },
+  async created() {
+    let raw = this.settings?.allowed_emails;
+    if (!raw) {
+      try {
+        const records = await api.get('/settings');
+        const s = {};
+        for (const r of records) s[r.key] = r.value;
+        raw = s.allowed_emails;
+      } catch (_) {}
+    }
+    this._loadWhitelist(raw);
+  },
   methods: {
+    _loadWhitelist(raw) {
+      if (!raw || raw === '[]') { this.whitelist = []; this.whitelistLoaded = true; return; }
+      try {
+        const parsed = JSON.parse(raw);
+        this.whitelist = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        this.whitelist = raw.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+      }
+      this.whitelistLoaded = true;
+    },
+    addToWhitelist() {
+      const email = this.whitelistInput.trim().toLowerCase();
+      if (!email || !email.includes('@')) return;
+      if (this.whitelist.includes(email)) { this.whitelistInput = ''; return; }
+      this.whitelist.push(email);
+      this.whitelistInput = '';
+      this._saveWhitelist();
+    },
+    removeFromWhitelist(email) {
+      this.whitelist = this.whitelist.filter(e => e !== email);
+      this._saveWhitelist();
+    },
+    _saveWhitelist() {
+      this.whitelistSaved = false;
+      this.$emit('save-setting', { key: 'allowed_emails', value: JSON.stringify(this.whitelist) });
+      this.whitelistSaved = true;
+      setTimeout(() => this.whitelistSaved = false, 3000);
+    },
+    roundLabel(r) { return roundLabel(r); },
     compactDate(dateStr) {
       const parts = dateStr.split('-');
       return parts[2] + '/' + parts[1];
@@ -140,10 +188,21 @@ export default {
                  </div>
                  <span v-if="errors.time" class="field-error">{{ errors.time }}</span>
               </div>
-          </div>
-          <button class="btn btn-primary w-full" :disabled="!isFormValid" @click="submitMatch" style="margin-top: 1rem;">
-            GUARDAR PARTIDO
-          </button>
+              <div class="form-group" style="grid-column:1/-1;">
+                 <label class="form-label">Tipo de partido</label>
+                 <select v-model="newMatch.round" class="form-input" style="padding-left:0.5rem;">
+                   <option value="group">Fase de Grupos</option>
+                   <option value="round_32">32vos de Final</option>
+                   <option value="round_16">16vos de Final</option>
+                   <option value="quarter">Cuartos de Final</option>
+                   <option value="semi">Semifinal</option>
+                   <option value="final">Final</option>
+                 </select>
+              </div>
+           </div>
+           <button class="btn btn-primary w-full" :disabled="!isFormValid" @click="submitMatch" style="margin-top: 1rem;">
+             GUARDAR PARTIDO
+           </button>
         </div>
       </transition>
 
@@ -155,10 +214,11 @@ export default {
         
         <div v-for="match in filteredMatches" :key="match.id" class="admin-match-row" :class="{'admin-match-finished': match.status === 'finished'}" style="flex-direction: column; align-items: stretch;">
            <div style="display: flex; align-items: center; width: 100%;">
-             <div class="admin-col-time">
-               <div style="font-size: 0.6rem; opacity: 0.6;">{{ compactDate(match.date) }}</div>
-               <div style="font-size: 0.75rem;">{{ match.time }}</div>
-             </div>
+              <div class="admin-col-time">
+                <div style="font-size: 0.6rem; opacity: 0.6;">{{ compactDate(match.date) }}</div>
+                <div style="font-size: 0.75rem;">{{ match.time }}</div>
+                <div style="font-size:0.55rem;opacity:0.5;margin-top:2px;">{{ roundLabel(match.round) }}</div>
+              </div>
               <div class="admin-col-team home">
                  <span class="admin-team-name">{{ match.home_team }}</span>
                  <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" class="admin-team-flag">
@@ -201,6 +261,33 @@ export default {
         </div>
       </div>
 -->
+      <div class="card">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem;">
+          <span style="font-size: 1.5rem;">📋</span>
+          <div style="flex: 1;">
+            <h3 class="form-label" style="font-size: 0.8rem; margin: 0;">LISTA DE PERMITIDOS</h3>
+            <p style="font-size: 0.6rem; color: var(--color-gray); margin-top: 0.2rem;">
+              Solo estos correos pueden ingresar. Vacío = todos pueden ingresar.
+            </p>
+          </div>
+        </div>
+
+        <div v-if="whitelist.length === 0" style="padding:0.5rem;background:#f5f5f5;border-radius:4px;text-align:center;font-size:0.75rem;color:var(--color-gray);margin-bottom:0.5rem;">
+          Sin restricciones — cualquier correo puede ingresar
+        </div>
+
+        <div v-for="(email, i) in whitelist" :key="i" style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;border-bottom:1px solid rgba(0,0,0,0.05);font-size:0.85rem;">
+          <span style="flex:1;">✉️ {{ email }}</span>
+          <button @click="removeFromWhitelist(email)" style="background:none;border:none;color:var(--color-red);cursor:pointer;font-size:1rem;padding:0 0.25rem;" title="Eliminar">✕</button>
+        </div>
+
+        <div style="display:flex;gap:0.5rem;margin-top:0.75rem;">
+          <input type="email" v-model="whitelistInput" @keyup.enter="addToWhitelist" placeholder="correo@ejemplo.com" class="form-input" style="flex:1;padding:0.4rem 0.5rem;font-size:0.8rem;">
+          <button class="btn btn-primary" :disabled="!whitelistInput || !whitelistInput.includes('@')" @click="addToWhitelist" style="padding:0.4rem 0.8rem;font-size:0.75rem;">AGREGAR</button>
+        </div>
+        <span v-if="whitelistSaved" style="color:var(--color-green);font-size:0.75rem;margin-top:0.3rem;display:block;">✅ Guardado</span>
+      </div>
+
       <div class="card" style="background: #fffbeb; border: 1px solid #fcd34d;">
         <p style="font-size: 0.75rem; color: #92400e;">
           ⚠️ <strong>ADMIN:</strong> Al guardar un resultado, el partido se marca como "finalizado" y se activará el cálculo de puntos para los usuarios.

@@ -91,8 +91,13 @@ router.post('/', authRequired, (req, res) => {
     if (match.status === 'finished' || match.status === 'closed') {
       return res.status(400).json({ error: 'Partido finalizado o cerrado' });
     }
-    const matchTime = new Date(`${match.date}T${match.time}`);
-    if (new Date() >= new Date(matchTime.getTime() - 60000)) {
+    const now = new Date();
+    const nowStr = now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') + '-' +
+      String(now.getDate()).padStart(2, '0') + ' ' +
+      String(now.getHours()).padStart(2, '0') + ':' +
+      String(now.getMinutes()).padStart(2, '0');
+    if ((match.date + ' ' + match.time) <= nowStr) {
       return res.status(400).json({ error: 'Tiempo expirado' });
     }
     const existing = db.prepare('SELECT * FROM predictions WHERE user_id = ? AND match_id = ?').get(req.user.id, matchId);

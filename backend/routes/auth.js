@@ -25,6 +25,16 @@ router.post('/google', async (req, res) => {
       return res.status(400).json({ error: 'Email no disponible en el token' });
     }
 
+    const allowedSetting = db.prepare("SELECT value FROM settings WHERE key = 'allowed_emails'").get();
+    if (allowedSetting && allowedSetting.value && allowedSetting.value.trim()) {
+      let allowedList = [];
+      const raw = allowedSetting.value.trim();
+      try { allowedList = JSON.parse(raw); } catch (_) { allowedList = raw.split(',').map(e => e.trim().toLowerCase()).filter(Boolean); }
+      if (allowedList.length > 0 && !allowedList.includes(email.toLowerCase())) {
+        return res.status(403).json({ error: 'Acceso no autorizado. Tu correo no está en la lista de permitidos.' });
+      }
+    }
+
     let user = db.prepare('SELECT * FROM users WHERE google_id = ?').get(googleId);
     if (!user) {
       user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);

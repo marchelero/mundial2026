@@ -143,11 +143,11 @@ export default {
                   <span class="team-name">{{ match.away_team }}</span>
                </div>
             </div>
-             <div v-if="match.status === 'finished'" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; font-size: 0.8rem; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 0.5rem;">
-                <span style="color: var(--color-gray);">Real: {{ match.home_score }} - {{ match.away_score }}</span>
-                <span v-if="predictions[match.id]?.id" class="pts-badge" :class="ptsClass(match)">{{ getPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }}</span>
-                <span v-else style="color: var(--color-gray); font-size: 0.7rem;">Sin pronóstico</span>
-             </div>
+              <div v-if="match.status === 'finished'" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; font-size: 0.8rem; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 0.5rem;">
+                 <span style="color: var(--color-gray);">Resultado: {{ match.home_score }} - {{ match.away_score }}</span>
+                 <span v-if="predictions[match.id]?.id" class="pts-badge" :class="ptsClass(match)">{{ getPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }}</span>
+                 <span v-else class="pts-badge wrong">0 PTS</span>
+              </div>
          </div>
       </div>
     </div>
