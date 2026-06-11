@@ -57,7 +57,7 @@ export default {
       } else if (this.activeTab === 'MAÑANA') {
         return this.matchGroups.filter(g => g.date === tomorrow);
       } else {
-        return this.matchGroups.filter(g => g.date >= dayAfter);
+        return this.matchGroups.filter(g => g.date === dayAfter);
       }
     }
   },
@@ -113,9 +113,9 @@ export default {
     },
     saveChampionPick() {
       if (!this.championSelected) return;
+      if (!confirm(`¿Estás seguro de que "${this.championSelected}" será el campeón?\n\n⚠️ Solo podrás hacer esto UNA VEZ. No podrás cambiarlo después.`)) return;
       this.$emit('save-champion-pick', this.championSelected);
-    }
-  },
+    },
   template: `
     <div class="view-container">
       <div class="section-banner">

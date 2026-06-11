@@ -360,6 +360,15 @@ createApp({
     }
   },
   async mounted() {
+    // PWA: capturar el evento antes del login
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      window.__DEFERRED_PROMPT = e;
+    });
+    window.addEventListener('appinstalled', () => {
+      window.__DEFERRED_PROMPT = null;
+    });
+
     window.addEventListener('google-login-success', (e) => {
       this.handleLoginSuccess(e.detail);
     });

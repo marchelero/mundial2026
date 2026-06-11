@@ -2,17 +2,19 @@ export default {
     props: ['user', 'currentView', 'isAdmin', 'notification'],
     emits: ['change-view', 'logout', 'clear-notification'],
     data() {
-        return { deferredPrompt: null, showInstallBtn: false, showMenu: false };
+        return { deferredPrompt: window.__DEFERRED_PROMPT || null, showInstallBtn: !!window.__DEFERRED_PROMPT, showMenu: false };
     },
     mounted() {
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             this.deferredPrompt = e;
             this.showInstallBtn = true;
+            window.__DEFERRED_PROMPT = e;
         });
         window.addEventListener('appinstalled', () => {
             this.showInstallBtn = false;
             this.deferredPrompt = null;
+            window.__DEFERRED_PROMPT = null;
         });
         window.addEventListener('click', (e) => {
             if (!e.target.closest('.user-menu')) this.showMenu = false;
@@ -20,11 +22,15 @@ export default {
     },
     methods: {
         async installApp() {
-            if (!this.deferredPrompt) return;
-            this.deferredPrompt.prompt();
-            const { outcome } = await this.deferredPrompt.userChoice;
-            if (outcome === 'accepted') this.showInstallBtn = false;
-            this.deferredPrompt = null;
+            const prompt = this.deferredPrompt || window.__DEFERRED_PROMPT;
+            if (!prompt) return;
+            prompt.prompt();
+            const { outcome } = await prompt.userChoice;
+            if (outcome === 'accepted') {
+                this.showInstallBtn = false;
+                this.deferredPrompt = null;
+                window.__DEFERRED_PROMPT = null;
+            }
         }
     },
     template: `
@@ -43,13 +49,16 @@ export default {
              <div class="user-menu" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; position: relative;" @click.stop="showMenu = !showMenu">
                <span style="font-size: 0.8rem; font-weight: bold;">{{ user?.name || user?.email?.split('@')[0] }}</span>
                <span style="font-size: 1.2rem;">👤</span>
-               <div v-if="showMenu" style="position: absolute; top: 100%; right: 0; margin-top: 0.5rem; background: white; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; z-index: 200; padding: 0.75rem;">
-                 <div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.15rem;">{{ user?.name || user?.email?.split('@')[0] }}</div>
-                 <div style="font-size: 0.7rem; color: var(--color-gray); margin-bottom: 0.75rem; word-break: break-all;">{{ user?.email }}</div>
-                 <div style="border-top: 1px solid rgba(0,0,0,0.08); padding-top: 0.75rem;">
-                   <button @click="$emit('logout')" style="width: 100%; padding: 0.5rem; border: none; border-radius: 6px; background: #fef2f2; color: var(--color-red); font-weight: 600; cursor: pointer; font-size: 0.8rem;">🚪 CERRAR SESIÓN</button>
-                 </div>
-               </div>
+              <div v-if="showMenu" style="position: absolute; top: 100%; right: 0; margin-top: 0.5rem; background: white; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; z-index: 200; padding: 0.75rem;">
+                <div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.15rem;">{{ user?.name || user?.email?.split('@')[0] }}</div>
+                <div style="font-size: 0.7rem; color: var(--color-gray); margin-bottom: 0.75rem; word-break: break-all;">{{ user?.email }}</div>
+                <div v-if="showInstallBtn" style="border-top: 1px solid rgba(0,0,0,0.08); padding-top: 0.5rem; margin-bottom: 0.5rem;">
+                  <button @click="installApp" style="width: 100%; padding: 0.5rem; border: none; border-radius: 6px; background: #f0fdf4; color: var(--color-green); font-weight: 600; cursor: pointer; font-size: 0.8rem;">📲 INSTALAR APP</button>
+                </div>
+                <div style="border-top: 1px solid rgba(0,0,0,0.08); padding-top: 0.5rem;">
+                  <button @click="$emit('logout')" style="width: 100%; padding: 0.5rem; border: none; border-radius: 6px; background: #fef2f2; color: var(--color-red); font-weight: 600; cursor: pointer; font-size: 0.8rem;">🚪 CERRAR SESIÓN</button>
+                </div>
+              </div>
              </div>
            </div>
         </div>
