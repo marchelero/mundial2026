@@ -18,15 +18,36 @@ router.post('/', authRequired, adminRequired, (req, res) => {
     if (!key || typeof key !== 'string' || key.trim().length === 0) {
       return res.status(400).json({ error: 'Key requerida' });
     }
-    const existing = db.prepare('SELECT * FROM settings WHERE key = ?').get(key.trim());
+    const cleanKey = key.trim();
+    let cleanValue = value ?? '';
+
+    if (cleanKey === 'allowed_emails') {
+      let emails = [];
+      try { emails = JSON.parse(cleanValue); } catch { emails = []; }
+      if (!Array.isArray(emails)) emails = [];
+      emails = emails.map(e => e.trim().toLowerCase()).filter(Boolean);
+      emails = [...new Set(emails)];
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const invalid = emails.filter(e => !emailRegex.test(e));
+      if (invalid.length > 0) {
+        return res.status(400).json({ error: `Emails inválidos: ${invalid.join(', ')}` });
+      }
+      if (emails.length === 0) {
+        return res.status(400).json({ error: 'Debe haber al menos 1 email en la lista de permitidos' });
+      }
+      cleanValue = JSON.stringify(emails);
+    }
+
+    const existing = db.prepare('SELECT * FROM settings WHERE key = ?').get(cleanKey);
     if (existing) {
-      db.prepare('UPDATE settings SET value = ? WHERE key = ?').run(value ?? '', key.trim());
-      return res.json(db.prepare('SELECT * FROM settings WHERE key = ?').get(key.trim()));
+      db.prepare('UPDATE settings SET value = ? WHERE key = ?').run(cleanValue, cleanKey);
+      return res.json(db.prepare('SELECT * FROM settings WHERE key = ?').get(cleanKey));
     }
     const id = generateId();
-    db.prepare('INSERT INTO settings (id, key, value) VALUES (?, ?, ?)').run(id, key.trim(), value ?? '');
-    res.status(201).json(db.prepare('SELECT * FROM settings WHERE key = ?').get(key.trim()));
+    db.prepare('INSERT INTO settings (id, key, value) VALUES (?, ?, ?)').run(id, cleanKey, cleanValue);
+    res.status(201).json(db.prepare('SELECT * FROM settings WHERE key = ?').get(cleanKey));
   } catch (e) {
+    console.error('Error saving setting:', e.message);
     res.status(500).json({ error: 'Error al guardar configuración' });
   }
 });

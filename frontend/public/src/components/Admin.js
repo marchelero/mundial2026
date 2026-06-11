@@ -270,13 +270,13 @@ export default {
           </div>
         </div>
 
-        <div v-if="whitelist.length === 0" style="padding:0.5rem;background:#f5f5f5;border-radius:4px;text-align:center;font-size:0.75rem;color:var(--color-gray);margin-bottom:0.5rem;">
-          Sin restricciones — cualquier correo puede ingresar
+        <div v-if="whitelist.length === 0" style="padding:0.5rem;background:#fef2f2;border:1px solid #fecaca;border-radius:4px;text-align:center;font-size:0.75rem;color:var(--color-red);margin-bottom:0.5rem;">
+          ⚠️ Agrega al menos un email — sin emails configurados, NADIE puede ingresar
         </div>
 
         <div v-for="(email, i) in whitelist" :key="i" style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;border-bottom:1px solid rgba(0,0,0,0.05);font-size:0.85rem;">
           <span style="flex:1;">✉️ {{ email }}</span>
-          <button @click="removeFromWhitelist(email)" style="background:none;border:none;color:var(--color-red);cursor:pointer;font-size:1rem;padding:0 0.25rem;" title="Eliminar">✕</button>
+          <button @click="removeFromWhitelist(email)" :disabled="whitelist.length <= 1" :title="whitelist.length <= 1 ? 'Debe haber al menos 1 email permitido' : 'Eliminar'" style="background:none;border:none;color:var(--color-red);cursor:pointer;font-size:1rem;padding:0 0.25rem;opacity:whitelist.length <= 1 ? 0.4 : 1;">✕</button>
         </div>
 
         <div style="display:flex;gap:0.5rem;margin-top:0.75rem;">
