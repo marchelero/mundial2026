@@ -2,7 +2,7 @@ export default {
     props: ['user', 'currentView', 'isAdmin', 'notification'],
     emits: ['change-view', 'logout', 'clear-notification'],
     data() {
-        return { deferredPrompt: null, showInstallBtn: false };
+        return { deferredPrompt: null, showInstallBtn: false, showMenu: false };
     },
     mounted() {
         window.addEventListener('beforeinstallprompt', (e) => {
@@ -13,6 +13,9 @@ export default {
         window.addEventListener('appinstalled', () => {
             this.showInstallBtn = false;
             this.deferredPrompt = null;
+        });
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('.user-menu')) this.showMenu = false;
         });
     },
     methods: {
@@ -32,14 +35,21 @@ export default {
       </div>
 
       <header class="app-header">
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 1rem; position: relative;">
            <img src="/assets/logo.png" alt="Logo" style="height: 40px;">
            <div style="display: flex; align-items: center; gap: 0.75rem;">
              <button v-if="showInstallBtn" @click="installApp" class="install-btn" title="Instalar app">📲</button>
              <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.2rem 0.5rem; border-radius: 4px; background: var(--color-dark); color: white;">{{ isAdmin ? 'ADMIN' : 'INVITADO' }}</span>
-             <div style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;" @click="$emit('logout')">
+             <div class="user-menu" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; position: relative;" @click.stop="showMenu = !showMenu">
                <span style="font-size: 0.8rem; font-weight: bold;">{{ user?.name || user?.email?.split('@')[0] }}</span>
                <span style="font-size: 1.2rem;">👤</span>
+               <div v-if="showMenu" style="position: absolute; top: 100%; right: 0; margin-top: 0.5rem; background: white; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; z-index: 200; padding: 0.75rem;">
+                 <div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.15rem;">{{ user?.name || user?.email?.split('@')[0] }}</div>
+                 <div style="font-size: 0.7rem; color: var(--color-gray); margin-bottom: 0.75rem; word-break: break-all;">{{ user?.email }}</div>
+                 <div style="border-top: 1px solid rgba(0,0,0,0.08); padding-top: 0.75rem;">
+                   <button @click="$emit('logout')" style="width: 100%; padding: 0.5rem; border: none; border-radius: 6px; background: #fef2f2; color: var(--color-red); font-weight: 600; cursor: pointer; font-size: 0.8rem;">🚪 CERRAR SESIÓN</button>
+                 </div>
+               </div>
              </div>
            </div>
         </div>

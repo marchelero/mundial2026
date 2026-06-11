@@ -210,11 +210,16 @@ createApp({
         const match = finished.find(m => m.id === p.match);
         const pts = calcPoints({ home_score: p.home_score, away_score: p.away_score, comodin: p.comodin }, match);
         pointsMap[uid] = (pointsMap[uid] || 0) + (pts || 0);
-        userMap[uid] = p.expand?.user?.email?.split('@')[0] || uid;
+        userMap[uid] = p.expand?.user || { email: uid, name: uid };
       });
 
       this.rankingsData = Object.entries(pointsMap)
-        .map(([id, pts]) => ({ id, name: userMap[id], points: pts }))
+        .map(([id, pts]) => ({
+          id,
+          name: userMap[id]?.name || userMap[id]?.email?.split('@')[0] || id,
+          email: userMap[id]?.email || '',
+          points: pts
+        }))
         .sort((a, b) => b.points - a.points);
 
       this.rankingsLoading = false;
@@ -275,12 +280,13 @@ createApp({
         const BOM = '\uFEFF';
         const sep = ',';
         let csv = BOM;
-        csv += ['Usuario','Partido','Pronóstico Local','Pronóstico Visitante','Resultado Local','Resultado Visitante','Comodín','Puntos'].join(sep) + '\n';
+        csv += ['Usuario','Nombre','Partido','Pronóstico Local','Pronóstico Visitante','Resultado Local','Resultado Visitante','Comodín','Puntos'].join(sep) + '\n';
 
         records.forEach(r => {
           const m = r.expand?.match;
           const row = [
             r.expand?.user?.email || '?',
+            r.expand?.user?.name || r.expand?.user?.email?.split('@')[0] || '?',
             m ? `${m.home_team} vs ${m.away_team}` : '?',
             r.home_score,
             r.away_score,
@@ -308,11 +314,12 @@ createApp({
         const BOM = '\uFEFF';
         const sep = ',';
         let csv = BOM;
-        csv += ['Usuario','Pronóstico Local','Pronóstico Visitante','Resultado Local','Resultado Visitante','Comodín','Puntos'].join(sep) + '\n';
+        csv += ['Usuario','Nombre','Pronóstico Local','Pronóstico Visitante','Resultado Local','Resultado Visitante','Comodín','Puntos'].join(sep) + '\n';
 
         records.forEach(r => {
           const row = [
-            r.expand?.user?.email?.split('@')[0] || '?',
+            r.expand?.user?.email || '?',
+            r.expand?.user?.name || r.expand?.user?.email?.split('@')[0] || '?',
             r.home_score,
             r.away_score,
             match.home_score ?? '',

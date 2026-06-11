@@ -72,21 +72,23 @@ export default {
         <table style="width: 100%; border-collapse: collapse;">
           <thead style="background: rgba(0,0,0,0.05);">
             <tr>
-              <th style="padding: 0.75rem; text-align: left; font-size: 0.7rem;">#</th>
-              <th style="padding: 0.75rem; text-align: left; font-size: 0.7rem;">PARTICIPANTE</th>
-              <th style="padding: 0.75rem; text-align: right; font-size: 0.7rem;">PUNTOS</th>
+              <th style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">#</th>
+              <th style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">PARTICIPANTE</th>
+              <th style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">CORREO</th>
+              <th style="padding: 0.5rem; text-align: right; font-size: 0.65rem;">PTS</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(r, i) in rankingsData" :key="r.id" style="border-bottom: 1px solid rgba(0,0,0,0.05);">
-              <td style="padding: 0.75rem;">
+              <td style="padding: 0.5rem;">
                 <span v-if="i === 0">🥇</span>
                 <span v-else-if="i === 1">🥈</span>
                 <span v-else-if="i === 2">🥉</span>
-                <span v-else>{{ i + 1 }}</span>
+                <span v-else style="font-size: 0.8rem; color: var(--color-gray); font-weight: 700;">{{ i + 1 }}</span>
               </td>
-              <td style="padding: 0.75rem; font-weight: 600;">{{ r.name }}</td>
-              <td style="padding: 0.75rem; text-align: right; font-weight: bold;">{{ r.points }}</td>
+              <td style="padding: 0.5rem; font-weight: 600; font-size: 0.85rem;">{{ r.name }}</td>
+              <td style="padding: 0.5rem; font-size: 0.7rem; color: var(--color-gray);">{{ r.email }}</td>
+              <td style="padding: 0.5rem; text-align: right; font-weight: bold; font-size: 1rem;">{{ r.points }}</td>
             </tr>
           </tbody>
         </table>

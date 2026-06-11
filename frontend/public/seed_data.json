@@ -1,0 +1,148 @@
+{
+  "groups": [
+    {
+      "name": "A",
+      "teams": ["México", "Sudáfrica", "Corea del Sur", "República Checa"],
+      "matches": [
+        { "date": "2026-06-11", "time": "15:00", "home_team": "México", "away_team": "Sudáfrica" },
+        { "date": "2026-06-11", "time": "22:00", "home_team": "Corea del Sur", "away_team": "República Checa" },
+        { "date": "2026-06-18", "time": "12:00", "home_team": "República Checa", "away_team": "Sudáfrica" },
+        { "date": "2026-06-18", "time": "21:00", "home_team": "México", "away_team": "Corea del Sur" },
+        { "date": "2026-06-24", "time": "21:00", "home_team": "República Checa", "away_team": "México" },
+        { "date": "2026-06-24", "time": "21:00", "home_team": "Sudáfrica", "away_team": "Corea del Sur" }
+      ]
+    },
+    {
+      "name": "B",
+      "teams": ["Canadá", "Bosnia y Herzegovina", "Catar", "Suiza"],
+      "matches": [
+        { "date": "2026-06-12", "time": "15:00", "home_team": "Canadá", "away_team": "Bosnia y Herzegovina" },
+        { "date": "2026-06-13", "time": "15:00", "home_team": "Catar", "away_team": "Suiza" },
+        { "date": "2026-06-18", "time": "15:00", "home_team": "Suiza", "away_team": "Bosnia y Herzegovina" },
+        { "date": "2026-06-18", "time": "18:00", "home_team": "Canadá", "away_team": "Catar" },
+        { "date": "2026-06-24", "time": "15:00", "home_team": "Suiza", "away_team": "Canadá" },
+        { "date": "2026-06-24", "time": "15:00", "home_team": "Bosnia y Herzegovina", "away_team": "Catar" }
+      ]
+    },
+    {
+      "name": "C",
+      "teams": ["Brasil", "Marruecos", "Haití", "Escocia"],
+      "matches": [
+        { "date": "2026-06-13", "time": "18:00", "home_team": "Brasil", "away_team": "Marruecos" },
+        { "date": "2026-06-13", "time": "21:00", "home_team": "Haití", "away_team": "Escocia" },
+        { "date": "2026-06-19", "time": "18:00", "home_team": "Escocia", "away_team": "Marruecos" },
+        { "date": "2026-06-19", "time": "20:30", "home_team": "Brasil", "away_team": "Haití" },
+        { "date": "2026-06-24", "time": "18:00", "home_team": "Escocia", "away_team": "Brasil" },
+        { "date": "2026-06-24", "time": "18:00", "home_team": "Marruecos", "away_team": "Haití" }
+      ]
+    },
+    {
+      "name": "D",
+      "teams": ["Estados Unidos", "Paraguay", "Australia", "Turquía"],
+      "matches": [
+        { "date": "2026-06-12", "time": "21:00", "home_team": "Estados Unidos", "away_team": "Paraguay" },
+        { "date": "2026-06-14", "time": "00:00", "home_team": "Australia", "away_team": "Turquía" },
+        { "date": "2026-06-19", "time": "15:00", "home_team": "Estados Unidos", "away_team": "Australia" },
+        { "date": "2026-06-19", "time": "23:00", "home_team": "Turquía", "away_team": "Paraguay" },
+        { "date": "2026-06-25", "time": "22:00", "home_team": "Turquía", "away_team": "Estados Unidos" },
+        { "date": "2026-06-25", "time": "22:00", "home_team": "Paraguay", "away_team": "Australia" }
+      ]
+    },
+    {
+      "name": "E",
+      "teams": ["Alemania", "Curazao", "Costa de Marfil", "Ecuador"],
+      "matches": [
+        { "date": "2026-06-14", "time": "13:00", "home_team": "Alemania", "away_team": "Curazao" },
+        { "date": "2026-06-14", "time": "19:00", "home_team": "Costa de Marfil", "away_team": "Ecuador" },
+        { "date": "2026-06-20", "time": "16:00", "home_team": "Alemania", "away_team": "Costa de Marfil" },
+        { "date": "2026-06-20", "time": "20:00", "home_team": "Ecuador", "away_team": "Curazao" },
+        { "date": "2026-06-25", "time": "16:00", "home_team": "Curazao", "away_team": "Costa de Marfil" },
+        { "date": "2026-06-25", "time": "16:00", "home_team": "Ecuador", "away_team": "Alemania" }
+      ]
+    },
+    {
+      "name": "F",
+      "teams": ["Países Bajos", "Japón", "Suecia", "Túnez"],
+      "matches": [
+        { "date": "2026-06-14", "time": "16:00", "home_team": "Países Bajos", "away_team": "Japón" },
+        { "date": "2026-06-14", "time": "22:00", "home_team": "Suecia", "away_team": "Túnez" },
+        { "date": "2026-06-20", "time": "13:00", "home_team": "Países Bajos", "away_team": "Suecia" },
+        { "date": "2026-06-21", "time": "00:00", "home_team": "Túnez", "away_team": "Japón" },
+        { "date": "2026-06-25", "time": "19:00", "home_team": "Japón", "away_team": "Suecia" },
+        { "date": "2026-06-25", "time": "19:00", "home_team": "Túnez", "away_team": "Países Bajos" }
+      ]
+    },
+    {
+      "name": "G",
+      "teams": ["Bélgica", "Egipto", "Irán", "Nueva Zelanda"],
+      "matches": [
+        { "date": "2026-06-15", "time": "15:00", "home_team": "Bélgica", "away_team": "Egipto" },
+        { "date": "2026-06-15", "time": "21:00", "home_team": "Irán", "away_team": "Nueva Zelanda" },
+        { "date": "2026-06-21", "time": "15:00", "home_team": "Bélgica", "away_team": "Irán" },
+        { "date": "2026-06-21", "time": "21:00", "home_team": "Nueva Zelanda", "away_team": "Egipto" },
+        { "date": "2026-06-26", "time": "23:00", "home_team": "Egipto", "away_team": "Irán" },
+        { "date": "2026-06-26", "time": "23:00", "home_team": "Nueva Zelanda", "away_team": "Bélgica" }
+      ]
+    },
+    {
+      "name": "H",
+      "teams": ["España", "Cabo Verde", "Arabia Saudita", "Uruguay"],
+      "matches": [
+        { "date": "2026-06-15", "time": "12:00", "home_team": "España", "away_team": "Cabo Verde" },
+        { "date": "2026-06-15", "time": "18:00", "home_team": "Arabia Saudita", "away_team": "Uruguay" },
+        { "date": "2026-06-21", "time": "12:00", "home_team": "España", "away_team": "Arabia Saudita" },
+        { "date": "2026-06-21", "time": "18:00", "home_team": "Uruguay", "away_team": "Cabo Verde" },
+        { "date": "2026-06-26", "time": "20:00", "home_team": "Cabo Verde", "away_team": "Arabia Saudita" },
+        { "date": "2026-06-26", "time": "20:00", "home_team": "Uruguay", "away_team": "España" }
+      ]
+    },
+    {
+      "name": "I",
+      "teams": ["Francia", "Senegal", "Irak", "Noruega"],
+      "matches": [
+        { "date": "2026-06-16", "time": "15:00", "home_team": "Francia", "away_team": "Senegal" },
+        { "date": "2026-06-16", "time": "18:00", "home_team": "Irak", "away_team": "Noruega" },
+        { "date": "2026-06-22", "time": "17:00", "home_team": "Francia", "away_team": "Irak" },
+        { "date": "2026-06-22", "time": "20:00", "home_team": "Noruega", "away_team": "Senegal" },
+        { "date": "2026-06-26", "time": "15:00", "home_team": "Noruega", "away_team": "Francia" },
+        { "date": "2026-06-26", "time": "15:00", "home_team": "Senegal", "away_team": "Irak" }
+      ]
+    },
+    {
+      "name": "J",
+      "teams": ["Argentina", "Argelia", "Austria", "Jordania"],
+      "matches": [
+        { "date": "2026-06-16", "time": "21:00", "home_team": "Argentina", "away_team": "Argelia" },
+        { "date": "2026-06-17", "time": "00:00", "home_team": "Austria", "away_team": "Jordania" },
+        { "date": "2026-06-22", "time": "13:00", "home_team": "Argentina", "away_team": "Austria" },
+        { "date": "2026-06-22", "time": "23:00", "home_team": "Jordania", "away_team": "Argelia" },
+        { "date": "2026-06-27", "time": "22:00", "home_team": "Argelia", "away_team": "Austria" },
+        { "date": "2026-06-27", "time": "22:00", "home_team": "Jordania", "away_team": "Argentina" }
+      ]
+    },
+    {
+      "name": "K",
+      "teams": ["Portugal", "Congo DR", "Uzbekistán", "Colombia"],
+      "matches": [
+        { "date": "2026-06-17", "time": "13:00", "home_team": "Portugal", "away_team": "Congo DR" },
+        { "date": "2026-06-17", "time": "22:00", "home_team": "Uzbekistán", "away_team": "Colombia" },
+        { "date": "2026-06-23", "time": "13:00", "home_team": "Portugal", "away_team": "Uzbekistán" },
+        { "date": "2026-06-23", "time": "22:00", "home_team": "Colombia", "away_team": "Congo DR" },
+        { "date": "2026-06-27", "time": "19:30", "home_team": "Colombia", "away_team": "Portugal" },
+        { "date": "2026-06-27", "time": "19:30", "home_team": "Congo DR", "away_team": "Uzbekistán" }
+      ]
+    },
+    {
+      "name": "L",
+      "teams": ["Inglaterra", "Croacia", "Ghana", "Panamá"],
+      "matches": [
+        { "date": "2026-06-17", "time": "16:00", "home_team": "Inglaterra", "away_team": "Croacia" },
+        { "date": "2026-06-17", "time": "19:00", "home_team": "Ghana", "away_team": "Panamá" },
+        { "date": "2026-06-23", "time": "16:00", "home_team": "Inglaterra", "away_team": "Ghana" },
+        { "date": "2026-06-23", "time": "19:00", "home_team": "Panamá", "away_team": "Croacia" },
+        { "date": "2026-06-27", "time": "17:00", "home_team": "Panamá", "away_team": "Inglaterra" },
+        { "date": "2026-06-27", "time": "17:00", "home_team": "Croacia", "away_team": "Ghana" }
+      ]
+    }
+  ]
+}
