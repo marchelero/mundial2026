@@ -5,18 +5,20 @@ App web para gestionar una **polla (quiniela) del Mundial 2026**. Los usuarios r
 ## Stack
 
 - **Frontend:** Vue 3 (CDN) — SPA sin build step
-- **Backend:** Express.js + SQLite (better-sqlite3)
-- **Auth:** Google OAuth2 (Google Identity Services) + JWT
-- **Seguridad:** Helmet, Rate Limiting, CORS configurado
+- **Backend:** Express.js + SQLite (better-sqlite3) — un solo proceso Node
+- **Auth:** Google OAuth2 (Google Identity Services) + JWT propio
+- **Seguridad:** Helmet, Rate Limiting
 - **Performance:** Compresión gzip, índices en BD
 - **PWA:** Instalable en celular (manifest.json + service worker)
+- **Despliegue target:** cPanel con "Setup Node.js App" (Passenger)
 
 ## Requisitos
 
-- Node.js 18+
+- Node.js 18 o superior
 - cPanel con "Setup Node.js App" habilitado (para producción)
+- Un proyecto de Google Cloud con OAuth Client ID configurado
 
-## Cómo levantar el proyecto
+## Cómo levantar el proyecto (local)
 
 ### 1. Clonar y entrar
 
@@ -31,7 +33,7 @@ cd mundial2026
 npm install
 ```
 
-### 3. Configurar variables de entorno
+### 3. Configurar variables de entorno del backend
 
 ```bash
 cp .env.example .env
@@ -41,12 +43,15 @@ Editar `.env` con tus valores:
 
 ```bash
 PORT=3000
+NODE_ENV=development
 JWT_SECRET=un-string-aleatorio-largo-y-seguro
 GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
 ADMIN_EMAILS=tu@email.com
 ```
 
-### 4. Configurar emails de admin
+> El `JWT_SECRET` lo generás con `node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"`.
+
+### 4. Configurar el frontend
 
 ```bash
 cp public/config.example.js public/config.js
@@ -59,7 +64,7 @@ var ADMIN_EMAILS = ['tu@email.com'];
 var GOOGLE_CLIENT_ID = 'tu-client-id.apps.googleusercontent.com';
 ```
 
-> Solo los usuarios con estos emails ven la solapa **Admin**.
+> El `GOOGLE_CLIENT_ID` tiene que ser **el mismo** que está en `.env`. Solo los usuarios con emails en `ADMIN_EMAILS` ven la solapa **Admin**.
 
 ### 5. Iniciar el servidor
 
@@ -67,20 +72,23 @@ var GOOGLE_CLIENT_ID = 'tu-client-id.apps.googleusercontent.com';
 npm run dev
 ```
 
-Esto inicia el servidor en `http://localhost:3000`.
+Esto inicia el servidor en `http://localhost:3000` con hot-reload.
 
 ### 6. Configurar Google OAuth
 
-En la consola de [Google Cloud Console](https://console.cloud.google.com/apis/credentials):
+En [Google Cloud Console](https://console.cloud.google.com/apis/credentials):
 
-1. Crear proyecto → "Credentials" → "OAuth client ID"
+1. Crear proyecto → "Credentials" → "Create OAuth client ID"
 2. Tipo: **Web application**
-3. Authorized JavaScript origins: `http://localhost:3000` (y tu dominio de producción)
-4. Copiar **Client ID** y pegarlo en `.env` y `public/config.js`
+3. **Authorized JavaScript origins:** agregar las URLs desde donde se va a usar la app, una por línea:
+   - `http://localhost:3000` (desarrollo)
+   - `https://tudominio.com` y/o `https://www.tudominio.com` (producción)
+4. Copiar el **Client ID** y pegarlo en `.env` y `public/config.js`
+5. Guardar y esperar 1-2 minutos para que propague
 
-### 7. Usar la app
+### 7. Probar
 
-Abrir `http://localhost:3000/` e iniciar sesión con Google.
+Abrir `http://localhost:3000/`, hacer clic en el botón de Google, elegir tu cuenta. Debería llevarte a la pantalla principal de la app.
 
 ## Cómo se usa
 
@@ -177,52 +185,77 @@ mundial2026/
 
 ### 1. Subir archivos
 
-Subir todo excepto `node_modules/`, `data/`, `.env`:
+Subir todo al servidor **excepto** `node_modules/`, `data/`, `.env`, `public/config.js`. El `.gitignore` ya excluye estos.
 
-- Por FTP/SCP: `scp -r mundial2026/ usuario@host:/ruta/`
-- O clonar directamente: `git clone <repo> /ruta/mundial2026`
+```bash
+# Opción A: clonar
+git clone <repo> /home/usuario/mundial2026
 
-### 2. Configurar en cPanel
+# Opción B: SCP
+scp -r mundial2026/ usuario@host:/home/usuario/
+```
+
+### 2. Crear la app en cPanel
 
 Ir a **Setup Node.js App** > **Create Application**:
 
 - **Node version:** 18 o superior
 - **Application mode:** Production
-- **Application root:** `/ruta/mundial2026`
-- **Application startup file:** `server.js`
+- **Application root:** `/home/usuario/mundial2026`
 - **Application URL:** tu-dominio.com (o subdominio)
+- **Application startup file:** `server.js`
 
-### 3. Configurar variables
+Anotá el **puerto** que cPanel le asigna (ej: 3000).
 
-Crear `.env` en el root de la app:
+### 3. Configurar variables de entorno
+
+Crear/editar `.env` en el root de la app (NO la subas por git, tiene secretos):
 
 ```bash
-PORT=3000
-JWT_SECRET=genera-un-string-aleatorio-largo
-GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
-ADMIN_EMAILS=admin1@email.com,admin2@email.com
+PORT=<puerto_que_asigno_cpanel>
+NODE_ENV=production
+JWT_SECRET=<string-aleatorio-largo-generado-con-crypto>
+GOOGLE_CLIENT_ID=<tu-client-id>.apps.googleusercontent.com
+ADMIN_EMAILS=tu@email.com
 ```
 
-Copiar `public/config.example.js` a `public/config.js` con los mismos valores.
+También copiá el config del frontend (puede ser el mismo client_id y los mismos emails):
+
+```bash
+cp public/config.example.js public/config.js
+# editar con los mismos valores que en .env
+```
 
 ### 4. Instalar dependencias
 
-En cPanel, seleccionar la app creada y hacer clic en **Run NPM Install**.
-
-O por SSH:
-
+Opción A (SSH):
 ```bash
-cd /ruta/mundial2026
+cd /home/usuario/mundial2026
 npm install --production
 ```
 
+Opción B (cPanel UI): seleccionar la app y clic en **Run NPM Install**.
+
+> Si `better-sqlite3` falla al compilar (módulo nativo), pedile al hosting que active el build toolchain (python, make, g++) o que use un Node con prebuilt binaries disponibles.
+
 ### 5. Reiniciar la app
 
-En cPanel, seleccionar la app y hacer clic en **Restart**.
+En cPanel UI: seleccionar la app > **Restart**.
+
+Por SSH:
+```bash
+touch /home/usuario/mundial2026/tmp/restart.txt
+```
 
 ### 6. Verificar
 
-Abrir `https://tu-dominio.com` y verificar que funciona.
+- Abrir `https://tu-dominio.com` — debería cargar la app
+- Probar el login con Google — si redirige a `accounts.google.com/gsi/transform` y queda en blanco, revisá los **Authorized JavaScript origins** del Client ID en Google Cloud (debe incluir tu dominio EXACTO con https)
+- Probar el admin: entrar con un email que esté en `ADMIN_EMAILS` y verificar que aparezca la solapa Admin
+
+### 7. SSL
+
+El service worker y Google OAuth requieren HTTPS. Activá el certificado SSL de cPanel (Let's Encrypt es gratuito) antes de probar el login.
 
 ## Backups
 
@@ -249,33 +282,77 @@ npm run dev
 # Producción
 npm start
 
-# Ver logs en cPanel
-# Ir a Node.js App > ver logs de la app
+# Test de salud
+npm test
+# → hace curl a /api/health y muestra la respuesta
+
+# Generar un JWT_SECRET seguro
+node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
 ```
 
 ## Características de seguridad
 
-- **Helmet:** Headers HTTP seguros configurados
-- **Rate Limiting:** 
+- **Helmet:** Headers HTTP seguros + CSP estricto
+- **Rate Limiting:**
   - 1000 requests/15min para API general
-  - 20 requests/15min para autenticación
-- **JWT:** Tokens con expiración de 7 días
+  - 20 requests/15min para `/api/auth/*`
+- **JWT:** Tokens con expiración de 7 días, firmados con `JWT_SECRET`
 - **Validación:** Todos los inputs se validan en backend
-- **CORS:** Configurado para permitir solo dominios autorizados
 - **Compresión:** gzip para mejor performance
+- **Archivos sensibles protegidos:** `.htaccess` bloquea acceso a `.env`, `server.js`, `db.js`, `data/`, `node_modules/`
 
-## Notas
+## Estructura del proyecto
 
-- La base de datos SQLite se crea automáticamente al arrancar
-- No requiere configuración manual de tablas
-- Los archivos estáticos se sirven desde `public/`
-- El frontend es una SPA en Vue 3 sin build step
-- Índices en la BD para queries rápidas
-- Manejo robusto de errores en frontend y backend
+```
+mundial2026/
+├── server.js              ← Entry point Express
+├── db.js                  ← SQLite: crea tablas automáticamente
+├── package.json
+├── app.json               ← Metadata para cPanel Passenger
+├── passengerfile.json     ← Configuración Passenger
+├── .env.example
+├── middleware/
+│   └── auth.js            ← JWT: authRequired + adminRequired
+├── routes/
+│   ├── auth.js            ← Google OAuth → JWT
+│   ├── matches.js         ← CRUD partidos
+│   ├── predictions.js     ← CRUD pronósticos + rankings
+│   ├── champion.js        ← Pronóstico campeón
+│   └── settings.js        ← Configuración admin
+├── data/                  ← SQLite DB (se crea sola, gitignored)
+├── public/                ← Frontend estático
+│   ├── .htaccess          ← Apache rules (cPanel)
+│   ├── index.html
+│   ├── config.js          ← Configuración frontend (gitignored)
+│   ├── app.js             ← Vue 3 app principal
+│   ├── style.css
+│   ├── paises.js          ← 48 países clasificados
+│   ├── manifest.json
+│   ├── sw.js              ← Service Worker
+│   └── src/
+│       ├── components/    ← Componentes Vue
+│       ├── services/      ← API client + auth
+│       └── utils/         ← Helpers
+├── deploy.sh              ← Script de despliegue
+└── .env                   ← Variables de entorno (gitignored)
+```
 
 ## Posibles problemas
 
-- **No se ve la solapa Admin** → verificar que el email en `config.js` y `.env` coincidan con el del login
-- **Login de Google no funciona** → verificar que el Client ID sea correcto y que el dominio esté en "Authorized JavaScript origins"
-- **Error 502 en cPanel** → verificar que el puerto en `.env` coincida con el configurado en cPanel
-- **No arranca la app** → revisar logs en cPanel o ejecutar `node server.js` manualmente para ver errores
+- **Login queda en blanco en `accounts.google.com/gsi/transform`**
+  → El Client ID de `public/config.js` no coincide con el de `.env`, o el dominio no está en "Authorized JavaScript origins" de Google Cloud Console.
+
+- **No se ve la solapa Admin**
+  → El email con el que logueás no está en `ADMIN_EMAILS` (en `.env`) ni en `public/config.js`. Comparar case-insensitive.
+
+- **Error 502 en cPanel**
+  → El `PORT` en `.env` no coincide con el puerto que cPanel asignó. O la app no terminó de iniciar (revisar logs).
+
+- **`better-sqlite3` no instala**
+  → El hosting no tiene build tools. Pedir python + make + g++, o usar un Node que tenga prebuilt binaries (Node 18 LTS suele tenerlos).
+
+- **La base de datos se borró tras un deploy**
+  → Asegurate de no subir/eliminar la carpeta `data/`. El `.gitignore` la excluye, pero si re-subís todo el contenido, se borra. Hacer backup antes de cualquier deploy (`cp data/mundial2026.db backup.db`).
+
+- **Error de CORS en consola del navegador**
+  → El frontend usa `window.location.origin` para llamar al backend, así que CORS no debería ser problema si están en el mismo dominio. Si usás subdominios distintos, ajustá el CSP en `server.js`.

@@ -127,7 +127,8 @@ export default {
             <div class="match-row" style="border: none;">
                <div class="team-info home">
                   <span class="team-name">{{ match.home_team }}</span>
-                  <span class="team-flag">{{ match.home_flag }}</span>
+                  <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" class="team-flag">
+                  <span v-else class="team-flag">{{ match.home_flag }}</span>
                </div>
                
                <div class="score-box">
@@ -137,7 +138,8 @@ export default {
                </div>
 
                <div class="team-info away">
-                  <span class="team-flag">{{ match.away_flag }}</span>
+                  <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" class="team-flag">
+                  <span v-else class="team-flag">{{ match.away_flag }}</span>
                   <span class="team-name">{{ match.away_team }}</span>
                </div>
             </div>

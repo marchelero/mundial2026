@@ -41,3 +41,16 @@ export function roundLabel(r) {
         final: 'Final'
     }[r] || r;
 }
+
+export function flagUrl(emojiFlag) {
+    if (!emojiFlag || emojiFlag.length < 2) return '';
+    try {
+        const codes = [...emojiFlag].map(c => {
+            const code = c.codePointAt(0);
+            if (!code || code < 127462) return null;
+            return String.fromCharCode(code - 127397).toLowerCase();
+        }).filter(Boolean).join('');
+        if (codes.length !== 2) return '';
+        return 'https://flagcdn.com/24x18/' + codes + '.png';
+    } catch (_) { return ''; }
+}

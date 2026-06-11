@@ -1,6 +1,21 @@
 node_modules/
 data/
-public/config.js
 .env
 .agents
 skills-lock.json
+
+# Config del frontend (tiene GOOGLE_CLIENT_ID y emails admin)
+frontend/public/config.js
+
+# Residuos de versiones viejas
+pb_data/
+pb_public/
+pb_hooks/
+pb_migrations/
+pocketbase
+pocketbase.exe
+start.sh
+fix-voto-unico.sh
+public/config.js
+app.json
+passengerfile.json

@@ -11,7 +11,7 @@ import {
   saveSetting,
   loadAllRankings
 } from './src/services/game.js';
-import { calcPoints } from './src/utils/helpers.js';
+import { calcPoints, flagUrl } from './src/utils/helpers.js';
 
 import Login from './src/components/Login.js';
 import Layout from './src/components/Layout.js';
@@ -132,10 +132,14 @@ createApp({
       this.allMatches = (await loadMatches()).map(m => {
         const country = this.countries.find(c => c.name === m.home_team);
         const countryAway = this.countries.find(c => c.name === m.away_team);
+        const homeFlag = country?.flag || '🏴';
+        const awayFlag = countryAway?.flag || '🏴';
         return {
           ...m,
-          home_flag: country?.flag || '🏴',
-          away_flag: countryAway?.flag || '🏴'
+          home_flag: homeFlag,
+          home_flag_url: flagUrl(homeFlag),
+          away_flag: awayFlag,
+          away_flag_url: flagUrl(awayFlag),
         };
       });
       const preds = await loadPredictions(this.user.id);
@@ -251,26 +255,28 @@ createApp({
       try {
         const records = await api.get('/predictions/export');
 
-        let csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += "Usuario,Partido,Pronóstico Home,Pronóstico Away,Resultado Real,Puntos\n";
+        const BOM = '\uFEFF';
+        const sep = ',';
+        let csv = BOM;
+        csv += ['Usuario','Partido','Pronóstico Local','Pronóstico Visitante','Resultado Local','Resultado Visitante','Comodín','Puntos'].join(sep) + '\n';
 
         records.forEach(r => {
-          const user = r.expand?.user?.email || 'N/A';
-          const match = r.expand?.match ? `${r.expand.match.home_team} vs ${r.expand.match.away_team}` : 'N/A';
-          const pred = `${r.home_score}-${r.away_score}`;
-          const actual = r.expand?.match ? `${r.expand.match.home_score}-${r.expand.match.away_score}` : 'N/A';
-          const pts = calcPoints({ home_score: r.home_score, away_score: r.away_score, comodin: r.comodin }, r.expand?.match);
-
-          csvContent += `"${user}","${match}","${r.home_score}","${r.away_score}","${actual}","${pts}"\n`;
+          const m = r.expand?.match;
+          const row = [
+            r.expand?.user?.email || '?',
+            m ? `${m.home_team} vs ${m.away_team}` : '?',
+            r.home_score,
+            r.away_score,
+            m?.home_score ?? '',
+            m?.away_score ?? '',
+            r.comodin ? 'Sí' : 'No',
+            calcPoints({ home_score: r.home_score, away_score: r.away_score, comodin: r.comodin }, m) ?? '',
+          ];
+          csv += row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(sep) + '\n';
         });
 
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `predicciones_mundial_${new Date().toISOString().split('T')[0]}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        this._downloadCSV(csv, `predicciones_mundial_${new Date().toISOString().split('T')[0]}.csv`);
+        this.notify(`Exportados ${records.length} pronósticos`, 'success');
       } catch (e) {
         this.notify('Error al exportar: ' + e.message, 'error');
       }
@@ -282,32 +288,40 @@ createApp({
           this.notify('No hay predicciones para este partido.', 'error');
           return;
         }
-        const matchName = `${match.home_team}_vs_${match.away_team}`;
-        const realScore = `${match.home_score}-${match.away_score}`;
-
-        let csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += "Usuario,Pronóstico Local,Pronóstico Visitante,Comodín,Puntos\n";
+        const BOM = '\uFEFF';
+        const sep = ',';
+        let csv = BOM;
+        csv += ['Usuario','Pronóstico Local','Pronóstico Visitante','Resultado Local','Resultado Visitante','Comodín','Puntos'].join(sep) + '\n';
 
         records.forEach(r => {
-          const user = r.expand?.user?.email?.split('@')[0] || 'N/A';
-          const pts = calcPoints({ home_score: r.home_score, away_score: r.away_score, comodin: r.comodin }, match);
-          const comodin = r.comodin ? 'Sí' : 'No';
-
-          csvContent += `"${user}","${r.home_score}","${r.away_score}","${comodin}","${pts}"\n`;
+          const row = [
+            r.expand?.user?.email?.split('@')[0] || '?',
+            r.home_score,
+            r.away_score,
+            match.home_score ?? '',
+            match.away_score ?? '',
+            r.comodin ? 'Sí' : 'No',
+            calcPoints({ home_score: r.home_score, away_score: r.away_score, comodin: r.comodin }, match) ?? '',
+          ];
+          csv += row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(sep) + '\n';
         });
 
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `${matchName}_${realScore}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        this.notify(`Exportado: ${match.home_team} vs ${match.away_team} (${records.length} predicciones)`, 'success');
+        const matchName = `${match.home_team.replace(/\s/g,'_')}_vs_${match.away_team.replace(/\s/g,'_')}`;
+        const realScore = `${match.home_score ?? '?'}-${match.away_score ?? '?'}`;
+        this._downloadCSV(csv, `${matchName}_${realScore}.csv`);
+        this.notify(`Exportado ${records.length} pronósticos de ${match.home_team} vs ${match.away_team}`, 'success');
       } catch (e) {
         this.notify('Error al exportar: ' + e.message, 'error');
       }
+    },
+    _downloadCSV(csv, filename) {
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     },
     _groupMatches(matches) {
       const groups = {};

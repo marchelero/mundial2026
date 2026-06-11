@@ -1,10 +1,9 @@
-const CACHE_NAME = 'mundial2026-v3';
+const CACHE_NAME = 'mundial2026-v4';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/style.css',
   '/app.js',
-  '/config.js',
   '/paises.js',
   '/manifest.json',
   '/icons/icon-192.png',

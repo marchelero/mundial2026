@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
-const dataDir = path.join(__dirname, 'data');
+const dataDir = path.join(__dirname, '..', 'data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
@@ -32,7 +32,6 @@ try {
       name TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-
     CREATE TABLE IF NOT EXISTS matches (
       id TEXT PRIMARY KEY,
       date TEXT NOT NULL,
@@ -44,7 +43,6 @@ try {
       status TEXT NOT NULL DEFAULT 'open',
       round TEXT DEFAULT 'group'
     );
-
     CREATE TABLE IF NOT EXISTS predictions (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -54,28 +52,25 @@ try {
       comodin INTEGER DEFAULT 0,
       UNIQUE(user_id, match_id)
     );
-
     CREATE TABLE IF NOT EXISTS champion_picks (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       champion TEXT NOT NULL,
       UNIQUE(user_id)
     );
-
     CREATE TABLE IF NOT EXISTS settings (
       id TEXT PRIMARY KEY,
       key TEXT UNIQUE NOT NULL,
       value TEXT
     );
-
     CREATE INDEX IF NOT EXISTS idx_predictions_user ON predictions(user_id);
     CREATE INDEX IF NOT EXISTS idx_predictions_match ON predictions(match_id);
     CREATE INDEX IF NOT EXISTS idx_matches_date ON matches(date, time);
     CREATE INDEX IF NOT EXISTS idx_champion_picks_user ON champion_picks(user_id);
   `);
-  console.log('Database initialized successfully');
+  console.log('Database initialized');
 } catch (e) {
-  console.error('Database initialization error:', e.message);
+  console.error('Database error:', e.message);
   process.exit(1);
 }
 

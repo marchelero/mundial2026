@@ -6,7 +6,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js",
+    "dev": "node dev.js",
+    "backend": "node backend/server.js",
+    "frontend": "node frontend/server.js",
     "test": "curl -s http://localhost:3000/api/health"
   },
   "dependencies": {

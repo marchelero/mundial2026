@@ -27,7 +27,7 @@
 }
 
 body {
-  font-family: var(--font-main);
+  font-family: var(--font-main), 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
   background-color: var(--color-white);
   color: var(--color-text);
   line-height: 1.5;
@@ -379,6 +379,14 @@ body {
 
 .team-flag {
   font-size: 1.25rem;
+  vertical-align: middle;
+}
+.team-flag img,
+img.team-flag {
+  width: 24px;
+  height: 18px;
+  vertical-align: middle;
+  border-radius: 2px;
 }
 
 .team-name {
@@ -802,8 +810,15 @@ body {
 .admin-team-flag {
   font-size: 1.1rem;
   flex: none;
-  width: 22px;
+  width: 24px;
   text-align: center;
+}
+.admin-team-flag img,
+img.admin-team-flag {
+  width: 20px;
+  height: 15px;
+  vertical-align: middle;
+  border-radius: 2px;
 }
 
 /* Ranking Stats PREMIUM (Unified) */
