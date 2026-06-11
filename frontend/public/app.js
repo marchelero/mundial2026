@@ -181,20 +181,30 @@ createApp({
     },
     async submitPredictions() {
       this.saving = true;
-      try {
-        for (const [matchId, p] of Object.entries(this.predictions)) {
-          if (!p.id && p.home !== null && p.away !== null) {
+      this.authError = '';
+      const errors = [];
+      let saved = 0;
+      for (const [matchId, p] of Object.entries(this.predictions)) {
+        if (!p.id && p.home !== null && p.away !== null) {
+          try {
             await savePrediction({
               match: matchId,
               home_score: p.home,
               away_score: p.away,
               comodin: !!p.comodin
             });
+            saved++;
+          } catch (e) {
+            errors.push(e.message || 'Error');
           }
         }
-        await this.loadAllData();
-        this.notify('Pronósticos guardados');
-      } catch (e) { console.error(e); this.notify(e.message || 'Error al guardar', 'error'); }
+      }
+      await this.loadAllData();
+      if (errors.length === 0) {
+        this.notify(saved > 0 ? `${saved} pronóstico(s) guardado(s)` : 'No hay pronósticos nuevos para guardar');
+      } else {
+        this.notify(saved > 0 ? `Guardado ${saved}, falló ${errors.length}: ${errors[0]}` : errors[0], 'error');
+      }
       this.saving = false;
     },
     async loadRankings() {
@@ -375,7 +385,9 @@ createApp({
     });
     
     this.user = await refreshAuth();
-    if (this.user) await this.loadAllData();
+    if (this.user) {
+      await this.loadAllData();
+    }
     this.loading = false;
   }
 }).mount('#app');

@@ -89,16 +89,12 @@ router.post('/', authRequired, (req, res) => {
     const match = db.prepare('SELECT * FROM matches WHERE id = ?').get(matchId);
     if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
     if (match.status === 'finished' || match.status === 'closed') {
-      return res.status(400).json({ error: 'Partido finalizado o cerrado' });
+      return res.status(400).json({ error: `"${match.home_team} vs ${match.away_team}" ya finalizó` });
     }
     const now = new Date();
-    const nowStr = now.getFullYear() + '-' +
-      String(now.getMonth() + 1).padStart(2, '0') + '-' +
-      String(now.getDate()).padStart(2, '0') + ' ' +
-      String(now.getHours()).padStart(2, '0') + ':' +
-      String(now.getMinutes()).padStart(2, '0');
-    if ((match.date + ' ' + (match.time || '23:59')) <= nowStr) {
-      return res.status(400).json({ error: 'Tiempo expirado' });
+    const matchDt = new Date(match.date + 'T' + match.time);
+    if (now >= matchDt) {
+      return res.status(400).json({ error: `"${match.home_team} vs ${match.away_team}" — el tiempo para pronosticar expiró` });
     }
     const existing = db.prepare('SELECT * FROM predictions WHERE user_id = ? AND match_id = ?').get(req.user.id, matchId);
     if (existing) return res.status(409).json({ error: 'Ya tienes pronóstico' });
