@@ -119,6 +119,13 @@ function sendWhatsAppPredictions(user, predictions) {
   sendRaw(text);
 }
 
+function sendChampionPick(user, champion, flag) {
+  const name = user.name || user.email?.split('@')[0] || 'Usuario';
+  const email = user.email || '';
+  const text = `🏆 *CAMPEÓN MUNDIAL 2026* 🏆\n\n${flag} *${champion}*\n\n👤 ${name}\n📧 ${email}`;
+  sendRaw(text);
+}
+
 function sendMatchResult(match, homeFlag, awayFlag, pointsSummary) {
   const total = pointsSummary.reduce((s, r) => s + r.count, 0);
 
@@ -148,4 +155,4 @@ function sendMatchResult(match, homeFlag, awayFlag, pointsSummary) {
   sendRaw(text);
 }
 
-module.exports = { sendWhatsAppPredictions, sendMatchResult, flagEmoji };
+module.exports = { sendWhatsAppPredictions, sendChampionPick, sendMatchResult, flagEmoji };

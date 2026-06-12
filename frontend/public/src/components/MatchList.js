@@ -151,6 +151,15 @@ export default {
       if (pts > 0) return 'exact';
       return 'wrong';
     },
+    shareChampion(e) {
+      e.stopPropagation();
+      const name = this.championPickLabel || this.championPick?.champion || '';
+      const flag = this.championPickFlagUrl || '🏆';
+      const user = this.user || {};
+      const msg = `🏆 CAMPEÓN MUNDIAL 2026\n\n${name} 🏆\n\nPronosticado por: ${user.name || ''}\n${user.email || ''}`;
+      const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+      window.open(url, '_blank');
+    },
     async saveChampionPick() {
       if (!this.championSelected) return;
       this.championConfirmData = this.championSelected;

@@ -1,11 +1,54 @@
+import { api } from '../services/api.js';
+
 export default {
   props: ['rankingsData', 'rankingsLoading', 'allMatches'],
+  data() {
+    return { expandedUser: null, userBreakdown: null };
+  },
   computed: {
     totalMatches() {
       return this.allMatches.length;
     },
     playedMatches() {
       return this.allMatches.filter(m => m.status === 'finished').length;
+    }
+  },
+  methods: {
+    async toggleUser(userId) {
+      if (this.expandedUser === userId) {
+        this.expandedUser = null;
+        this.userBreakdown = null;
+        return;
+      }
+      try {
+        const records = await api.get('/predictions/rankings');
+        const userPreds = records.filter(r => r.user === userId);
+        let exactos = 0, resultados = 0, errors = 0, comodines = 0;
+        const matches = this.allMatches.filter(m => m.status === 'finished');
+        userPreds.forEach(p => {
+          const match = matches.find(m => m.id === p.match);
+          if (p.comodin) comodines++;
+          if (!match || match.home_score == null) return;
+          const ph = Number(p.home_score), pa = Number(p.away_score);
+          const mh = Number(match.home_score), ma = Number(match.away_score);
+          if (ph === mh && pa === ma) exactos++;
+          else {
+            const pd = ph - pa;
+            const rd = mh - ma;
+            if ((pd === rd && rd === 0) || (pd > 0 && rd > 0) || (pd < 0 && rd < 0)) resultados++;
+            else errors++;
+          }
+        });
+        // Champion bonus
+        const champPicks = await api.get('/champion-picks/all').catch(() => []);
+        const champPick = champPicks.find(cp => cp.user === userId);
+        const champBonus = champPick ? 5 : 0;
+        this.userBreakdown = { exactos, resultados, errors, comodines, champBonus };
+        this.expandedUser = userId;
+      } catch (_) {
+        this.userBreakdown = null;
+        this.expandedUser = userId;
+      }
     }
   },
   template: `
@@ -20,7 +63,6 @@ export default {
 
       <!-- Stats Grid -->
       <div class="ranking-stats-grid">
-        <!-- Participantes -->
         <div class="ranking-stat-card">
           <div class="ranking-stat-icon-box dark">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 24px; height: 24px;">
@@ -33,7 +75,6 @@ export default {
           </div>
         </div>
 
-        <!-- Partidos -->
         <div class="ranking-stat-card">
           <div class="ranking-stat-icon-box">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 24px; height: 24px;">
@@ -46,7 +87,6 @@ export default {
           </div>
         </div>
 
-        <!-- Jugados -->
         <div class="ranking-stat-card">
           <div class="ranking-stat-icon-box">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 24px; height: 24px;">
@@ -60,7 +100,6 @@ export default {
         </div>
       </div>
 
-      <!-- Info Message -->
       <div class="ranking-info-msg">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="ranking-info-icon-svg">
           <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836c-.149.598.019 1.452.385 1.266 1.144-.573 2.438.463 2.127 1.706l-.71 2.836c-.147.59-.011 1.45.387 1.252a1.125 1.125 0 1 0-1.006-2.012l.709-2.836c.149-.598-.019-1.452-.385-1.266-1.144.573-2.438-.463-2.127-1.706l.71-2.836c.147-.59.011-1.45-.387-1.252a1.125 1.125 0 0 0 1.006 2.012ZM12 9a1.125 1.125 0 1 0 0-2.25 1.125 1.125 0 0 0 0 2.25Z" clip-rule="evenodd" />
@@ -79,7 +118,8 @@ export default {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(r, i) in rankingsData" :key="r.id" style="border-bottom: 1px solid rgba(0,0,0,0.05);">
+            <template v-for="(r, i) in rankingsData || []" :key="r ? r.id : i">
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.05); cursor:pointer;" @click="r && toggleUser(r.id)">
               <td style="padding: 0.5rem;">
                 <span v-if="i === 0">🥇</span>
                 <span v-else-if="i === 1">🥈</span>
@@ -90,6 +130,23 @@ export default {
               <td style="padding: 0.5rem; font-size: 0.7rem; color: var(--color-gray);">{{ r.email }}</td>
               <td style="padding: 0.5rem; text-align: right; font-weight: bold; font-size: 1rem; white-space: nowrap;">{{ r.points }}<span v-if="r.potential_points > 0" class="pts-potential-rank">+{{ r.potential_points }}</span></td>
             </tr>
+            <tr v-if="r && expandedUser === r.id">
+              <td colspan="4" style="padding: 0.25rem 0.5rem 0.5rem;">
+                <template v-if="userBreakdown">
+                <div style="display:flex;gap:0.4rem;flex-wrap:wrap;font-size:0.6rem;justify-content:flex-end;">
+                  <span style="background:#f0fdf4;color:#16a34a;border:1px solid #dcfce7;padding:0.15rem 0.4rem;border-radius:4px;font-weight:700;">{{ userBreakdown.exactos }}× Exacto (+3)</span>
+                  <span style="background:#fefce8;color:#ca8a04;border:1px solid #fef3c7;padding:0.15rem 0.4rem;border-radius:4px;font-weight:700;">{{ userBreakdown.resultados }}× Resultado (+1)</span>
+                  <span style="background:#fef2f2;color:#ef4444;border:1px solid #fee2e2;padding:0.15rem 0.4rem;border-radius:4px;font-weight:700;">{{ userBreakdown.errors }}× Error (+0)</span>
+                  <span v-if="userBreakdown.comodines > 0" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:0.15rem 0.4rem;border-radius:4px;font-weight:700;">🍀 {{ userBreakdown.comodines }}× Comodín</span>
+                  <span v-if="userBreakdown.champBonus > 0" style="background:#fff7ed;color:#d97706;border:1px solid #ffedd5;padding:0.15rem 0.4rem;border-radius:4px;font-weight:700;">🏆 Campeón +{{ userBreakdown.champBonus }}</span>
+                </div>
+                </template>
+                <div v-else style="font-size:0.6rem;color:var(--color-gray);text-align:center;padding:0.25rem;">
+                  ⏳ Cargando detalle...
+                </div>
+              </td>
+            </tr>
+            </template>
           </tbody>
         </table>
       </div>

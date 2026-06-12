@@ -2,6 +2,7 @@ const express = require('express');
 const { db, generateId } = require('../db');
 const { authRequired, adminRequired } = require('../middleware/auth');
 const { nowStr } = require('../utils/datetime');
+const { sendChampionPick, flagEmoji } = require('../services/whatsapp');
 
 const router = express.Router();
 
@@ -95,10 +96,15 @@ router.post('/', authRequired, (req, res) => {
     if (existing) {
       db.prepare('UPDATE champion_picks SET champion = ? WHERE user_id = ?').run(champion.trim(), req.user.id);
       const updated = db.prepare('SELECT * FROM champion_picks WHERE user_id = ?').get(req.user.id);
+      // Notificar solo si cambió el campeón
+      if (existing.champion !== champion.trim()) {
+        sendChampionPick(req.user, champion.trim(), flagEmoji(champion.trim()));
+      }
       return res.json({ id: updated.id, champion: updated.champion, points: updated.points ?? null });
     }
     const id = generateId();
     db.prepare('INSERT INTO champion_picks (id, user_id, champion) VALUES (?, ?, ?)').run(id, req.user.id, champion.trim());
+    sendChampionPick(req.user, champion.trim(), flagEmoji(champion.trim()));
     res.status(201).json({ id, champion: champion.trim(), points: null });
   } catch (e) {
     console.error('Error saving champion pick:', e.message);
