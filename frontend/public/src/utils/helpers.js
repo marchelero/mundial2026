@@ -1,6 +1,38 @@
+const APP_TZ = 'America/La_Paz';
+
+function partsInTZ(date = new Date()) {
+    const fmt = new Intl.DateTimeFormat('en-CA', {
+        timeZone: APP_TZ,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false
+    });
+    const p = Object.fromEntries(fmt.formatToParts(date).map(x => [x.type, x.value]));
+    return {
+        y: p.year, m: p.month, d: p.day,
+        hh: p.hour === '24' ? '00' : p.hour,
+        mm: p.minute, ss: p.second
+    };
+}
+
 export function todayStr() {
-    const d = new Date();
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const p = partsInTZ();
+    return p.y + '-' + p.m + '-' + p.d;
+}
+
+export function addDaysStr(days) {
+    const p = partsInTZ();
+    const base = new Date(Date.UTC(+p.y, +p.m - 1, +p.d, 12, 0, 0));
+    base.setUTCDate(base.getUTCDate() + days);
+    const yy = base.getUTCFullYear();
+    const mm = String(base.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(base.getUTCDate()).padStart(2, '0');
+    return yy + '-' + mm + '-' + dd;
+}
+
+export function nowStr() {
+    const p = partsInTZ();
+    return p.y + '-' + p.m + '-' + p.d + ' ' + p.hh + ':' + p.mm;
 }
 
 export function parseDateTime(dateStr, timeStr) {

@@ -1,6 +1,7 @@
 const express = require('express');
 const { db, generateId } = require('../db');
 const { authRequired } = require('../middleware/auth');
+const { nowStr } = require('../utils/datetime');
 
 const router = express.Router();
 
@@ -39,9 +40,9 @@ router.post('/', authRequired, (req, res) => {
       return res.status(403).json({ error: 'El pronóstico del campeón está deshabilitado por el administrador' });
     }
 
-    // Validar fecha límite (Dom 28 jun 2026 15:00 Bolivia)
-    const now = new Date();
-    const deadline = new Date('2026-06-28T15:00:00');
+    // Validar fecha límite (Dom 28 jun 2026 15:00 hora Bolivia / America/La_Paz)
+    const now = nowStr();
+    const deadline = '2026-06-28 15:00';
     if (now >= deadline) {
       return res.status(400).json({ error: 'La fecha límite para el pronóstico del campeón ya pasó' });
     }

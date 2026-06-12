@@ -1,4 +1,4 @@
-import { roundLabel, formatDate, calcPoints, flagUrl } from '../utils/helpers.js';
+import { roundLabel, formatDate, calcPoints, flagUrl, todayStr as todayStrLocal, addDaysStr as addDaysStrLocal, nowStr } from '../utils/helpers.js';
 import { api } from '../services/api.js';
 
 export default {
@@ -15,8 +15,8 @@ export default {
   computed: {
     championDeadlinePassed() {
       const now = new Date();
-      // Domingo 28 de junio de 2026 15:00 hora Bolivia
-      const deadline = new Date('2026-06-28T15:00:00');
+      // Domingo 28 de junio de 2026 15:00 hora Bolivia (America/La_Paz)
+      const deadline = new Date('2026-06-28T15:00:00-04:00');
       return now >= deadline;
     },
     championPickOpen() {
@@ -38,13 +38,13 @@ export default {
       return c ? flagUrl(c.flag) : '';
     },
     todayStr() {
-      return new Date().toISOString().split('T')[0];
+      return todayStrLocal();
     },
     tomorrowStr() {
-      return new Date(new Date().getTime() + 86400000).toISOString().split('T')[0];
+      return addDaysStrLocal(1);
     },
     dayAfterTomorrowStr() {
-      return new Date(new Date().getTime() + 172800000).toISOString().split('T')[0];
+      return addDaysStrLocal(2);
     },
     filteredGroups() {
       const today = this.todayStr;
@@ -70,13 +70,7 @@ export default {
     },
     isMatchPast(match) {
       if (!match.date || !match.time) return false;
-      const now = new Date();
-      const nowStr = now.getFullYear() + '-' +
-        String(now.getMonth() + 1).padStart(2, '0') + '-' +
-        String(now.getDate()).padStart(2, '0') + ' ' +
-        String(now.getHours()).padStart(2, '0') + ':' +
-        String(now.getMinutes()).padStart(2, '0');
-      return (match.date + ' ' + match.time) < nowStr;
+      return (match.date + ' ' + match.time) < nowStr();
     },
     matchState(match) {
       if (this.predictions[match.id]?.id) return 'submitted';

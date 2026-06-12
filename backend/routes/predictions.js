@@ -1,6 +1,7 @@
 const express = require('express');
 const { db, generateId } = require('../db');
 const { authRequired, adminRequired } = require('../middleware/auth');
+const { nowStr } = require('../utils/datetime');
 
 const router = express.Router();
 
@@ -91,8 +92,8 @@ router.post('/', authRequired, (req, res) => {
     if (match.status === 'finished' || match.status === 'closed') {
       return res.status(400).json({ error: `"${match.home_team} vs ${match.away_team}" ya finalizó` });
     }
-    const now = new Date();
-    const matchDt = new Date(match.date + 'T' + match.time);
+    const now = nowStr();
+    const matchDt = match.date + ' ' + match.time;
     if (now >= matchDt) {
       return res.status(400).json({ error: `"${match.home_team} vs ${match.away_team}" — el tiempo para pronosticar expiró` });
     }
