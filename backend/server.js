@@ -36,6 +36,7 @@ app.use('/api/predictions', require('../backend/routes/predictions'));
 app.use('/api/champion-picks', require('../backend/routes/champion'));
 app.use('/api/settings', require('../backend/routes/settings'));
 app.use('/api/users', require('../backend/routes/users'));
+app.use('/api/groups', require('../backend/routes/groups'));
 
 const { nowStr, partsInTZ } = require('./utils/datetime');
 

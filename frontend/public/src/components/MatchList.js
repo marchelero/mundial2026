@@ -11,8 +11,15 @@ export default {
       showConfirmModal: false,
       pendingMatches: [],
       showChampionModal: false,
-      championConfirmData: null
+      championConfirmData: null,
+      groups: [],
+      groupsLoading: true,
+      showGroupsPanel: false,
+      expandedGroup: null
     };
+  },
+  async mounted() {
+    await this.loadGroups();
   },
   computed: {
     championDeadlinePassed() {
@@ -43,6 +50,10 @@ export default {
       if (!this.championConfirmData) return '';
       const c = this.countries.find(x => x.name === this.championConfirmData);
       return c ? flagUrl(c.flag) : '';
+    },
+    selectedGroup() {
+      if (!this.expandedGroup || !this.groups.length) return null;
+      return this.groups.find(g => g.group === this.expandedGroup) || null;
     },
     todayStr() {
       return todayStrLocal();
@@ -174,6 +185,20 @@ export default {
       this.showConfirmModal = false;
       this.pendingMatches = [];
     },
+    async loadGroups() {
+      try {
+        this.groups = await api.get('/groups/standings');
+        if (this.groups.length > 0) this.expandedGroup = this.groups[0].group;
+      } catch (_) { this.groups = []; }
+      this.groupsLoading = false;
+    },
+    teamFlag(name) {
+      const c = this.countries.find(x => x.name === name);
+      return c ? flagUrl(c.flag) : '';
+    },
+    toggleGroup(label) {
+      this.expandedGroup = this.expandedGroup === label ? null : label;
+    },
   },
   template: `
     <div class="view-container">
@@ -229,6 +254,66 @@ export default {
             <p style="font-size: 0.65rem; color: #ef4444; margin-bottom: 0.75rem; font-family: var(--font-main); font-weight: 500;">La fecha límite para el pronóstico del campeón ya pasó.</p>
             <div style="padding: 0.75rem; background: #fef2f2; border: 1px solid #fee2e2; border-radius: 8px; text-align: center; color: #991b1b; font-size: 0.85rem; font-family: var(--font-header); letter-spacing: 0.05em;">
               🚫 TE PERDISTE EL PRONÓSTICO DEL CAMPEÓN
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Group Standings -->
+      <div class="card" style="padding: 0.75rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" @click="showGroupsPanel = !showGroupsPanel; if(showGroupsPanel && groups.length) expandedGroup = groups[0].group">
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <span style="font-size:1.2rem;">#</span>
+            <span style="font-weight:700;font-size:0.85rem;">TABLA DE GRUPOS</span>
+          </div>
+          <span style="font-size:0.85rem;color:var(--color-gray);transition:transform 0.2s;" :style="{transform: showGroupsPanel ? 'rotate(180deg)' : ''}">▼</span>
+        </div>
+        <div v-if="showGroupsPanel" style="margin-top:0.75rem;">
+          <div v-if="groupsLoading" style="text-align:center;padding:0.5rem;font-size:0.75rem;color:var(--color-gray);">Cargando grupos...</div>
+          <div v-else-if="groups.length === 0" style="text-align:center;padding:0.5rem;font-size:0.75rem;color:var(--color-gray);">No hay datos de grupos</div>
+          <template v-else>
+            <!-- Carousel de grupos -->
+            <div style="display:flex;gap:0.4rem;overflow-x:auto;padding-bottom:0.5rem;margin-bottom:0.75rem;scrollbar-width:thin;-webkit-overflow-scrolling:touch;">
+              <button v-for="g in groups" :key="g.group" @click="expandedGroup = g.group"
+                :style="{flex:'0 0 auto', padding:'0.35rem 0.7rem', border:'1.5px solid', borderRadius:'8px', cursor:'pointer', fontWeight: expandedGroup === g.group ? 800 : 600, fontSize:'0.75rem', background: expandedGroup === g.group ? 'var(--color-dark)' : 'white', color: expandedGroup === g.group ? 'white' : 'var(--color-dark)', borderColor: expandedGroup === g.group ? 'var(--color-dark)' : '#d1d5db', transition:'all 0.15s'}">
+                GRUPO {{ g.group }}
+              </button>
+            </div>
+            <!-- Tabla del grupo seleccionado -->
+            <div v-if="expandedGroup && selectedGroup" style="border:1px solid rgba(0,0,0,0.06);border-radius:8px;overflow:hidden;">
+              <div style="padding:0.4rem 0.6rem;background:var(--color-dark);color:white;font-size:0.75rem;font-weight:700;">GRUPO {{ selectedGroup.group }}</div>
+              <div style="padding:0.4rem;">
+                <table style="width:100%;border-collapse:collapse;font-size:0.65rem;">
+                  <thead>
+                    <tr style="border-bottom:1px solid rgba(0,0,0,0.06);">
+                      <th style="padding:0.25rem 0.3rem;text-align:left;color:var(--color-gray);width:24px;">#</th>
+                      <th style="padding:0.25rem 0.3rem;text-align:left;color:var(--color-gray);">EQUIPO</th>
+                      <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PJ</th>
+                      <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PG</th>
+                      <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PE</th>
+                      <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PP</th>
+                      <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">GF</th>
+                      <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">GC</th>
+                      <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);font-weight:800;">Pts</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(t, i) in selectedGroup.teams" :key="t.name" :style="{background: i < 2 ? 'rgba(22,163,74,0.04)' : '', fontWeight: i < 2 ? 700 : 400, borderBottom: '1px solid rgba(0,0,0,0.03)'}">
+                      <td style="padding:0.3rem 0.3rem;text-align:left;">{{ i + 1 }}</td>
+                      <td style="padding:0.3rem 0.3rem;text-align:left;white-space:nowrap;">
+                        <img v-if="teamFlag(t.name)" :src="teamFlag(t.name)" alt="" style="width:20px;height:14px;border-radius:2px;vertical-align:middle;margin-right:0.25rem;">
+                        {{ t.name }}</td>
+                      <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pj }}</td>
+                      <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pg }}</td>
+                      <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pe }}</td>
+                      <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pp }}</td>
+                      <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.gf }}</td>
+                      <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.gc }}</td>
+                      <td style="padding:0.3rem 0.3rem;text-align:center;font-weight:800;color:var(--color-dark);">{{ t.pts }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </template>
         </div>

@@ -1374,3 +1374,19 @@ img.admin-team-flag {
     max-width: 1280px;
   }
 }
+
+/* Group standings table responsive */
+@media (max-width: 767px) {
+  .group-standings-table th,
+  .group-standings-table td {
+    font-size: 0.6rem;
+    padding: 0.2rem 0.2rem;
+  }
+  .group-standings-table td:nth-child(2) {
+    font-size: 0.6rem;
+    max-width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
