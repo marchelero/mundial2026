@@ -132,27 +132,26 @@ function sendMatchResult(match, homeFlag, awayFlag, pointsSummary) {
   let summary = '';
   const groups = {};
   for (const r of pointsSummary) {
-    const label = r.points === 6 ? '⭐ EXACTO + COMODÍN' :
-      r.points === 3 ? '✅ EXACTO' :
-        r.points === 2 ? '🍀 RESULTADO + COMODÍN' :
-          r.points === 1 ? '📌 RESULTADO' :
-            '❌ SIN PUNTOS';
-    groups[r.points] = { label, count: r.count };
+    groups[r.points] = r.count;
   }
 
   for (const pts of [6, 3, 2, 1, 0]) {
-    const g = groups[pts];
-    if (g && g.count > 0) {
-      summary += `• ${g.label}: ${g.count} persona(s)\n`;
+    if (groups[pts] && groups[pts] > 0) {
+      summary += `+${pts} puntos: ${groups[pts]} persona(s)\n`;
     }
   }
 
-  const text = `🏁 *RESUMEN DEL PARTIDO* 🏁\n` +
+  const text = `🏁 RESUMEN DEL PARTIDO 🏁\n` +
     `${homeFlag} ${match.home_team} ${match.home_score} - ${match.away_score} ${match.away_team} ${awayFlag}\n` +
-    `*Resumen de puntos:*\n${summary}\n` +
+    `Resumen de puntos:\n${summary}\n` +
     `👥 Total: ${total} pronóstico(s)`;
 
   sendRaw(text);
 }
 
-module.exports = { sendWhatsAppPredictions, sendChampionPick, sendMatchResult, flagEmoji };
+function sendChampionAward(winner, flag) {
+  const text = `🏆 *CAMPEÓN MUNDIAL 2026* 🏆\n\n${flag} *${winner}*\n\nSe ha definido el campeón mundial. Revisá la app para más detalles.`;
+  sendRaw(text);
+}
+
+module.exports = { sendWhatsAppPredictions, sendChampionPick, sendMatchResult, sendChampionAward, flagEmoji };

@@ -103,7 +103,7 @@ export default {
     },
     hasUnsavedPredictions() {
       return this.filteredGroups.some(g =>
-        g.matches.some(m => this.canPredict(m) && !this.predictions[m.id]?.id)
+        g.matches.some(m => this.canPredict(m) && !this.predictions[m.id]?.id && this.predictions[m.id]?.home != null && this.predictions[m.id]?.away != null)
       );
     },
     getPoints(match) {
@@ -238,6 +238,12 @@ export default {
     },
     toggleGroup(label) {
       this.expandedGroup = this.expandedGroup === label ? null : label;
+    },
+    onlyDigits(e) {
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      const key = e.key;
+      if (key === 'Backspace' || key === 'Delete' || key === 'Tab' || key === 'ArrowLeft' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowDown' || key === 'Home' || key === 'End') return;
+      if (!/^\d$/.test(key)) e.preventDefault();
     },
   },
   template: `
@@ -419,6 +425,7 @@ export default {
                   :value="predictions[match.id]?.home"
                   @input="$emit('set-score', match.id, 'home', $event.target.value)"
                   @focus="$event.target.select()"
+                  @keypress="onlyDigits" @paste.prevent
                   :disabled="!canPredict(match)"
                   inputmode="numeric">
                 <span>-</span>
@@ -426,6 +433,7 @@ export default {
                   :value="predictions[match.id]?.away"
                   @input="$emit('set-score', match.id, 'away', $event.target.value)"
                   @focus="$event.target.select()"
+                  @keypress="onlyDigits" @paste.prevent
                   :disabled="!canPredict(match)"
                   inputmode="numeric">
               </template>
@@ -534,7 +542,13 @@ export default {
                 <span v-else style="font-size:1.3rem;flex-shrink:0;">{{ m.away_flag }}</span>
                 <span style="font-weight:700;font-size:0.82rem;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ m.away_team }}</span>
               </div>
+              <div v-if="predictions[m.id]?.comodin" style="grid-column:1/-1;text-align:center;font-size:0.7rem;font-weight:700;color:#d97706;background:#fef3c7;padding:0.15rem 0.4rem;border-radius:4px;">
+                ⭐ COMODÍN ACTIVO
+              </div>
             </div>
+          </div>
+          <div v-if="pendingMatches.some(m => predictions[m.id]?.comodin)" style="text-align:center;font-size:0.75rem;color:#92400e;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:0.5rem;margin-bottom:0.75rem;">
+            ⚠️ El comodín solo se podrá utilizar <strong>una vez</strong> en todo el torneo.
           </div>
           <div style="display:flex;gap:0.6rem;">
             <button @click="closeModal" style="flex:1;padding:0.75rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CANCELAR</button>

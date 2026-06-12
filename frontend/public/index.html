@@ -29,7 +29,10 @@
 
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js');
+      navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(reg => {
+        reg.update();
+        setInterval(() => reg.update(), 1000 * 60 * 30);
+      });
     }
   </script>
 </body>

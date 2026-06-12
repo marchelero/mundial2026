@@ -72,7 +72,7 @@ self.addEventListener('fetch', event => {
           return caches.match('/index.html');
         }
       });
-    }
+    })
   );
 });
 
@@ -85,13 +85,28 @@ self.addEventListener('push', event => {
       data.body = event.data.text();
     }
   }
+
+  const title = data.title || 'Mundial 2026';
+  const options = {
+    body: data.body || '',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    vibrate: [200, 100, 200],
+    data: data.data || {},
+    tag: 'match-result',
+    renotify: true,
+  };
+
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: data.icon || '/icons/icon-192.png',
-      badge: data.badge || '/icons/icon-192.png',
-      vibrate: data.vibrate || [200, 100, 200],
-      data: data.data || {},
+    self.registration.showNotification(title, options)
+  );
+
+  // Informar a las ventanas abiertas (para debug)
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) {
+        client.postMessage({ type: 'PUSH_RECEIVED', data });
+      }
     })
   );
 });

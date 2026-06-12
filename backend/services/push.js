@@ -53,4 +53,75 @@ function sendMatchResultPush(match, homeFlag, awayFlag, pointsSummary) {
   console.log(`[Push] Sent to ${subscriptions.length} subscription(s)`);
 }
 
-module.exports = { sendNotification, sendMatchResultPush };
+function sendChampionPickPush(user, champion, flag) {
+  const name = user.name || user.email?.split('@')[0] || 'Usuario';
+  const title = `🏆 ${flag} ${champion}`;
+  const body = `${name} eligió a ${champion} como campeón mundial.`;
+
+  const payload = {
+    title,
+    body,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    vibrate: [200, 100, 200],
+    data: { url: '/' },
+  };
+
+  const { db } = require('../db');
+  const subscriptions = db.prepare('SELECT * FROM push_subscriptions').all();
+  for (const sub of subscriptions) {
+    sendNotification({
+      endpoint: sub.endpoint,
+      keys: { p256dh: sub.p256dh, auth: sub.auth },
+    }, payload);
+  }
+  console.log(`[Push] Champion pick sent to ${subscriptions.length} subscription(s)`);
+}
+
+function sendChampionAwardPush(winner, flag) {
+  const title = `🏆 ${flag} ${winner} ES EL CAMPEÓN MUNDIAL 2026 🏆`;
+  const body = `El campeón del mundo es ${winner}. Ingresá a la app para ver los resultados.`;
+
+  const payload = {
+    title,
+    body,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    vibrate: [200, 100, 200],
+    data: { url: '/' },
+  };
+
+  const { db } = require('../db');
+  const subscriptions = db.prepare('SELECT * FROM push_subscriptions').all();
+  for (const sub of subscriptions) {
+    sendNotification({
+      endpoint: sub.endpoint,
+      keys: { p256dh: sub.p256dh, auth: sub.auth },
+    }, payload);
+  }
+  console.log(`[Push] Champion award sent to ${subscriptions.length} subscription(s)`);
+}
+
+function sendTestPush() {
+  const payload = {
+    title: '🔔 Notificación de Prueba',
+    body: 'Si ves esto, las notificaciones push funcionan correctamente.',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    vibrate: [200, 100, 200],
+    data: { url: '/' },
+  };
+
+  const { db } = require('../db');
+  const subscriptions = db.prepare('SELECT * FROM push_subscriptions').all();
+  for (const sub of subscriptions) {
+    sendNotification({
+      endpoint: sub.endpoint,
+      keys: { p256dh: sub.p256dh, auth: sub.auth },
+    }, payload);
+  }
+  console.log(`[Push] Test sent to ${subscriptions.length} subscription(s)`);
+  return subscriptions.length;
+}
+
+module.exports = { sendNotification, sendMatchResultPush, sendTestPush, sendChampionPickPush, sendChampionAwardPush };

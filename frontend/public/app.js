@@ -395,6 +395,19 @@ createApp({
     window.addEventListener('google-login-success', (e) => {
       this.handleLoginSuccess(e.detail);
     });
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && this.user) {
+        subscribeToPush();
+      }
+    });
+
+    navigator.serviceWorker.addEventListener('message', event => {
+      if (event.data?.type === 'PUSH_RECEIVED') {
+        const d = event.data.data;
+        this.notify(d.title + ' — ' + d.body, 'success');
+      }
+    });
     
     this.user = await refreshAuth();
     if (this.user) {

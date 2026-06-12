@@ -2,7 +2,8 @@ const express = require('express');
 const { db, generateId } = require('../db');
 const { authRequired, adminRequired } = require('../middleware/auth');
 const { nowStr } = require('../utils/datetime');
-const { sendChampionPick, flagEmoji } = require('../services/whatsapp');
+const { sendChampionPick, sendChampionAward, flagEmoji } = require('../services/whatsapp');
+const { sendChampionPickPush, sendChampionAwardPush } = require('../services/push');
 
 const router = express.Router();
 
@@ -37,25 +38,19 @@ router.post('/award', authRequired, adminRequired, (req, res) => {
       return res.status(400).json({ error: 'Ganador requerido' });
     }
 
-    const picks = db.prepare('SELECT * FROM champion_picks WHERE champion = ?').all(winner.trim());
-    if (picks.length === 0) {
-      return res.status(404).json({ error: 'No hay usuarios que hayan elegido a este campeón' });
-    }
-
     const pts = 5;
     const updatePick = db.prepare('UPDATE champion_picks SET points = ? WHERE id = ?');
     const setSetting = db.prepare("INSERT OR REPLACE INTO settings (id, key, value) VALUES (?, 'champion_winner', ?)");
 
     const runAward = db.transaction(() => {
-      // Check INSIDE transaction to prevent race condition
       const existing = db.prepare("SELECT value FROM settings WHERE key = 'champion_winner'").get();
       if (existing && existing.value) {
         throw new Error(`El campeón ya fue asignado: ${existing.value}`);
       }
 
+      const picks = db.prepare('SELECT * FROM champion_picks WHERE champion = ?').all(winner.trim());
       for (const pick of picks) {
         updatePick.run(pts, pick.id);
-        // Recalculate total_points from scratch: predictions + champion
         const predSum = db.prepare("SELECT COALESCE(SUM(points), 0) as s FROM predictions WHERE user_id = ? AND points IS NOT NULL").get(pick.user_id);
         const total = predSum.s + pts;
         db.prepare('UPDATE users SET total_points = ? WHERE id = ?').run(total, pick.user_id);
@@ -64,7 +59,10 @@ router.post('/award', authRequired, adminRequired, (req, res) => {
     });
 
     runAward();
-    res.json({ winner: winner.trim(), points: pts, awarded: picks.length });
+    const flag = flagEmoji(winner.trim());
+    sendChampionAward(winner.trim(), flag);
+    sendChampionAwardPush(winner.trim(), flag);
+    res.json({ winner: winner.trim(), points: pts, awarded: db.prepare('SELECT COUNT(*) as c FROM champion_picks WHERE champion = ?').get(winner.trim()).c });
   } catch (e) {
     console.error('Error awarding champion points:', e.message);
     res.status(500).json({ error: 'Error al otorgar puntos de campeón' });
@@ -99,12 +97,14 @@ router.post('/', authRequired, (req, res) => {
       // Notificar solo si cambió el campeón
       if (existing.champion !== champion.trim()) {
         sendChampionPick(req.user, champion.trim(), flagEmoji(champion.trim()));
+        sendChampionPickPush(req.user, champion.trim(), flagEmoji(champion.trim()));
       }
       return res.json({ id: updated.id, champion: updated.champion, points: updated.points ?? null });
     }
     const id = generateId();
     db.prepare('INSERT INTO champion_picks (id, user_id, champion) VALUES (?, ?, ?)').run(id, req.user.id, champion.trim());
     sendChampionPick(req.user, champion.trim(), flagEmoji(champion.trim()));
+    sendChampionPickPush(req.user, champion.trim(), flagEmoji(champion.trim()));
     res.status(201).json({ id, champion: champion.trim(), points: null });
   } catch (e) {
     console.error('Error saving champion pick:', e.message);

@@ -167,6 +167,12 @@ export default {
       this.showAwardModal = false;
       this.awardConfirmWinner = '';
     },
+    onlyDigits(e) {
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      const key = e.key;
+      if (key === 'Backspace' || key === 'Delete' || key === 'Tab' || key === 'ArrowLeft' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowDown' || key === 'Home' || key === 'End') return;
+      if (!/^\d$/.test(key)) e.preventDefault();
+    },
   },
   template: `
     <div class="view-container">
@@ -287,11 +293,11 @@ export default {
                  <span v-else class="admin-team-flag">{{ match.home_flag }}</span>
               </div>
               
-               <div class="admin-col-score">
-                  <input type="text" class="input-score" v-model="match.home_score" @focus="$event.target.select()" inputmode="numeric">
-                  <span style="font-size: 0.85rem;">-</span>
-                  <input type="text" class="input-score" v-model="match.away_score" @focus="$event.target.select()" inputmode="numeric">
-               </div>
+                <div class="admin-col-score">
+                   <input type="text" class="input-score" v-model="match.home_score" @focus="$event.target.select()" @keypress="onlyDigits" @paste.prevent inputmode="numeric">
+                   <span style="font-size: 0.85rem;">-</span>
+                   <input type="text" class="input-score" v-model="match.away_score" @focus="$event.target.select()" @keypress="onlyDigits" @paste.prevent inputmode="numeric">
+                </div>
    
               <div class="admin-col-team away">
                  <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" class="admin-team-flag">
@@ -299,10 +305,10 @@ export default {
                  <span class="admin-team-name">{{ match.away_team }}</span>
               </div>
   
-              <div v-if="match.status !== 'finished'" class="admin-col-actions">
-                 <button class="btn btn-primary" @click="$emit('save-score', match)" style="padding: 0.3rem 0.4rem; font-size: 0.65rem;" title="Guardar score">💾</button>
-                 <button class="btn" @click="openFinishModal(match)" style="padding: 0.3rem 0.4rem; font-size: 0.65rem; background: var(--color-accent); color: white;" title="Finalizar partido">🏁</button>
-               </div>
+               <div v-if="match.status !== 'finished'" class="admin-col-actions">
+                  <button class="btn btn-primary" @click="$emit('save-score', match)" :disabled="match.home_score == null || match.away_score == null" style="padding: 0.3rem 0.4rem; font-size: 0.65rem;" title="Guardar score">💾</button>
+                  <button class="btn" @click="openFinishModal(match)" :disabled="match.home_score == null || match.away_score == null" style="padding: 0.3rem 0.4rem; font-size: 0.65rem; background: var(--color-accent); color: white;" title="Finalizar partido">🏁</button>
+                </div>
             </div>
             <div v-if="match.status === 'finished'" style="width: 100%; text-align: center; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed rgba(0,0,0,0.1);">
               <span style="font-size: 0.6rem; color: var(--color-green); cursor: pointer; font-weight: 600;" @click="$emit('export-match', match)">📥 Exportar predicciones</span>

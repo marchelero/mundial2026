@@ -1,6 +1,7 @@
 const express = require('express');
 const { db, generateId } = require('../db');
-const { authRequired } = require('../middleware/auth');
+const { authRequired, adminRequired } = require('../middleware/auth');
+const { sendTestPush } = require('../services/push');
 
 const router = express.Router();
 
@@ -47,6 +48,26 @@ router.delete('/subscribe', authRequired, (req, res) => {
 
 router.get('/vapid-key', (req, res) => {
   res.json({ key: process.env.VAPID_PUBLIC_KEY || '' });
+});
+
+router.get('/stats', authRequired, adminRequired, (req, res) => {
+  try {
+    const count = db.prepare('SELECT COUNT(*) as count FROM push_subscriptions').get();
+    const users = db.prepare('SELECT DISTINCT user_id FROM push_subscriptions').all();
+    res.json({ subscriptions: count.count, users: users.length });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al obtener estadísticas' });
+  }
+});
+
+router.post('/test', authRequired, adminRequired, (req, res) => {
+  try {
+    const count = sendTestPush();
+    res.json({ sent: true, subscriptions: count });
+  } catch (e) {
+    console.error('[Push] Test error:', e.message);
+    res.status(500).json({ error: 'Error al enviar push de prueba' });
+  }
 });
 
 module.exports = router;

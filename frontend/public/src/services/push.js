@@ -2,30 +2,40 @@ import { api } from './api.js';
 
 export async function subscribeToPush() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.log('[Push] No soportado en este navegador');
     return;
   }
 
   if (Notification.permission === 'denied') {
+    console.log('[Push] Permiso denegado previamente');
     return;
   }
 
   if (Notification.permission === 'default') {
+    console.log('[Push] Solicitando permiso...');
     const result = await Notification.requestPermission();
+    console.log('[Push] Permiso:', result);
     if (result !== 'granted') return;
   }
 
   const vapidKey = typeof VAPID_PUBLIC_KEY !== 'undefined' ? VAPID_PUBLIC_KEY : '';
-  if (!vapidKey) return;
+  if (!vapidKey) {
+    console.warn('[Push] VAPID_PUBLIC_KEY no definida');
+    return;
+  }
 
   try {
     const registration = await navigator.serviceWorker.ready;
+    console.log('[Push] Service Worker ready');
     const existing = await registration.pushManager.getSubscription();
     if (existing) {
+      //console.log('[Push] Suscripción existente, actualizando...');
       const subJson = existing.toJSON();
       await api.post('/push/subscribe', {
         endpoint: subJson.endpoint,
         keys: subJson.keys,
       });
+      // console.log('[Push] Suscripción actualizada');
       return;
     }
 
@@ -36,6 +46,7 @@ export async function subscribeToPush() {
       return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
     };
 
+    // console.log('[Push] Creando nueva suscripción...');
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(vapidKey),
@@ -46,7 +57,8 @@ export async function subscribeToPush() {
       endpoint: subJson.endpoint,
       keys: subJson.keys,
     });
+    // console.log('[Push] Suscripción creada correctamente');
   } catch (e) {
-    console.warn('[Push] Subscription failed:', e.message);
+    console.warn('[Push] Error de suscripción:', e.message);
   }
 }
