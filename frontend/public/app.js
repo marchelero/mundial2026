@@ -12,6 +12,7 @@ import {
   saveSetting
 } from './src/services/game.js';
 import { flagUrl } from './src/utils/helpers.js';
+import { subscribeToPush } from './src/services/push.js';
 
 import Login from './src/components/Login.js';
 import Layout from './src/components/Layout.js';
@@ -144,6 +145,7 @@ createApp({
       this.user = user;
       this.view = 'votar';
       await this.loadAllData();
+      subscribeToPush();
       this.loading = false;
     },
     async handleLogout() {
@@ -397,6 +399,7 @@ createApp({
     this.user = await refreshAuth();
     if (this.user) {
       await this.loadAllData();
+      subscribeToPush();
     }
     this.loading = false;
   }

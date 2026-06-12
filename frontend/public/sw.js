@@ -68,11 +68,45 @@ self.addEventListener('fetch', event => {
         }
         return response;
       }).catch(() => {
-        // Fallback solo para navegación (HTML)
         if (event.request.mode === 'navigate') {
           return caches.match('/index.html');
         }
       });
+    }
+  );
+});
+
+self.addEventListener('push', event => {
+  let data = { title: 'Mundial 2026', body: '' };
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch {
+      data.body = event.data.text();
+    }
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: data.icon || '/icons/icon-192.png',
+      badge: data.badge || '/icons/icon-192.png',
+      vibrate: data.vibrate || [200, 100, 200],
+      data: data.data || {},
+    })
+  );
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      for (const client of windowClients) {
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) return clients.openWindow(url);
     })
   );
 });

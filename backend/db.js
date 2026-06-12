@@ -67,6 +67,16 @@ try {
     CREATE INDEX IF NOT EXISTS idx_predictions_match ON predictions(match_id);
     CREATE INDEX IF NOT EXISTS idx_matches_date ON matches(date, time);
     CREATE INDEX IF NOT EXISTS idx_champion_picks_user ON champion_picks(user_id);
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      endpoint TEXT NOT NULL,
+      p256dh TEXT NOT NULL,
+      auth TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, endpoint)
+    );
+    CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id);
   `);
 
   // Migrations for points columns

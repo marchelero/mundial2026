@@ -47,6 +47,7 @@ app.use('/api/predictions', require('./backend/routes/predictions'));
 app.use('/api/champion-picks', require('./backend/routes/champion'));
 app.use('/api/settings', require('./backend/routes/settings'));
 app.use('/api/users', require('./backend/routes/users'));
+app.use('/api/push', require('./backend/routes/push'));
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -59,7 +60,8 @@ app.get('/config.js', (req, res) => {
   const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
   res.send(
     `var ADMIN_EMAILS = ${JSON.stringify(adminEmails)};\n` +
-    `var GOOGLE_CLIENT_ID = ${JSON.stringify(process.env.GOOGLE_CLIENT_ID || '')};\n`
+    `var GOOGLE_CLIENT_ID = ${JSON.stringify(process.env.GOOGLE_CLIENT_ID || '')};\n` +
+    `var VAPID_PUBLIC_KEY = ${JSON.stringify(process.env.VAPID_PUBLIC_KEY || '')};\n`
   );
 });
 

@@ -3,6 +3,7 @@ const { db, generateId } = require('../db');
 const { authRequired, adminRequired } = require('../middleware/auth');
 const { sendMatchResult } = require('../services/whatsapp');
 const { flagEmoji } = require('../services/whatsapp');
+const { sendMatchResultPush } = require('../services/push');
 
 const router = express.Router();
 
@@ -67,6 +68,7 @@ router.patch('/:id', authRequired, adminRequired, (req, res) => {
         const homeFlag = flagEmoji(updatedMatch.home_team);
         const awayFlag = flagEmoji(updatedMatch.away_team);
         sendMatchResult(updatedMatch, homeFlag, awayFlag, summary);
+        sendMatchResultPush(updatedMatch, homeFlag, awayFlag, summary);
       }
     }
 
