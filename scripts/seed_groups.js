@@ -113,6 +113,18 @@ if (whitelistEmails.length > 0) {
   console.log('⏭️  Whitelist vacía');
 }
 
+// =====================================================
+// champion_pick_open default: deshabilitado
+// =====================================================
+const existingCPO = db.prepare("SELECT id FROM settings WHERE key = 'champion_pick_open'").get();
+if (!existingCPO) {
+  const cpoId = generateId();
+  db.prepare("INSERT INTO settings (id, key, value) VALUES (?, 'champion_pick_open', 'false')").run(cpoId);
+  console.log('✅ champion_pick_open inicializado como deshabilitado');
+} else {
+  console.log('⏭️  champion_pick_open ya configurado');
+}
+
 console.log(`\n📊 Grupos oficiales Mundial 2026:`);
 seedData.groups.forEach(g => {
   console.log(`  Grupo ${g.group}: ${g.teams.join(', ')}`);

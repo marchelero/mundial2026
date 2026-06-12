@@ -2,6 +2,7 @@ const express = require('express');
 const { db, generateId } = require('../db');
 const { authRequired, adminRequired } = require('../middleware/auth');
 const { nowStr } = require('../utils/datetime');
+const { sendWhatsAppPredictions } = require('../services/whatsapp');
 
 const router = express.Router();
 
@@ -104,6 +105,14 @@ router.post('/', authRequired, (req, res) => {
       .run(id, req.user.id, matchId, home_score, away_score, comodin ? 1 : 0);
     const pred = db.prepare('SELECT * FROM predictions WHERE id = ?').get(id);
     res.status(201).json(formatPrediction(pred));
+    // WhatsApp notification (non-blocking)
+    sendWhatsAppPredictions(req.user, [{
+      home_team: match.home_team,
+      away_team: match.away_team,
+      home_score,
+      away_score,
+      comodin: !!comodin,
+    }]);
   } catch (e) {
     res.status(500).json({ error: 'Error al crear pronóstico' });
   }
@@ -112,5 +121,58 @@ router.post('/', authRequired, (req, res) => {
 function formatPrediction(p) {
   return { id: p.id, user: p.user_id, match: p.match_id, home_score: p.home_score, away_score: p.away_score, comodin: !!p.comodin, points: p.points ?? null };
 }
+
+router.post('/batch', authRequired, (req, res) => {
+  try {
+    const items = req.body.predictions;
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Se requiere un array de pronósticos' });
+    }
+    const results = [];
+    const errors = [];
+
+    const insertOne = db.prepare(`
+      INSERT INTO predictions (id, user_id, match_id, home_score, away_score, comodin)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    const runBatch = db.transaction(() => {
+      for (const item of items) {
+        const { match: matchId, home_score, away_score, comodin } = item;
+        if (!matchId || home_score == null || away_score == null) {
+          errors.push({ match: matchId, error: 'Campos incompletos' }); continue;
+        }
+        const match = db.prepare('SELECT * FROM matches WHERE id = ?').get(matchId);
+        if (!match) { errors.push({ match: matchId, error: 'Partido no encontrado' }); continue; }
+        if (match.status === 'finished' || match.status === 'closed') {
+          errors.push({ match: matchId, error: `"${match.home_team} vs ${match.away_team}" ya finalizó` }); continue;
+        }
+        const now = nowStr();
+        const matchDt = match.date + ' ' + match.time;
+        if (now >= matchDt) {
+          errors.push({ match: matchId, error: `"${match.home_team} vs ${match.away_team}" — tiempo expiró` }); continue;
+        }
+        const existing = db.prepare('SELECT * FROM predictions WHERE user_id = ? AND match_id = ?').get(req.user.id, matchId);
+        if (existing) { errors.push({ match: matchId, error: 'Ya tienes un pronóstico para este partido' }); continue; }
+        const id = generateId();
+        insertOne.run(id, req.user.id, matchId, home_score, away_score, comodin ? 1 : 0);
+        results.push({ id, match: matchId, home_score, away_score, comodin: !!comodin });
+      }
+    });
+
+    runBatch();
+    res.json({ saved: results, errors });
+    // WhatsApp notification (non-blocking)
+    if (results.length > 0) {
+      const wppPreds = results.map(r => {
+        const m = db.prepare('SELECT home_team, away_team FROM matches WHERE id = ?').get(r.match);
+        return m ? { home_team: m.home_team, away_team: m.away_team, home_score: r.home_score, away_score: r.away_score, comodin: r.comodin } : null;
+      }).filter(Boolean);
+      if (wppPreds.length > 0) sendWhatsAppPredictions(req.user, wppPreds);
+    }
+  } catch (e) {
+    res.status(500).json({ error: 'Error al guardar pronósticos' });
+  }
+});
 
 module.exports = router;

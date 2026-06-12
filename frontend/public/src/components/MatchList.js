@@ -10,6 +10,8 @@ export default {
       championSelected: '',
       showConfirmModal: false,
       pendingMatches: [],
+      showChampionModal: false,
+      championConfirmData: null
     };
   },
   computed: {
@@ -35,6 +37,11 @@ export default {
     championPickFlagUrl() {
       if (!this.championPickLabel) return '';
       const c = this.countries.find(x => x.name === this.championPickLabel);
+      return c ? flagUrl(c.flag) : '';
+    },
+    championConfirmFlagUrl() {
+      if (!this.championConfirmData) return '';
+      const c = this.countries.find(x => x.name === this.championConfirmData);
       return c ? flagUrl(c.flag) : '';
     },
     todayStr() {
@@ -131,13 +138,24 @@ export default {
     },
     async saveChampionPick() {
       if (!this.championSelected) return;
-      if (!confirm(`¿Estás seguro de que "${this.championSelected}" será el campeón?\n\n⚠️ Solo podrás hacer esto UNA VEZ. No podrás cambiarlo después.`)) return;
-      try {
-        await api.post('/champion-picks', { champion: this.championSelected });
-        this.$emit('saved');
-      } catch (e) {
-        this.$emit('save-error', e.message || 'Error al guardar');
-      }
+      this.championConfirmData = this.championSelected;
+      this.showChampionModal = true;
+    },
+    confirmChampionPick() {
+      if (!this.championConfirmData) return;
+      this.showChampionModal = false;
+      api.post('/champion-picks', { champion: this.championConfirmData })
+        .then(() => {
+          this.$emit('saved');
+        })
+        .catch(e => {
+          this.$emit('save-error', e.message || 'Error al guardar');
+        });
+      this.championConfirmData = null;
+    },
+    cancelChampionPick() {
+      this.showChampionModal = false;
+      this.championConfirmData = null;
     },
     openSubmitModal() {
       const pending = [];
@@ -315,6 +333,30 @@ export default {
         <template v-if="!hasUnsavedPredictions() && !saving">Completá los marcadores para enviar.</template>
         <template v-else>Envía tus pronósticos antes de 1 minuto del inicio de cada partido.</template>
       </p>
+
+      <!-- Champion Confirm Modal -->
+      <div v-if="showChampionModal && championConfirmData" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;" @click.self="cancelChampionPick">
+        <div style="background:white;border-radius:16px;padding:1.5rem;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+          <div style="text-align:center;margin-bottom:1.25rem;">
+            <div style="font-size:2.5rem;margin-bottom:0.5rem;">🏆</div>
+            <h3 style="font-family:var(--font-header);font-size:1.25rem;margin:0 0 0.25rem;">CONFIRMAR CAMPEÓN</h3>
+            <p style="font-size:0.75rem;color:var(--color-gray);margin:0;">Solo podrás hacer esto UNA VEZ. No podrás cambiarlo después.</p>
+          </div>
+          <div style="background:linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%);border-radius:12px;padding:1rem;margin-bottom:1.25rem;border:1px solid #bbf7d0;text-align:center;">
+            <div style="font-size:0.7rem;color:#15803d;font-weight:600;text-transform:uppercase;margin-bottom:0.5rem;">TU PRONÓSTICO</div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:0.75rem;">
+              <img v-if="championConfirmFlagUrl" :src="championConfirmFlagUrl" alt="" style="width:36px;height:24px;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+              <span v-else style="font-size:2rem;">🏴</span>
+              <span style="font-family:var(--font-header);font-size:1.5rem;color:var(--color-dark);">{{ championConfirmData }}</span>
+            </div>
+            <div style="margin-top:0.5rem;font-size:0.75rem;color:#15803d;font-weight:600;">Será el campeón del Mundial 2026 🏆</div>
+          </div>
+          <div style="display:flex;gap:0.6rem;">
+            <button @click="cancelChampionPick" style="flex:1;padding:0.75rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CANCELAR</button>
+            <button @click="confirmChampionPick" style="flex:1;padding:0.75rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CONFIRMAR</button>
+          </div>
+        </div>
+      </div>
 
       <!-- Confirm Modal -->
       <div v-if="showConfirmModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;" @click.self="closeModal">

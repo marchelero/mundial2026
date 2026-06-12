@@ -3,7 +3,7 @@ import { api } from '../services/api.js';
 
 export default {
   props: ['matches', 'settings', 'isAdmin', 'countries'],
-  emits: ['save-score', 'finish-match', 'add-match', 'export-csv', 'export-match', 'save-setting'],
+  emits: ['save-score', 'finish-match', 'add-match', 'export-csv', 'export-match', 'save-setting', 'award-champion'],
   data() {
     return {
       newMatch: {
@@ -27,7 +27,14 @@ export default {
       whitelistLoaded: false,
       totalUsers: 0,
       showFinishModal: false,
-      finishMatchData: null
+      finishMatchData: null,
+      showAwardModal: false,
+      awardConfirmWinner: '',
+      championWinner: '',
+      championAwardSelected: '',
+      awardLoading: false,
+      awardDone: false,
+      awardCount: 0
     };
   },
   async created() {
@@ -37,16 +44,14 @@ export default {
       this.totalUsers = users.size;
     } catch (_) { this.totalUsers = 0; }
 
-    let raw = this.settings?.allowed_emails;
-    if (!raw) {
-      try {
-        const r = await api.get('/settings');
-        const s = {};
-        for (const item of r) s[item.key] = item.value;
-        raw = s.allowed_emails;
-      } catch (_) { }
-    }
-    this._loadWhitelist(raw);
+    // Always load settings fresh to get champion_winner
+    try {
+      const r = await api.get('/settings');
+      const s = {};
+      for (const item of r) s[item.key] = item.value;
+      this.championWinner = s.champion_winner || '';
+      this._loadWhitelist(s.allowed_emails);
+    } catch (_) { }
   },
   computed: {
     flagMap() {
@@ -135,7 +140,33 @@ export default {
       this.newMatch.time = h + ':' + m;
       this.$emit('add-match', { ...this.newMatch });
       this.showAddForm = false;
-    }
+    },
+    async awardChampion() {
+      if (!this.championAwardSelected || this.awardLoading) return;
+      this.awardConfirmWinner = this.championAwardSelected;
+      this.showAwardModal = true;
+    },
+    confirmAward() {
+      if (!this.awardConfirmWinner || this.awardLoading) return;
+      this.showAwardModal = false;
+      this.awardLoading = true;
+      this.awardDone = false;
+      api.post('/champion-picks/award', { winner: this.awardConfirmWinner })
+        .then(result => {
+          this.championWinner = result.winner;
+          this.awardCount = result.awarded;
+          this.awardDone = true;
+          this.awardLoading = false;
+        })
+        .catch(e => {
+          alert(e.message || 'Error al otorgar puntos');
+          this.awardLoading = false;
+        });
+    },
+    cancelAward() {
+      this.showAwardModal = false;
+      this.awardConfirmWinner = '';
+    },
   },
   template: `
     <div class="view-container">
@@ -278,7 +309,31 @@ export default {
             </div>
             <div v-else style="width: 100%; text-align: center; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed rgba(0,0,0,0.05); font-size: 0.55rem; color: var(--color-gray);">
               {{ match.date }} — {{ match.time }}
+        </div>
+      </div>
+      <div class="card">
+        <div style="display: flex; align-items: flex-start; gap: 1rem;">
+          <span style="font-size: 1.5rem;">👑</span>
+          <div style="flex: 1;">
+            <h3 class="form-label" style="font-size: 0.8rem; margin: 0;">OTORGAR PUNTOS DE CAMPEÓN</h3>
+            <p style="font-size: 0.6rem; color: var(--color-gray); margin-top: 0.2rem;">
+              Una vez finalizado el mundial, seleccioná al campeón y otorgá +5 pts a quienes acertaron.
+            </p>
+            <div v-if="championWinner" style="margin-top: 0.75rem; padding: 0.75rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+              <div style="font-size: 0.75rem; font-weight: 700; color: #166534;">✅ CAMPEÓN REGISTRADO</div>
+              <div style="font-size: 1rem; font-weight: 800; color: var(--color-dark); margin-top: 0.25rem;">{{ championWinner }}</div>
+              <div v-if="awardDone" style="font-size: 0.7rem; color: #15803d; margin-top: 0.25rem;">{{ awardCount }} usuario(s) recibieron +5 pts</div>
             </div>
+            <div v-else style="display: flex; gap: 0.5rem; margin-top: 0.75rem; align-items: stretch;">
+              <select v-model="championAwardSelected" style="flex: 1; padding: 0.5rem; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: var(--font-main); font-size: 0.85rem; background: #f8fafc; cursor: pointer;">
+                <option value="">Seleccionar campeón...</option>
+                <option v-for="c in countries" :key="c.name" :value="c.name">{{ c.name }}</option>
+              </select>
+              <button class="btn btn-primary" :disabled="!championAwardSelected || awardLoading" @click="awardChampion" style="padding: 0.5rem 1rem; font-size: 0.75rem; white-space: nowrap;">
+                {{ awardLoading ? 'OTORGANDO...' : 'OTORGAR +5 PTS' }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="card">
@@ -289,9 +344,9 @@ export default {
             <p style="font-size: 0.6rem; color: var(--color-gray);">Cierre: Dom 28 jun 2026, 15:00.</p>
           </div>
           <div style="text-align: right;">
-            <div :style="{fontSize:'0.55rem', fontWeight:700, textTransform:'uppercase', marginBottom:'0.15rem', color: settings.champion_pick_open === 'false' ? '#ef4444' : '#16a34a'}">{{ settings.champion_pick_open === 'false' ? 'DESHABILITADO' : 'HABILITADO' }}</div>
-            <button @click="$emit('save-setting', { key: 'champion_pick_open', value: settings.champion_pick_open === 'false' ? 'true' : 'false' })" :style="{padding:'0.3rem 0.6rem', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:600, fontSize:'0.7rem', background: settings.champion_pick_open === 'false' ? '#16a34a' : '#ef4444', color:'white'}">
-              {{ settings.champion_pick_open === 'false' ? 'HABILITAR' : 'DESHABILITAR' }}
+            <div :style="{fontSize:'0.55rem', fontWeight:700, textTransform:'uppercase', marginBottom:'0.15rem', color: settings.champion_pick_open === 'true' ? '#16a34a' : '#ef4444'}">{{ settings.champion_pick_open === 'true' ? 'HABILITADO' : 'DESHABILITADO' }}</div>
+            <button @click="$emit('save-setting', { key: 'champion_pick_open', value: settings.champion_pick_open === 'true' ? 'false' : 'true' })" :style="{padding:'0.3rem 0.6rem', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:600, fontSize:'0.7rem', background: settings.champion_pick_open === 'true' ? '#ef4444' : '#16a34a', color:'white'}">
+              {{ settings.champion_pick_open === 'true' ? 'DESHABILITAR' : 'HABILITAR' }}
             </button>
           </div>
         </div>
@@ -362,6 +417,26 @@ export default {
         <p style="font-size: 0.75rem; color: #92400e;">
           ⚠️ <strong>ADMIN:</strong> 💾 guarda el score sin cerrar el partido. 🏁 finaliza y activa el cálculo de puntos.
         </p>
+      </div>
+
+      <!-- Award Champion Modal -->
+      <div v-if="showAwardModal && awardConfirmWinner" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;" @click.self="cancelAward">
+        <div style="background:white;border-radius:16px;padding:1.5rem;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+          <div style="text-align:center;margin-bottom:1.25rem;">
+            <div style="font-size:2.5rem;margin-bottom:0.5rem;">👑</div>
+            <h3 style="font-family:var(--font-header);font-size:1.25rem;margin:0 0 0.25rem;">OTORGAR PUNTOS DE CAMPEÓN</h3>
+            <p style="font-size:0.75rem;color:var(--color-gray);margin:0;">Esta acción es irreversible. Se otorgarán +5 pts a quienes hayan elegido a este campeón.</p>
+          </div>
+          <div style="background:linear-gradient(135deg, #fef3c7 0%, #f8fafc 100%);border-radius:12px;padding:1rem;margin-bottom:1.25rem;border:1px solid #fcd34d;text-align:center;">
+            <div style="font-size:0.7rem;color:#92400e;font-weight:600;text-transform:uppercase;margin-bottom:0.5rem;">CAMPEÓN MUNDIAL 2026</div>
+            <div style="font-family:var(--font-header);font-size:1.75rem;color:var(--color-dark);">{{ awardConfirmWinner }}</div>
+            <div style="margin-top:0.5rem;font-size:0.75rem;color:var(--color-gray);">+5 puntos para cada usuario que acertó</div>
+          </div>
+          <div style="display:flex;gap:0.6rem;">
+            <button @click="cancelAward" style="flex:1;padding:0.75rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CANCELAR</button>
+            <button @click="confirmAward" style="flex:1;padding:0.75rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">OTORGAR +5 PTS</button>
+          </div>
+        </div>
       </div>
     </div>
   `

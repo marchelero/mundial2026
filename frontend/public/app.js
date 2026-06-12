@@ -7,6 +7,7 @@ import {
   loadSettings,
   loadChampionPick,
   savePrediction,
+  savePredictionsBatch,
   saveChampionPick,
   saveSetting
 } from './src/services/game.js';
@@ -52,14 +53,15 @@ createApp({
             @set-score="setScore"
             @toggle-comodin="toggleComodin"
             @submit="submitPredictions"
-            @save-champion-pick="handleSaveChampionPick"
-            @saved="handleChampionSaved"
-            @save-error="handleChampionError" />
+             @save-champion-pick="handleChampionSaved"
+             @saved="handleChampionSaved"
+             @save-error="handleChampionError" />
             
           <Mypredictions v-else-if="view === 'historial'"
             :match-groups="historyGroups"
             :predictions="predictions"
-            :all-matches="allMatches" />
+            :all-matches="allMatches"
+            :champion-pick="championPick" />
 
           <Ranking v-else-if="view === 'posiciones'"
             :rankings-data="rankingsData"
@@ -184,28 +186,34 @@ createApp({
     async submitPredictions() {
       this.saving = true;
       this.authError = '';
-      const errors = [];
-      let saved = 0;
+      const items = [];
       for (const [matchId, p] of Object.entries(this.predictions)) {
         if (!p.id && p.home !== null && p.away !== null) {
-          try {
-            await savePrediction({
-              match: matchId,
-              home_score: p.home,
-              away_score: p.away,
-              comodin: !!p.comodin
-            });
-            saved++;
-          } catch (e) {
-            errors.push(e.message || 'Error');
-          }
+          items.push({
+            match: matchId,
+            home_score: p.home,
+            away_score: p.away,
+            comodin: !!p.comodin
+          });
         }
       }
-      await this.loadAllData();
-      if (errors.length === 0) {
-        this.notify(saved > 0 ? `${saved} pronóstico(s) guardado(s)` : 'No hay pronósticos nuevos para guardar');
-      } else {
-        this.notify(saved > 0 ? `Guardado ${saved}, falló ${errors.length}: ${errors[0]}` : errors[0], 'error');
+      if (items.length === 0) {
+        this.notify('No hay pronósticos nuevos para guardar');
+        this.saving = false;
+        return;
+      }
+      try {
+        const result = await savePredictionsBatch(items);
+        await this.loadAllData();
+        const saved = result.saved.length;
+        const errs = result.errors;
+        if (errs.length === 0) {
+          this.notify(`${saved} pronóstico(s) guardado(s)`);
+        } else {
+          this.notify(`Guardado ${saved}, falló ${errs.length}: ${errs[0].error || errs[0]}`, 'error');
+        }
+      } catch (e) {
+        this.notify(e.message || 'Error al guardar pronósticos', 'error');
       }
       this.saving = false;
     },
@@ -261,11 +269,17 @@ createApp({
       }
     },
     async handleChampionSaved() {
-      await this.loadAllData();
-      this.notify('Campeón registrado correctamente ¡Suerte!', 'success');
+      try {
+        await this.loadAllData();
+        this.notify('Campeón registrado correctamente ¡Suerte!', 'success');
+      } catch (e) {
+        this.notify('Error al cargar datos', 'error');
+      }
     },
     async handleChampionError(msg) {
-      await this.loadAllData();
+      try {
+        await this.loadAllData();
+      } catch (_) {}
       this.notify(msg, 'error');
     },
     async handleSaveSetting({ key, value }) {

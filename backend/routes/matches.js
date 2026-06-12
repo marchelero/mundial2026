@@ -90,8 +90,10 @@ function calcAndSavePoints(match) {
   }
 
   for (const userId of userIds) {
-    const result = db.prepare('SELECT COALESCE(SUM(points), 0) as total FROM predictions WHERE user_id = ? AND points IS NOT NULL').get(userId);
-    db.prepare('UPDATE users SET total_points = ? WHERE id = ?').run(result.total, userId);
+    const predPts = db.prepare('SELECT COALESCE(SUM(points), 0) as total FROM predictions WHERE user_id = ? AND points IS NOT NULL').get(userId);
+    const champPts = db.prepare('SELECT COALESCE(points, 0) as total FROM champion_picks WHERE user_id = ? AND points IS NOT NULL').get(userId);
+    const total = predPts.total + (champPts ? champPts.total : 0);
+    db.prepare('UPDATE users SET total_points = ? WHERE id = ?').run(total, userId);
   }
 }
 

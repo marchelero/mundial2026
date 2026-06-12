@@ -1,21 +1,28 @@
 import { roundLabel, formatDate } from '../utils/helpers.js';
 
 export default {
-  props: ['matchGroups', 'predictions', 'allMatches'],
+  props: ['matchGroups', 'predictions', 'allMatches', 'championPick'],
   computed: {
     totalPredicted() {
       return this.allMatches.filter(m => this.predictions[m.id]?.id).length;
     },
     totalPoints() {
-      return this.allMatches.reduce((sum, m) => {
+      const matchPts = this.allMatches.reduce((sum, m) => {
         if (m.status !== 'finished') return sum;
         const p = this.predictions[m.id];
         if (!p?.id || p.points == null) return sum;
         return sum + p.points;
       }, 0);
+      return matchPts + (this.championPoints || 0);
     },
     jokersUsed() {
       return Object.values(this.predictions).filter(p => p.comodin).length;
+    },
+    championPoints() {
+      return this.championPick?.points || 0;
+    },
+    championName() {
+      return this.championPick?.champion || '';
     }
   },
   methods: {
@@ -89,6 +96,19 @@ export default {
           <div class="ranking-stat-info">
             <div class="ranking-stat-label">COMODÍN</div>
             <div class="ranking-stat-value">{{ jokersUsed }}</div>
+          </div>
+        </div>
+
+        <!-- Champion Pick -->
+        <div class="ranking-stat-card" v-if="championName" style="background: #f0fdf4; border-color: #86efac;">
+          <div class="ranking-stat-icon-box" style="color: var(--color-accent); background: #fef3c7;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 24px; height: 24px;">
+              <path d="M11.584 2.376a.75.75 0 0 1 .832 0l9 6a.75.75 0 0 1-.416 1.374h-.996v10.5a.75.75 0 0 1-.75.75h-12a.75.75 0 0 1-.75-.75v-10.5h-.996a.75.75 0 0 1-.416-1.374l9-6Z" />
+            </svg>
+          </div>
+          <div class="ranking-stat-info">
+            <div class="ranking-stat-label">CAMPEÓN</div>
+            <div class="ranking-stat-value" style="font-size: 0.9rem;">{{ championName }} {{ championPoints > 0 ? '+'+championPoints+' PTS' : '' }}</div>
           </div>
         </div>
       </div>

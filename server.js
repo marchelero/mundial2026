@@ -67,6 +67,12 @@ app.use('/api/*', (req, res) => {
 });
 
 // Frontend
+app.get('/sw.js', (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  res.type('application/javascript');
+  res.sendFile(path.join(__dirname, 'frontend', 'public', 'sw.js'));
+});
+
 app.use(express.static(path.join(__dirname, 'frontend', 'public'), {
   maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
 }));

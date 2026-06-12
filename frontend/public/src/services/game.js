@@ -41,11 +41,6 @@ export async function saveSetting(key, value) {
   return await api.post('/settings', { key, value });
 }
 
-export async function loadAllRankings() {
-  const records = await api.get('/predictions/rankings');
-  let champPicks = [];
-  try {
-    champPicks = await api.get('/champion-picks/all');
-  } catch (_) { }
-  return { records, champPicks };
+export async function savePredictionsBatch(predictions) {
+  return await api.post('/predictions/batch', { predictions });
 }
