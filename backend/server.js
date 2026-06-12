@@ -37,8 +37,15 @@ app.use('/api/champion-picks', require('../backend/routes/champion'));
 app.use('/api/settings', require('../backend/routes/settings'));
 app.use('/api/users', require('../backend/routes/users'));
 
+const { nowStr, partsInTZ } = require('./utils/datetime');
+
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    utc: new Date().toISOString(),
+    bolivia: nowStr(),
+    serverTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
 });
 
 app.use('/api/*', (req, res) => {
