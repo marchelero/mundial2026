@@ -1,4 +1,4 @@
-import { roundLabel, formatDate, calcPoints, flagUrl, todayStr as todayStrLocal, addDaysStr as addDaysStrLocal, nowStr } from '../utils/helpers.js';
+import { roundLabel, formatDate, flagUrl, todayStr as todayStrLocal, addDaysStr as addDaysStrLocal, nowStr } from '../utils/helpers.js';
 import { api } from '../services/api.js';
 
 export default {
@@ -88,8 +88,33 @@ export default {
     },
     getPoints(match) {
       const p = this.predictions[match.id];
-      if (!p) return null;
-      return calcPoints({ home_score: p.home, away_score: p.away, comodin: p.comodin }, match);
+      if (!p || match.status !== 'finished') return null;
+      return p.points ?? null;
+    },
+    potentialPoints(match) {
+      const p = this.predictions[match.id];
+      if (!p?.id) return null;
+      const hs = Number(match.home_score);
+      const as = Number(match.away_score);
+      if (isNaN(hs) || isNaN(as)) return null;
+      if (match.status === 'finished') return null;
+      const ph = Number(p.home);
+      const pa = Number(p.away);
+      if (isNaN(ph) || isNaN(pa)) return null;
+      let pts = 0;
+      if (ph === hs && pa === as) {
+        pts = 3;
+      } else {
+        const pd = ph - pa;
+        const rd = hs - as;
+        if ((pd === rd && rd === 0) || (pd > 0 && rd > 0) || (pd < 0 && rd < 0)) {
+          pts = 1;
+        }
+      }
+      return p.comodin ? pts * 2 : pts;
+    },
+    canShowPotential(match) {
+      return this.potentialPoints(match) !== null;
     },
     groupPoints(group) {
       return group.matches.reduce((sum, m) => {
@@ -271,6 +296,10 @@ export default {
             </button>
           </div>
 
+          <div v-if="canShowPotential(match)" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.06); font-size: 0.75rem;">
+            <span style="color: var(--color-gray);">Resultado: {{ match.home_score }} - {{ match.away_score }}</span>
+            <span class="pts-badge pts-potential">{{ potentialPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }} ⏳</span>
+          </div>
           <div v-if="match.status === 'finished'" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.06); font-size: 0.75rem;">
             <span style="color: var(--color-gray);">Resultado: {{ match.home_score }} - {{ match.away_score }}</span>
             <span v-if="predictions[match.id]?.id" class="pts-badge" :class="ptsClass(match)">{{ getPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }}</span>
@@ -289,21 +318,32 @@ export default {
 
       <!-- Confirm Modal -->
       <div v-if="showConfirmModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;" @click.self="closeModal">
-        <div style="background:white;border-radius:12px;padding:1.5rem;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-          <div style="text-align:center;margin-bottom:1rem;">
-            <div style="font-size:2rem;margin-bottom:0.5rem;">📋</div>
-            <h3 style="font-family:var(--font-header);font-size:1.2rem;margin:0 0 0.25rem;">CONFIRMAR ENVÍO</h3>
+        <div style="background:white;border-radius:16px;padding:1.5rem;max-width:460px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+          <div style="text-align:center;margin-bottom:1.25rem;">
+            <div style="font-size:2.5rem;margin-bottom:0.5rem;">📋</div>
+            <h3 style="font-family:var(--font-header);font-size:1.25rem;margin:0 0 0.25rem;">CONFIRMAR ENVÍO</h3>
             <p style="font-size:0.75rem;color:var(--color-gray);margin:0;">Una vez enviados no podrás modificarlos.</p>
           </div>
-          <div style="background:#f8fafc;border-radius:8px;padding:0.75rem;margin-bottom:1rem;max-height:200px;overflow-y:auto;">
-            <div v-for="m in pendingMatches" :key="m.id" style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;font-size:0.8rem;border-bottom:1px solid rgba(0,0,0,0.05);">
-              <span style="font-weight:600;flex:1;">{{ m.home_team }} vs {{ m.away_team }}</span>
-              <span style="font-weight:700;background:var(--color-dark);color:white;padding:0.1rem 0.4rem;border-radius:4px;font-size:0.75rem;">{{ predictions[m.id]?.home }} - {{ predictions[m.id]?.away }}</span>
+          <div style="background:#f8fafc;border-radius:12px;padding:0.85rem;margin-bottom:1.25rem;max-height:240px;overflow-y:auto;border:1px solid #e2e8f0;">
+            <div v-for="m in pendingMatches" :key="m.id" style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:0.6rem;padding:0.6rem 0;border-bottom:1px solid rgba(0,0,0,0.05);">
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:0.5rem;min-width:0;">
+                <span style="font-weight:700;font-size:0.82rem;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ m.home_team }}</span>
+                <img v-if="m.home_flag_url" :src="m.home_flag_url" alt="" style="width:26px;height:18px;border-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,0.1);flex-shrink:0;">
+                <span v-else style="font-size:1.3rem;flex-shrink:0;">{{ m.home_flag }}</span>
+              </div>
+              <div style="font-size:1.4rem;font-weight:800;color:var(--color-dark);background:white;padding:0.5rem 1rem;border-radius:10px;border:2px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,0.08);text-align:center;white-space:nowrap;">
+                {{ predictions[m.id]?.home }} - {{ predictions[m.id]?.away }}
+              </div>
+              <div style="display:flex;align-items:center;justify-content:flex-start;gap:0.5rem;min-width:0;">
+                <img v-if="m.away_flag_url" :src="m.away_flag_url" alt="" style="width:26px;height:18px;border-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,0.1);flex-shrink:0;">
+                <span v-else style="font-size:1.3rem;flex-shrink:0;">{{ m.away_flag }}</span>
+                <span style="font-weight:700;font-size:0.82rem;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ m.away_team }}</span>
+              </div>
             </div>
           </div>
-          <div style="display:flex;gap:0.5rem;">
-            <button @click="closeModal" style="flex:1;padding:0.65rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;">CANCELAR</button>
-            <button @click="$emit('submit'); closeModal()" style="flex:1;padding:0.65rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;">ACEPTAR</button>
+          <div style="display:flex;gap:0.6rem;">
+            <button @click="closeModal" style="flex:1;padding:0.75rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CANCELAR</button>
+            <button @click="$emit('submit'); closeModal()" style="flex:1;padding:0.75rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">ACEPTAR</button>
           </div>
         </div>
       </div>

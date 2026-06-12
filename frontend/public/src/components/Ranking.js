@@ -88,7 +88,7 @@ export default {
               </td>
               <td style="padding: 0.5rem; font-weight: 600; font-size: 0.85rem;">{{ r.name }}</td>
               <td style="padding: 0.5rem; font-size: 0.7rem; color: var(--color-gray);">{{ r.email }}</td>
-              <td style="padding: 0.5rem; text-align: right; font-weight: bold; font-size: 1rem;">{{ r.points }}</td>
+              <td style="padding: 0.5rem; text-align: right; font-weight: bold; font-size: 1rem; white-space: nowrap;">{{ r.points }}<span v-if="r.potential_points > 0" class="pts-potential-rank">+{{ r.potential_points }}</span></td>
             </tr>
           </tbody>
         </table>

@@ -68,7 +68,7 @@ export default {
       return this.matches.filter(m => {
         if (this.adminTab === 'nuevos') return m.status !== 'finished';
         return m.status === 'finished';
-      }).sort((a, b) => (b.date + ' ' + (b.time || '00:00')).localeCompare(a.date + ' ' + (a.time || '00:00')));
+      }).sort((a, b) => (a.date + ' ' + (a.time || '00:00')).localeCompare(b.date + ' ' + (b.time || '00:00')));
     }
   },
   methods: {
@@ -325,21 +325,35 @@ export default {
 
       <!-- Finish Modal -->
       <div v-if="showFinishModal && finishMatchData" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;" @click.self="showFinishModal = false">
-        <div style="background:white;border-radius:12px;padding:1.5rem;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-          <div style="text-align:center;margin-bottom:1rem;">
-            <div style="font-size:2rem;margin-bottom:0.5rem;">🏁</div>
-            <h3 style="font-family:var(--font-header);font-size:1.1rem;margin:0 0 0.25rem;">FINALIZAR PARTIDO</h3>
+        <div style="background:white;border-radius:16px;padding:1.5rem;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+          <div style="text-align:center;margin-bottom:1.25rem;">
+            <div style="font-size:2.5rem;margin-bottom:0.5rem;">🏁</div>
+            <h3 style="font-family:var(--font-header);font-size:1.25rem;margin:0 0 0.25rem;">FINALIZAR PARTIDO</h3>
             <p style="font-size:0.75rem;color:var(--color-gray);margin:0;">Se cerrará el marcador y se calcularán los puntos.</p>
           </div>
-          <div style="background:#f8fafc;border-radius:8px;padding:0.75rem;margin-bottom:1rem;text-align:center;">
-            <div style="font-weight:700;font-size:1rem;margin-bottom:0.5rem;">{{ finishMatchData.home_team }} vs {{ finishMatchData.away_team }}</div>
-            <div style="font-size:2rem;font-weight:800;color:var(--color-dark);background:white;display:inline-block;padding:0.5rem 1.5rem;border-radius:8px;border:1px solid #e2e8f0;">
-              {{ finishMatchData.home_score ?? '?' }} - {{ finishMatchData.away_score ?? '?' }}
+          <div style="background:linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);border-radius:12px;padding:1rem;margin-bottom:1.25rem;border:1px solid #e2e8f0;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.75rem;">
+              <div style="display:flex;align-items:center;gap:0.5rem;flex:1;justify-content:flex-end;">
+                <span style="font-weight:700;font-size:0.9rem;text-align:right;">{{ finishMatchData.home_team }}</span>
+                <img v-if="finishMatchData.home_flag_url" :src="finishMatchData.home_flag_url" alt="" style="width:28px;height:20px;border-radius:3px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                <span v-else style="font-size:1.5rem;">{{ finishMatchData.home_flag }}</span>
+              </div>
+              <span style="font-size:0.75rem;color:var(--color-gray);font-weight:600;">VS</span>
+              <div style="display:flex;align-items:center;gap:0.5rem;flex:1;">
+                <img v-if="finishMatchData.away_flag_url" :src="finishMatchData.away_flag_url" alt="" style="width:28px;height:20px;border-radius:3px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                <span v-else style="font-size:1.5rem;">{{ finishMatchData.away_flag }}</span>
+                <span style="font-weight:700;font-size:0.9rem;">{{ finishMatchData.away_team }}</span>
+              </div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:2.25rem;font-weight:800;color:var(--color-dark);background:white;display:inline-block;padding:0.6rem 1.75rem;border-radius:10px;border:2px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+                {{ finishMatchData.home_score ?? '?' }} - {{ finishMatchData.away_score ?? '?' }}
+              </div>
             </div>
           </div>
-          <div style="display:flex;gap:0.5rem;">
-            <button @click="showFinishModal = false" style="flex:1;padding:0.65rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;">CANCELAR</button>
-            <button @click="confirmFinish" style="flex:1;padding:0.65rem;border:none;border-radius:8px;background:var(--color-accent);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;">FINALIZAR</button>
+          <div style="display:flex;gap:0.6rem;">
+            <button @click="showFinishModal = false" style="flex:1;padding:0.75rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CANCELAR</button>
+            <button @click="confirmFinish" style="flex:1;padding:0.75rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">FINALIZAR</button>
           </div>
         </div>
       </div>

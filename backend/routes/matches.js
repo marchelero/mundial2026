@@ -40,20 +40,60 @@ router.patch('/:id', authRequired, adminRequired, (req, res) => {
     const allowedFields = ['date', 'time', 'home_team', 'away_team', 'home_score', 'away_score', 'status', 'round'];
     const updates = [];
     const values = [];
+    let transitioningToFinished = false;
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) {
         updates.push(`${field} = ?`);
         values.push(req.body[field]);
+        if (field === 'status' && req.body[field] === 'finished') transitioningToFinished = true;
       }
     }
     if (updates.length === 0) return res.status(400).json({ error: 'No hay campos para actualizar' });
     values.push(req.params.id);
     db.prepare(`UPDATE matches SET ${updates.join(', ')} WHERE id = ?`).run(values);
+
+    if (transitioningToFinished) {
+      const updatedMatch = db.prepare('SELECT * FROM matches WHERE id = ?').get(req.params.id);
+      if (updatedMatch.home_score != null && updatedMatch.away_score != null) {
+        calcAndSavePoints(updatedMatch);
+      }
+    }
+
     res.json(db.prepare('SELECT * FROM matches WHERE id = ?').get(req.params.id));
   } catch (e) {
     res.status(500).json({ error: 'Error al actualizar partido' });
   }
 });
+
+function calcPointsForPred(predHome, predAway, actualHome, actualAway, comodin) {
+  let pts = 0;
+  if (predHome === actualHome && predAway === actualAway) {
+    pts = 3;
+  } else {
+    const pd = predHome - predAway;
+    const rd = actualHome - actualAway;
+    if ((pd === rd && rd === 0) || (pd > 0 && rd > 0) || (pd < 0 && rd < 0)) {
+      pts = 1;
+    }
+  }
+  return comodin ? pts * 2 : pts;
+}
+
+function calcAndSavePoints(match) {
+  const predictions = db.prepare('SELECT * FROM predictions WHERE match_id = ?').all(match.id);
+  const userIds = [];
+
+  for (const pred of predictions) {
+    const pts = calcPointsForPred(pred.home_score, pred.away_score, match.home_score, match.away_score, !!pred.comodin);
+    db.prepare('UPDATE predictions SET points = ? WHERE id = ?').run(pts, pred.id);
+    if (!userIds.includes(pred.user_id)) userIds.push(pred.user_id);
+  }
+
+  for (const userId of userIds) {
+    const result = db.prepare('SELECT COALESCE(SUM(points), 0) as total FROM predictions WHERE user_id = ? AND points IS NOT NULL').get(userId);
+    db.prepare('UPDATE users SET total_points = ? WHERE id = ?').run(result.total, userId);
+  }
+}
 
 router.delete('/:id', authRequired, adminRequired, (req, res) => {
   try {

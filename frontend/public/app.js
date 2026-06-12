@@ -8,10 +8,9 @@ import {
   loadChampionPick,
   savePrediction,
   saveChampionPick,
-  saveSetting,
-  loadAllRankings
+  saveSetting
 } from './src/services/game.js';
-import { calcPoints, flagUrl } from './src/utils/helpers.js';
+import { flagUrl } from './src/utils/helpers.js';
 
 import Login from './src/components/Login.js';
 import Layout from './src/components/Layout.js';
@@ -165,7 +164,7 @@ createApp({
       const preds = await loadPredictions(this.user.id);
       this.predictions = {};
       preds.forEach(p => {
-        this.predictions[p.match] = { home: p.home_score, away: p.away_score, id: p.id, comodin: !!p.comodin };
+        this.predictions[p.match] = { home: p.home_score, away: p.away_score, id: p.id, comodin: !!p.comodin, points: p.points ?? null };
       });
       this.settings = await loadSettings();
       this.championPick = await loadChampionPick();
@@ -212,29 +211,11 @@ createApp({
     },
     async loadRankings() {
       this.rankingsLoading = true;
-      const finished = this.allMatches.filter(m => m.status === 'finished');
-      const { records, champPicks } = await loadAllRankings();
-
-      const pointsMap = {};
-      const userMap = {};
-
-      records.forEach(p => {
-        const uid = p.user;
-        const match = finished.find(m => m.id === p.match);
-        const pts = calcPoints({ home_score: p.home_score, away_score: p.away_score, comodin: p.comodin }, match);
-        pointsMap[uid] = (pointsMap[uid] || 0) + (pts || 0);
-        userMap[uid] = p.expand?.user || { email: uid, name: uid };
-      });
-
-      this.rankingsData = Object.entries(pointsMap)
-        .map(([id, pts]) => ({
-          id,
-          name: userMap[id]?.name || userMap[id]?.email?.split('@')[0] || id,
-          email: userMap[id]?.email || '',
-          points: pts
-        }))
-        .sort((a, b) => b.points - a.points);
-
+      try {
+        this.rankingsData = await api.get('/users/rankings');
+      } catch (_) {
+        this.rankingsData = [];
+      }
       this.rankingsLoading = false;
     },
     async saveScore(match) {
@@ -316,12 +297,13 @@ createApp({
             m?.home_score ?? '',
             m?.away_score ?? '',
             r.comodin ? 'Sí' : 'No',
-            calcPoints({ home_score: r.home_score, away_score: r.away_score, comodin: r.comodin }, m) ?? '',
+            r.points ?? '',
           ];
           csv += row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(sep) + '\n';
         });
 
-        this._downloadCSV(csv, `predicciones_mundial_${new Date().toISOString().split('T')[0]}.csv`);
+        const now = new Date();
+        this._downloadCSV(csv, `predicciones_mundial_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}.csv`);
         this.notify(`Exportados ${records.length} pronósticos`, 'success');
       } catch (e) {
         this.notify('Error al exportar: ' + e.message, 'error');
@@ -348,7 +330,7 @@ createApp({
             match.home_score ?? '',
             match.away_score ?? '',
             r.comodin ? 'Sí' : 'No',
-            calcPoints({ home_score: r.home_score, away_score: r.away_score, comodin: r.comodin }, match) ?? '',
+            r.points ?? '',
           ];
           csv += row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(sep) + '\n';
         });

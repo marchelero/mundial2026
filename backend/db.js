@@ -68,6 +68,17 @@ try {
     CREATE INDEX IF NOT EXISTS idx_matches_date ON matches(date, time);
     CREATE INDEX IF NOT EXISTS idx_champion_picks_user ON champion_picks(user_id);
   `);
+
+  // Migrations for points columns
+  const hasPoints = db.prepare("SELECT name FROM pragma_table_info('predictions') WHERE name = 'points'").get();
+  if (!hasPoints) {
+    db.exec("ALTER TABLE predictions ADD COLUMN points INTEGER DEFAULT NULL");
+  }
+  const hasTotalPoints = db.prepare("SELECT name FROM pragma_table_info('users') WHERE name = 'total_points'").get();
+  if (!hasTotalPoints) {
+    db.exec("ALTER TABLE users ADD COLUMN total_points INTEGER DEFAULT 0");
+  }
+
   console.log('Database initialized');
 } catch (e) {
   console.error('Database error:', e.message);

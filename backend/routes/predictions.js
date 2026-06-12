@@ -110,7 +110,7 @@ router.post('/', authRequired, (req, res) => {
 });
 
 function formatPrediction(p) {
-  return { id: p.id, user: p.user_id, match: p.match_id, home_score: p.home_score, away_score: p.away_score, comodin: !!p.comodin };
+  return { id: p.id, user: p.user_id, match: p.match_id, home_score: p.home_score, away_score: p.away_score, comodin: !!p.comodin, points: p.points ?? null };
 }
 
 module.exports = router;

@@ -1,4 +1,4 @@
-import { roundLabel, formatDate, calcPoints } from '../utils/helpers.js';
+import { roundLabel, formatDate } from '../utils/helpers.js';
 
 export default {
   props: ['matchGroups', 'predictions', 'allMatches'],
@@ -10,9 +10,8 @@ export default {
       return this.allMatches.reduce((sum, m) => {
         if (m.status !== 'finished') return sum;
         const p = this.predictions[m.id];
-        if (!p?.id) return sum;
-        const pts = calcPoints({ home_score: p.home, away_score: p.away, comodin: p.comodin }, m);
-        return sum + (pts || 0);
+        if (!p?.id || p.points == null) return sum;
+        return sum + p.points;
       }, 0);
     },
     jokersUsed() {
@@ -23,8 +22,8 @@ export default {
     formatDate,
     getPoints(match) {
       const p = this.predictions[match.id];
-      if (!p) return null;
-      return calcPoints({ home_score: p.home, away_score: p.away, comodin: p.comodin }, match);
+      if (!p || match.status !== 'finished') return null;
+      return p.points ?? null;
     },
     groupPoints(group) {
       return group.matches.reduce((sum, m) => {

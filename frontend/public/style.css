@@ -69,6 +69,17 @@ body {
   background-color: var(--color-gray);
 }
 
+.pts-badge.pts-potential {
+  background-color: #eab308;
+  color: #422006;
+  animation: pulse-potential 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-potential {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.65; transform: scale(1.04); }
+}
+
 /* Tab buttons refinement */
 .tabs-container {
   display: flex;
@@ -1089,6 +1100,20 @@ img.admin-team-flag {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
+}
+
+.pts-potential-rank {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 800;
+  background: #eab308;
+  color: #422006;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  margin-left: 0.3rem;
+  animation: pulse-potential 1.2s ease-in-out infinite;
+  vertical-align: middle;
+  line-height: 1.2;
 }
 
 /* =========================================
