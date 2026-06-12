@@ -1142,7 +1142,9 @@ img.admin-team-flag {
   .app-layout {
     display: grid;
     grid-template-columns: 260px 1fr;
+    grid-template-rows: auto 1fr;
     min-height: calc(100vh - 3rem);
+    align-items: start;
   }
 
   .app-header {
@@ -1153,7 +1155,7 @@ img.admin-team-flag {
   }
 
   .app-main {
-    padding: 1.5rem 2.5rem 2.5rem;
+    padding: 0 2.5rem 2.5rem;
     overflow-x: hidden;
   }
 
@@ -1181,6 +1183,14 @@ img.admin-team-flag {
   .app-main {
     grid-column: 2;
     grid-row: 2;
+  }
+
+  .app-main .view-container {
+    padding: 0 0 1rem !important;
+  }
+
+  .app-main .view-container .section-banner {
+    margin: 0 0 1.5rem !important;
   }
 
   .nav-item {
@@ -1215,8 +1225,16 @@ img.admin-team-flag {
 
   /* Contenido: cards en grid suave */
   .view-container {
-    padding: 0 0 1rem;
+    padding: 0;
     max-width: 100%;
+  }
+
+  .view-container > *:first-child {
+    margin-top: 0 !important;
+  }
+
+  .section-banner {
+    margin: 0 0 1.5rem !important;
   }
 
   .card {
