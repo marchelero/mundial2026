@@ -113,9 +113,7 @@ function sendWhatsAppPredictions(user, predictions) {
   const count = predictions.length;
 
   const text = `⚽ *MUNDIAL 2026* ⚽\n` +
-    `${'─'.repeat(28)}\n` +
     `${predictionLines}\n` +
-    `${'─'.repeat(28)}\n` +
     `👤 ${name} (${email})`;
 
   sendRaw(text);
@@ -143,10 +141,8 @@ function sendMatchResult(match, homeFlag, awayFlag, pointsSummary) {
   }
 
   const text = `🏁 *RESUMEN DEL PARTIDO* 🏁\n` +
-    `${'─'.repeat(28)}\n` +
     `${homeFlag} ${match.home_team} ${match.home_score} - ${match.away_score} ${match.away_team} ${awayFlag}\n` +
-    `${'─'.repeat(28)}\n` +
-    `📊 *Resumen de puntos:*\n${summary}\n` +
+    `*Resumen de puntos:*\n${summary}\n` +
     `👥 Total: ${total} pronóstico(s)`;
 
   sendRaw(text);
