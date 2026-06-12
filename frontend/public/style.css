@@ -35,12 +35,15 @@ body {
 }
 
 #app {
+  width: 100%;
   max-width: 500px;
   margin: 0 auto;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   position: relative;
+  background: var(--color-white);
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
 }
 
 /* Pts Badges */
@@ -588,17 +591,18 @@ img.team-flag {
 }
 
 .input-score {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   text-align: center;
   border: 1.5px solid #d1d5db;
   border-radius: 8px;
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1rem;
   background: white;
   appearance: textfield;
   -moz-appearance: textfield;
   transition: all 0.2s;
+  min-width: 0;
 }
 
 .input-score:focus {
@@ -845,9 +849,10 @@ img.team-flag {
 .admin-match-row {
   display: flex;
   align-items: center;
-  gap: 0;
-  padding: 0.5rem 0;
+  gap: 0.25rem;
+  padding: 0.5rem 0.25rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  min-width: 0;
 }
 
 .admin-match-row:last-child {
@@ -861,15 +866,16 @@ img.team-flag {
 }
 
 .admin-col-time {
-  width: 48px;
-  flex: none;
+  width: 42px;
+  flex: 0 0 42px;
   text-align: center;
   line-height: 1.2;
+  min-width: 0;
 }
 
 .admin-col-team {
-  width: 110px;
-  flex: none;
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -884,21 +890,19 @@ img.team-flag {
 }
 
 .admin-col-score {
-  width: 100px;
-  flex: none;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   margin: 0 2px;
 }
 
 .admin-col-actions {
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   justify-content: flex-end;
-  gap: 2px;
-  padding-left: 4px;
+  gap: 4px;
 }
 
 .admin-team-name {
@@ -906,15 +910,15 @@ img.team-flag {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  max-width: 82px;
+  min-width: 0;
 }
 
 .admin-team-flag {
   font-size: 1.1rem;
   flex: none;
-  width: 24px;
+  width: 22px;
   text-align: center;
 }
 
@@ -1085,4 +1089,245 @@ img.admin-team-flag {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
+}
+
+/* =========================================
+   RESPONSIVE: Desktop & Tablet
+   Mantiene el look mobile-first, expande a panel en pantallas grandes.
+   ========================================= */
+@media (min-width: 768px) {
+  body {
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(22, 163, 74, 0.08), transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, rgba(15, 23, 42, 0.06), transparent 60%),
+      #f5f3ec;
+    min-height: 100vh;
+  }
+
+  #app {
+    max-width: 1280px;
+    margin: 1.5rem auto;
+    min-height: calc(100vh - 3rem);
+    border-radius: 18px;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+    background: var(--color-white);
+  }
+
+  .app-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: calc(100vh - 3rem);
+  }
+
+  .app-header {
+    grid-column: 1 / -1;
+    padding: 0.9rem 1.5rem;
+    background: var(--color-white);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  .app-main {
+    padding: 1.5rem 2.5rem 2.5rem;
+    overflow-x: hidden;
+  }
+
+  /* Sidebar nav en desktop */
+  .bottom-nav {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    transform: none;
+    width: auto;
+    max-width: none;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    padding: 1.25rem 0.85rem;
+    background: var(--color-white);
+    border-right: 1px solid rgba(0, 0, 0, 0.06);
+    border-top: none;
+    box-shadow: none;
+    gap: 0.35rem;
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .app-main {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .nav-item {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    font-size: 0.78rem;
+    padding: 0.7rem 0.85rem;
+    border-radius: 10px;
+    transition: all 0.2s;
+    color: var(--color-gray);
+  }
+
+  .nav-item:hover {
+    background: rgba(15, 23, 42, 0.04);
+    color: var(--color-text);
+  }
+
+  .nav-item.active {
+    background: var(--color-dark);
+    color: var(--color-white);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18);
+  }
+
+  .nav-item.active .nav-icon {
+    filter: brightness(1.2);
+  }
+
+  .nav-icon {
+    font-size: 1.15rem;
+  }
+
+  /* Contenido: cards en grid suave */
+  .view-container {
+    padding: 0 0 1rem;
+    max-width: 100%;
+  }
+
+  .card {
+    padding: 1.1rem 1.25rem;
+  }
+
+  .section-banner {
+    margin: 0 0 1.5rem;
+    padding: 1.1rem 1.5rem;
+  }
+
+  .banner-title {
+    font-size: 1.75rem;
+  }
+
+  /* Stats: 3 columnas ya, pero más holgadas */
+  .stats-row,
+  .ranking-stats-grid {
+    gap: 0.85rem;
+  }
+
+  .stat-box,
+  .ranking-stat-card {
+    padding: 1rem 0.85rem;
+  }
+
+  /* Lista de partidos: 1 columna amplia en desktop para que los nombres respiren */
+  .date-section {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.85rem;
+  }
+
+  .date-header {
+    grid-column: 1 / -1;
+    margin-bottom: 0;
+  }
+
+  /* Cards de partido: nombre completo visible, sin truncamiento */
+  .date-section .card {
+    margin-bottom: 0;
+    overflow: hidden;
+    padding: 1rem 1.25rem;
+  }
+
+  .team-info {
+    min-width: 0;
+    gap: 0.6rem;
+  }
+
+  .team-info.home {
+    text-align: right;
+    justify-content: flex-end;
+  }
+
+  .team-info.away {
+    text-align: left;
+    justify-content: flex-start;
+  }
+
+  .team-name {
+    font-size: 0.95rem;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  .match-row {
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+  }
+
+  .score-box {
+    flex: 0 0 auto;
+  }
+
+  .input-score {
+    width: 44px;
+    height: 44px;
+    font-size: 1.1rem;
+  }
+
+  /* Botón enviar: centrado y con ancho máximo, no estirado al 100% */
+  .view-container > .btn-primary.w-full {
+    max-width: 520px;
+    margin: 1.25rem auto 0;
+    width: 100%;
+  }
+
+  .view-container > p {
+    text-align: center;
+  }
+
+  /* Admin: fila más espaciosa */
+  .admin-match-row {
+    padding: 0.65rem 0.5rem;
+    gap: 0.65rem;
+  }
+
+  .admin-col-time {
+    flex: 0 0 56px;
+    width: 56px;
+  }
+
+  .admin-team-name {
+    font-size: 0.8rem;
+  }
+
+  .input-score {
+    width: 42px;
+    height: 42px;
+    font-size: 1.05rem;
+  }
+
+  /* Login más elegante en desktop */
+  .login-screen {
+    padding: 3rem 2rem;
+  }
+
+  .login-card {
+    max-width: 420px;
+  }
+
+  /* Form grid del nuevo partido: 2 columnas reales */
+  .admin-add-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .admin-add-grid .full-row {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1200px) {
+  #app {
+    max-width: 1280px;
+  }
 }

@@ -179,7 +179,7 @@ export default {
       <transition name="fade">
         <div v-if="showAddForm" class="card" style="border: 2px solid var(--color-dark);">
           <h3 class="form-label" style="margin-bottom: 1rem;">Registrar Nuevo Partido</h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="admin-add-grid">
               <div class="form-group">
                  <label class="form-label">Local</label>
                  <div style="display:flex;align-items:center;gap:0.5rem;">
@@ -218,7 +218,7 @@ export default {
                  </div>
                  <span v-if="errors.time" class="field-error">{{ errors.time }}</span>
               </div>
-              <div class="form-group" style="grid-column:1/-1;">
+              <div class="form-group full-row">
                  <label class="form-label">Tipo de partido</label>
                  <select v-model="newMatch.round" class="form-input" style="padding-left:0.5rem;">
                    <option value="group">Fase de Grupos</option>
@@ -230,7 +230,7 @@ export default {
                  </select>
               </div>
            </div>
-           <button class="btn btn-primary w-full" :disabled="!isFormValid" @click="submitMatch" style="margin-top: 1rem;">
+           <button class="btn btn-primary w-full full-row" :disabled="!isFormValid" @click="submitMatch" style="margin-top: 1rem;">
              GUARDAR PARTIDO
            </button>
         </div>
