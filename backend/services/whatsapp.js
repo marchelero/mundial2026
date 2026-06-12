@@ -142,7 +142,7 @@ function sendMatchResult(match, homeFlag, awayFlag, pointsSummary) {
     }
   }
 
-  const text = `🏁 *PARTIDO FINALIZADO* 🏁\n` +
+  const text = `🏁 *RESUMEN DEL PARTIDO* 🏁\n` +
     `${'─'.repeat(28)}\n` +
     `${homeFlag} ${match.home_team} ${match.home_score} - ${match.away_score} ${match.away_team} ${awayFlag}\n` +
     `${'─'.repeat(28)}\n` +
