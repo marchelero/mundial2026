@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mundial2026-v7';
+const CACHE_NAME = 'mundial2026-v8';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -51,7 +51,7 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
   // No cachear API ni config.js (config.js es dinámico)
-  if (url.pathname.startsWith('/api/') || url.pathname === '/config.js') {
+  if (url.pathname.startsWith('/api/') || url.pathname === '/config.js' || url.pathname.endsWith('.js')) {
     event.respondWith(fetch(event.request));
     return;
   }

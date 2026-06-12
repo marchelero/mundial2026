@@ -15,7 +15,9 @@ export default {
       groups: [],
       groupsLoading: true,
       showGroupsPanel: false,
-      expandedGroup: null
+      expandedGroup: null,
+      expandedMatch: null,
+      matchStats: null,
     };
   },
   async mounted() {
@@ -136,15 +138,17 @@ export default {
     },
     groupPoints(group) {
       return group.matches.reduce((sum, m) => {
+        if (m.status !== 'finished' || m.home_score == null || m.away_score == null) return sum;
+        const p = this.predictions[m.id];
+        if (!p?.id) return sum;
         const pts = this.getPoints(m);
-        return pts !== null ? sum + pts : sum;
+        return sum + (pts || 0);
       }, 0);
     },
     ptsClass(match) {
       const pts = this.getPoints(match);
       if (pts === null) return '';
-      if (pts >= 3) return 'exact';
-      if (pts > 0) return 'winner';
+      if (pts > 0) return 'exact';
       return 'wrong';
     },
     async saveChampionPick() {
@@ -167,6 +171,33 @@ export default {
     cancelChampionPick() {
       this.showChampionModal = false;
       this.championConfirmData = null;
+    },
+    async toggleMatchStats(matchId) {
+      if (this.expandedMatch === matchId) {
+        this.expandedMatch = null;
+        this.matchStats = null;
+        return;
+      }
+      try {
+        const predictions = await api.get(`/predictions/match/${encodeURIComponent(matchId)}`);
+        const total = predictions.length;
+        const homeWins = predictions.filter(p => Number(p.home_score) > Number(p.away_score)).length;
+        const draws = predictions.filter(p => Number(p.home_score) === Number(p.away_score)).length;
+        const awayWins = predictions.filter(p => Number(p.home_score) < Number(p.away_score)).length;
+        const scoreCounts = {};
+        predictions.forEach(p => {
+          const key = `${p.home_score}-${p.away_score}`;
+          scoreCounts[key] = (scoreCounts[key] || 0) + 1;
+        });
+        const topScores = Object.entries(scoreCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3);
+        this.matchStats = { total, homeWins, draws, awayWins, topScores, predictions };
+        this.expandedMatch = matchId;
+      } catch (_) {
+        this.matchStats = { total: 0, homeWins: 0, draws: 0, awayWins: 0, topScores: [], predictions: [] };
+        this.expandedMatch = matchId;
+      }
     },
     openSubmitModal() {
       const pending = [];
@@ -338,7 +369,12 @@ export default {
       <div v-for="group in filteredGroups" :key="group.date" class="date-section">
         <div class="date-header">
           <span>{{ formatDate(group.date) }}</span>
-          <span v-if="groupPoints(group) > 0" class="pts-total">{{ groupPoints(group) }} PTS</span>
+          <span v-if="groupPoints(group) > 0" style="display:flex;align-items:center;gap:0.35rem;">
+            <span style="background:var(--color-accent);color:var(--color-dark);padding:0.15rem 0.5rem;border-radius:4px;font-family:var(--font-main);font-size:0.7rem;font-weight:800;letter-spacing:0.03em;">{{ groupPoints(group) }} PTS</span>
+          </span>
+          <span v-else-if="group.matches.some(m => m.status === 'finished')" style="display:flex;align-items:center;gap:0.35rem;">
+            <span style="background:#e2e8f0;color:#64748b;padding:0.15rem 0.5rem;border-radius:4px;font-family:var(--font-main);font-size:0.7rem;font-weight:700;">0 PTS</span>
+          </span>
         </div>
         
         <div v-for="match in group.matches" :key="match.id" class="card" :class="'card-' + matchState(match)" style="margin-bottom: 0.75rem; position: relative;">
@@ -399,14 +435,37 @@ export default {
             </button>
           </div>
 
-          <div v-if="canShowPotential(match)" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.06); font-size: 0.75rem;">
-            <span style="color: var(--color-gray);">Resultado: {{ match.home_score }} - {{ match.away_score }}</span>
-            <span class="pts-badge pts-potential">{{ potentialPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }} ⏳</span>
+          <div v-if="isMatchPast(match) && match.status !== 'finished'" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.06); font-size: 0.75rem;">
+            <span style="color: var(--color-gray);">
+              <template v-if="match.home_score != null && match.away_score != null">Resultado: {{ match.home_score }} - {{ match.away_score }}</template>
+              <template v-else>⚽ En juego</template>
+            </span>
+            <span v-if="potentialPoints(match) !== null" class="pts-badge pts-potential">{{ potentialPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }} ⏳</span>
+            <span v-else-if="predictions[match.id]?.id" style="font-size:0.6rem;color:var(--color-gray);font-style:italic;">Esperando resultado...</span>
           </div>
           <div v-if="match.status === 'finished'" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.06); font-size: 0.75rem;">
             <span style="color: var(--color-gray);">Resultado: {{ match.home_score }} - {{ match.away_score }}</span>
             <span v-if="predictions[match.id]?.id" class="pts-badge" :class="ptsClass(match)">{{ getPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }}</span>
             <span v-else class="pts-badge wrong">0 PTS</span>
+          </div>
+
+          <button @click="toggleMatchStats(match.id)" style="width:100%;margin-top:0.4rem;padding:0.25rem;border:none;border-radius:4px;background:rgba(0,0,0,0.03);color:var(--color-gray);font-size:0.6rem;cursor:pointer;font-weight:600;transition:background 0.2s;" @mouseover="$event.target.style.background='rgba(0,0,0,0.07)'" @mouseout="$event.target.style.background='rgba(0,0,0,0.03)'">
+            👥 {{ expandedMatch === match.id ? 'OCULTAR' : 'VER PRONÓSTICOS' }}
+          </button>
+
+          <div v-if="expandedMatch === match.id && matchStats" style="margin-top:0.4rem;padding:0.5rem;background:#f8fafc;border-radius:6px;font-size:0.7rem;border:1px solid rgba(0,0,0,0.06);">
+            <div style="display:flex;gap:0.75rem;margin-bottom:0.5rem;text-align:center;">
+              <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;">{{ matchStats.total }}</div><div style="color:var(--color-gray);font-size:0.6rem;">VOTOS</div></div>
+              <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#16a34a;">{{ matchStats.homeWins }}</div><div style="color:var(--color-gray);font-size:0.6rem;">{{ match.home_flag }} GANA</div></div>
+              <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#d4af37;">{{ matchStats.draws }}</div><div style="color:var(--color-gray);font-size:0.6rem;">EMPATE</div></div>
+              <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#2563eb;">{{ matchStats.awayWins }}</div><div style="color:var(--color-gray);font-size:0.6rem;">{{ match.away_flag }} GANA</div></div>
+            </div>
+            <div v-if="matchStats.topScores.length > 0" style="border-top:1px solid rgba(0,0,0,0.06);padding-top:0.35rem;">
+              <div v-for="([score, count], i) in matchStats.topScores" :key="i" style="display:flex;justify-content:space-between;padding:0.1rem 0;font-size:0.65rem;">
+                <span style="font-weight:600;">{{ match.home_team }} {{ match.home_flag }} {{ score }} {{ match.away_flag }} {{ match.away_team }}</span>
+                <span style="color:var(--color-gray);">{{ count }} voto(s)</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

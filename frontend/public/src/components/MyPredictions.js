@@ -1,7 +1,9 @@
 import { roundLabel, formatDate } from '../utils/helpers.js';
+import { api } from '../services/api.js';
 
 export default {
   props: ['matchGroups', 'predictions', 'allMatches', 'championPick'],
+  data() { return { expandedMatch: null, matchStats: null }; },
   computed: {
     totalAvailable() {
       return this.allMatches.filter(m => {
@@ -140,6 +142,17 @@ export default {
       if (pts >= 3) return 'exact';
       if (pts > 0) return 'winner';
       return 'wrong';
+    },
+    toggleMatchStats(matchId) {
+      if (this.expandedMatch === matchId) { this.expandedMatch = null; this.matchStats = null; return; }
+      api.get(`/predictions/match/${encodeURIComponent(matchId)}`).then(r => {
+        const home = r.filter(p => Number(p.home_score) > Number(p.away_score)).length;
+        const draw = r.filter(p => Number(p.home_score) === Number(p.away_score)).length;
+        const away = r.filter(p => Number(p.home_score) < Number(p.away_score)).length;
+        const top = Object.entries(r.reduce((a, p) => { const k = p.home_score+'-'+p.away_score; a[k]=(a[k]||0)+1; return a; }, {})).sort((a,b)=>b[1]-a[1]).slice(0,3);
+        this.matchStats = { total: r.length, homeWins: home, draws: draw, awayWins: away, topScores: top };
+        this.expandedMatch = matchId;
+      }).catch(() => { this.matchStats = {total:0}; this.expandedMatch = matchId; });
     }
   },
   template: `
@@ -237,8 +250,23 @@ export default {
               <div v-if="match.status === 'finished'" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; font-size: 0.8rem; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 0.5rem;">
                  <span style="color: var(--color-gray);">Resultado: {{ match.home_score }} - {{ match.away_score }}</span>
                  <span v-if="predictions[match.id]?.id" class="pts-badge" :class="ptsClass(match)">{{ getPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }}</span>
-                 <span v-else class="pts-badge wrong">0 PTS</span>
+                  <span v-else class="pts-badge wrong">0 PTS</span>
+               </div>
+          <button @click="toggleMatchStats(match.id)" style="width:100%;margin-top:0.4rem;padding:0.2rem;border:none;border-radius:4px;background:rgba(0,0,0,0.03);color:var(--color-gray);font-size:0.6rem;cursor:pointer;font-weight:600;">👥 {{ expandedMatch === match.id ? 'OCULTAR' : 'VER PRONÓSTICOS' }}</button>
+          <div v-if="expandedMatch === match.id" style="margin-top:0.3rem;padding:0.4rem;background:#f8fafc;border-radius:6px;font-size:0.65rem;border:1px solid rgba(0,0,0,0.06);">
+            <div style="display:flex;gap:0.5rem;margin-bottom:0.3rem;text-align:center;">
+              <div style="flex:1;"><span style="font-weight:700;">{{ matchStats?.total ?? 0 }}</span><br><span style="color:var(--color-gray);font-size:0.55rem;">VOTOS</span></div>
+              <div style="flex:1;"><span style="font-weight:700;color:#16a34a;">{{ matchStats?.homeWins ?? 0 }}</span><br><span style="color:var(--color-gray);font-size:0.55rem;">{{ match.home_flag || '' }} GANA</span></div>
+              <div style="flex:1;"><span style="font-weight:700;color:#d4af37;">{{ matchStats?.draws ?? 0 }}</span><br><span style="color:var(--color-gray);font-size:0.55rem;">EMPATE</span></div>
+              <div style="flex:1;"><span style="font-weight:700;color:#2563eb;">{{ matchStats?.awayWins ?? 0 }}</span><br><span style="color:var(--color-gray);font-size:0.55rem;">{{ match.away_flag || '' }} GANA</span></div>
+            </div>
+            <div v-if="matchStats?.topScores?.length" style="border-top:1px solid rgba(0,0,0,0.06);padding-top:0.25rem;">
+              <div v-for="([s, c]) in matchStats.topScores" :key="s" style="display:flex;justify-content:space-between;padding:0.05rem 0;font-size:0.6rem;">
+                <span style="font-weight:600;">{{ match.home_team || '' }} {{ match.home_flag || '' }} {{ s }} {{ match.away_flag || '' }} {{ match.away_team || '' }}</span>
+                <span style="color:var(--color-gray);">{{ c }} voto(s)</span>
               </div>
+            </div>
+          </div>
          </div>
       </div>
     </div>

@@ -40,8 +40,8 @@ createApp({
       <Login v-if="!user" :auth-error="authError" />
       
       <Layout v-else :user="user" :current-view="view" :is-admin="isAdmin" :notification="notification" @change-view="view = $event" @logout="handleLogout" @clear-notification="notification.visible = false">
-        <transition name="fade" mode="out-in">
-          <Matchlist v-if="view === 'votar'" 
+        <template v-if="view === 'votar'">
+          <Matchlist 
             :match-groups="matchGroups" 
             :predictions="predictions" 
             :user="user" 
@@ -53,22 +53,24 @@ createApp({
             @set-score="setScore"
             @toggle-comodin="toggleComodin"
             @submit="submitPredictions"
-             @save-champion-pick="handleChampionSaved"
-             @saved="handleChampionSaved"
-             @save-error="handleChampionError" />
-            
-          <Mypredictions v-else-if="view === 'historial'"
+            @saved="handleChampionSaved"
+            @save-error="handleChampionError" />
+        </template>
+        <template v-else-if="view === 'historial'">
+          <Mypredictions
             :match-groups="historyGroups"
             :predictions="predictions"
             :all-matches="allMatches"
             :champion-pick="championPick" />
-
-          <Ranking v-else-if="view === 'posiciones'"
+        </template>
+        <template v-else-if="view === 'posiciones'">
+          <Ranking
             :rankings-data="rankingsData"
             :rankings-loading="rankingsLoading"
             :all-matches="allMatches" />
-
-          <Admin v-else-if="view === 'admin' && isAdmin"
+        </template>
+        <template v-else-if="view === 'admin' && isAdmin">
+          <Admin
             :matches="allMatches"
             :settings="settings"
             :is-admin="isAdmin"
@@ -80,7 +82,7 @@ createApp({
             @export-csv="exportToCSV"
             @export-match="exportMatchCSV"
             @save-setting="handleSaveSetting" />
-        </transition>
+        </template>
       </Layout>
     </template>
   `,
