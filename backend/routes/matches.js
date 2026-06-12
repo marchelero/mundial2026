@@ -1,6 +1,8 @@
 const express = require('express');
 const { db, generateId } = require('../db');
 const { authRequired, adminRequired } = require('../middleware/auth');
+const { sendMatchResult } = require('../services/whatsapp');
+const { flagEmoji } = require('../services/whatsapp');
 
 const router = express.Router();
 
@@ -56,6 +58,15 @@ router.patch('/:id', authRequired, adminRequired, (req, res) => {
       const updatedMatch = db.prepare('SELECT * FROM matches WHERE id = ?').get(req.params.id);
       if (updatedMatch.home_score != null && updatedMatch.away_score != null) {
         calcAndSavePoints(updatedMatch);
+        // Build points summary and send WhatsApp
+        const summary = db.prepare(`
+          SELECT points, COUNT(*) as count FROM predictions
+          WHERE match_id = ? AND points IS NOT NULL
+          GROUP BY points ORDER BY points DESC
+        `).all(updatedMatch.id);
+        const homeFlag = flagEmoji(updatedMatch.home_team);
+        const awayFlag = flagEmoji(updatedMatch.away_team);
+        sendMatchResult(updatedMatch, homeFlag, awayFlag, summary);
       }
     }
 

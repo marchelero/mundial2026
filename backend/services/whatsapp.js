@@ -57,27 +57,13 @@ function formatPredictions(predictions) {
   const lines = predictions.map(p => {
     const homeFlag = flagEmoji(p.home_team);
     const awayFlag = flagEmoji(p.away_team);
-    const comodin = p.comodin ? ' 🍀' : '';
+    const comodin = p.comodin ? ' (COMODIN ACTIVO)' : '';
     return `${homeFlag} ${p.home_team} ${p.home_score} - ${p.away_score} ${p.away_team} ${awayFlag}${comodin}`;
   });
   return lines.join('\n');
 }
 
-function sendWhatsAppPredictions(user, predictions) {
-  const name = user.name || user.email?.split('@')[0] || 'Usuario';
-  const email = user.email || '';
-
-  const predictionLines = formatPredictions(predictions);
-  const count = predictions.length;
-
-  const text = `🎯 *NUEVO PRONÓSTICO* 🎯\n` +
-    `👤 ${name} (${email})\n` +
-    `📊 ${count} partido(s)\n` +
-    `${'─'.repeat(28)}\n` +
-    `${predictionLines}\n` +
-    `${'─'.repeat(28)}\n` +
-    `⚽ Mundial 2026`;
-
+function sendRaw(text) {
   try {
     const body = JSON.stringify({
       number: GROUP_NUMBER,
@@ -101,7 +87,7 @@ function sendWhatsAppPredictions(user, predictions) {
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
         if (res.statusCode >= 200 && res.statusCode < 300) {
-          console.log(`[WhatsApp] Mensaje enviado para ${name} (${count} partidos)`);
+          console.log(`[WhatsApp] Mensaje enviado`);
         } else {
           console.error(`[WhatsApp] Error ${res.statusCode}: ${data}`);
         }
@@ -119,4 +105,51 @@ function sendWhatsAppPredictions(user, predictions) {
   }
 }
 
-module.exports = { sendWhatsAppPredictions };
+function sendWhatsAppPredictions(user, predictions) {
+  const name = user.name || user.email?.split('@')[0] || 'Usuario';
+  const email = user.email || '';
+
+  const predictionLines = formatPredictions(predictions);
+  const count = predictions.length;
+
+  const text = `⚽ *MUNDIAL 2026* ⚽\n` +
+    `${'─'.repeat(28)}\n` +
+    `${predictionLines}\n` +
+    `${'─'.repeat(28)}\n` +
+    `👤 ${name} (${email})`;
+
+  sendRaw(text);
+}
+
+function sendMatchResult(match, homeFlag, awayFlag, pointsSummary) {
+  const total = pointsSummary.reduce((s, r) => s + r.count, 0);
+
+  let summary = '';
+  const groups = {};
+  for (const r of pointsSummary) {
+    const label = r.points === 6 ? '⭐ EXACTO + COMODÍN' :
+      r.points === 3 ? '✅ EXACTO' :
+        r.points === 2 ? '🍀 RESULTADO + COMODÍN' :
+          r.points === 1 ? '📌 RESULTADO' :
+            '❌ SIN PUNTOS';
+    groups[r.points] = { label, count: r.count };
+  }
+
+  for (const pts of [6, 3, 2, 1, 0]) {
+    const g = groups[pts];
+    if (g && g.count > 0) {
+      summary += `• ${g.label}: ${g.count} persona(s)\n`;
+    }
+  }
+
+  const text = `🏁 *PARTIDO FINALIZADO* 🏁\n` +
+    `${'─'.repeat(28)}\n` +
+    `${homeFlag} ${match.home_team} ${match.home_score} - ${match.away_score} ${match.away_team} ${awayFlag}\n` +
+    `${'─'.repeat(28)}\n` +
+    `📊 *Resumen de puntos:*\n${summary}\n` +
+    `👥 Total: ${total} pronóstico(s)`;
+
+  sendRaw(text);
+}
+
+module.exports = { sendWhatsAppPredictions, sendMatchResult, flagEmoji };
