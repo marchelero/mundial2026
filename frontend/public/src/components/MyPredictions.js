@@ -3,8 +3,38 @@ import { roundLabel, formatDate } from '../utils/helpers.js';
 export default {
   props: ['matchGroups', 'predictions', 'allMatches', 'championPick'],
   computed: {
+    totalAvailable() {
+      return this.allMatches.filter(m => {
+        if (m.status === 'finished' || m.status === 'closed') return true;
+        if (m.status === 'open') {
+          const matchDt = m.date + ' ' + (m.time || '00:00');
+          const now = new Date();
+          const nowStr = now.getFullYear() + '-' +
+            String(now.getMonth() + 1).padStart(2, '0') + '-' +
+            String(now.getDate()).padStart(2, '0') + ' ' +
+            String(now.getHours()).padStart(2, '0') + ':' +
+            String(now.getMinutes()).padStart(2, '0');
+          return matchDt < nowStr;
+        }
+        return false;
+      }).length;
+    },
     totalPredicted() {
-      return this.allMatches.filter(m => this.predictions[m.id]?.id).length;
+      return this.allMatches.filter(m => {
+        if (!this.predictions[m.id]?.id) return false;
+        if (m.status === 'finished' || m.status === 'closed') return true;
+        if (m.status === 'open') {
+          const matchDt = m.date + ' ' + (m.time || '00:00');
+          const now = new Date();
+          const nowStr = now.getFullYear() + '-' +
+            String(now.getMonth() + 1).padStart(2, '0') + '-' +
+            String(now.getDate()).padStart(2, '0') + ' ' +
+            String(now.getHours()).padStart(2, '0') + ':' +
+            String(now.getMinutes()).padStart(2, '0');
+          return matchDt < nowStr;
+        }
+        return false;
+      }).length;
     },
     totalPoints() {
       const matchPts = this.allMatches.reduce((sum, m) => {
@@ -15,18 +45,84 @@ export default {
       }, 0);
       return matchPts + (this.championPoints || 0);
     },
-    jokersUsed() {
-      return Object.values(this.predictions).filter(p => p.comodin).length;
-    },
-    championPoints() {
+    champPoints() {
       return this.championPick?.points || 0;
     },
     championName() {
       return this.championPick?.champion || '';
+    },
+    exactCount() {
+      const total = this.totalAvailable;
+      if (total === 0) return 0;
+      return this.allMatches.filter(m => {
+        if (m.status !== 'finished') return false;
+        const p = this.predictions[m.id];
+        return p?.id && p.points != null && p.points >= 3;
+      }).length;
+    },
+    resultCount() {
+      const total = this.totalAvailable;
+      if (total === 0) return 0;
+      return this.allMatches.filter(m => {
+        if (m.status !== 'finished') return false;
+        const p = this.predictions[m.id];
+        return p?.id && p.points != null && p.points > 0 && p.points < 3;
+      }).length;
+    },
+    sinPuntosCount() {
+      // predicted but 0 pts OR predicted but match not finished yet
+      const total = this.totalAvailable;
+      if (total === 0) return 0;
+      return this.allMatches.filter(m => {
+        const p = this.predictions[m.id];
+        if (!p?.id) return false;
+        if (m.status === 'finished') {
+          return p.points === 0;
+        }
+        // predicted but match is closed/past (not yet finished)
+        if (m.status === 'closed') return true;
+        if (m.status === 'open') {
+          const matchDt = m.date + ' ' + (m.time || '00:00');
+          const now = new Date();
+          const nowStr = now.getFullYear() + '-' +
+            String(now.getMonth() + 1).padStart(2, '0') + '-' +
+            String(now.getDate()).padStart(2, '0') + ' ' +
+            String(now.getHours()).padStart(2, '0') + ':' +
+            String(now.getMinutes()).padStart(2, '0');
+          return matchDt < nowStr;
+        }
+        return false;
+      }).length;
+    },
+    noPredCount() {
+      return Math.max(0, this.totalAvailable - this.totalPredicted);
+    },
+    finishedPreds() {
+      return this.allMatches
+        .filter(m => m.status === 'finished' && this.predictions[m.id]?.id)
+        .map(m => ({ match: m, pred: this.predictions[m.id] }))
+        .sort((a, b) => (a.match.date + ' ' + a.match.time).localeCompare(b.match.date + ' ' + b.match.time));
+    },
+    currentStreak() {
+      let streak = 0;
+      for (let i = this.finishedPreds.length - 1; i >= 0; i--) {
+        if (this.finishedPreds[i].pred.points > 0) streak++;
+        else break;
+      }
+      return streak;
+    },
+    maxStreak() {
+      let max = 0, current = 0;
+      for (const { pred } of this.finishedPreds) {
+        if (pred.points > 0) { current++; max = Math.max(max, current); }
+        else current = 0;
+      }
+      return max;
     }
   },
   methods: {
     formatDate,
+    roundLabel,
     getPoints(match) {
       const p = this.predictions[match.id];
       if (!p || match.status !== 'finished') return null;
@@ -56,62 +152,62 @@ export default {
         </div>
       </div>
 
-      <!-- Stats Summary -->
-      <div class="ranking-stats-grid">
-        <!-- Partidos -->
-        <div class="ranking-stat-card">
-          <div class="ranking-stat-icon-box dark">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 24px; height: 24px;">
-              <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 2a7.93 7.93 0 0 1 3.91 1.03l-1.83 1.83a2.5 2.5 0 0 1-4.16 0l-1.83-1.83A7.93 7.93 0 0 1 12 4Zm-6.39 4.91 1.83 1.83a2.5 2.5 0 0 1 0 2.16l-1.83 1.83A7.94 7.94 0 0 1 4 12c0-1.15.24-2.24.61-3.24L4.6 8.91h1.01Zm2.64 4.32 1.83-1.83a2.49 2.49 0 0 1 3.44 0l1.83 1.83-1.83 1.83a2.49 2.49 0 0 1-3.44 0l-1.83-1.83ZM12 20c-1.03 0-2.01-.22-2.91-.61l1.83-1.83a2.5 2.5 0 0 1 2.16 0l1.83 1.83C14.01 19.78 13.03 20 12 20Zm6.39-4.91a7.94 7.94 0 0 1-.61 3.24L15.95 16.5a2.5 2.5 0 0 1 0-2.16l1.83-1.83.61 3.24V15.09h-.1v1Zm-1.83-5.69A2.5 2.5 0 0 1 15.95 11l1.83-1.83c.37 1 .61 2.09.61 3.24 0 .39-.03.77-.09 1.15l-1.83-1.47V10.5h.09l-.17-.18Z" />
-            </svg>
-          </div>
-          <div class="ranking-stat-info">
-            <div class="ranking-stat-label">PARTIDOS</div>
-            <div class="ranking-stat-value">{{ totalPredicted }}</div>
-          </div>
+      <!-- Estadísticas -->
+      <div class="card" style="margin-bottom: 1rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+          <span style="font-size:1.2rem;">📊</span>
+          <span style="font-weight:700;font-size:0.8rem;text-transform:uppercase;">ESTADÍSTICAS</span>
         </div>
-
-        <!-- Puntos -->
-        <div class="ranking-stat-card">
-          <div class="ranking-stat-icon-box" style="color: var(--color-accent);">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 24px; height: 24px;">
-              <path fill-rule="evenodd" d="M12 2.25a.75.75 0 0 1 .75.75v.756a8.25 8.25 0 0 1 7.244 7.244h.756a.75.75 0 0 1 0 1.5h-.756a8.25 8.25 0 0 1-7.244 7.244v.756a.75.75 0 0 1-1.5 0v-.756a8.25 8.25 0 0 1-7.244-7.244h-.756a.75.75 0 0 1 0-1.5h.756a8.25 8.25 0 0 1 7.244-7.244V3a.75.75 0 0 1 .75-.75ZM5.25 12a6.75 6.75 0 1 1 13.5 0 6.75 6.75 0 0 1-13.5 0Z" clip-rule="evenodd" />
-            </svg>
-          </div>
-          <div class="ranking-stat-info">
-            <div class="ranking-stat-label">PUNTOS</div>
-            <div class="ranking-stat-value">{{ totalPoints }}</div>
-          </div>
+        <div v-if="totalAvailable === 0" style="text-align:center;padding:0.5rem;font-size:0.75rem;color:var(--color-gray);">
+          Aún no hay datos. Aparecerán cuando finalicen los primeros partidos.
         </div>
-
-        <!-- Comodin -->
-        <div class="ranking-stat-card">
-          <div class="ranking-stat-icon-box" style="color: var(--color-green);">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 24px; height: 24px;">
-              <path d="M11.644 1.59a.75.75 0 0 1 .712 0l9.75 5.25a.75.75 0 0 1 0 1.32l-9.75 5.25a.75.75 0 0 1-.712 0l-9.75-5.25a.75.75 0 0 1 0-1.32l9.75-5.25Z" />
-              <path d="m3.265 10.602 7.691 4.142a2.25 2.25 0 0 0 2.088 0l7.691-4.142a.75.75 0 0 1 .712 1.32l-7.691 4.142a3.75 3.75 0 0 1-3.482 0l-7.691-4.142a.75.75 0 1 1 .712-1.32Z" />
-              <path d="m3.265 14.352 7.691 4.142a2.25 2.25 0 0 0 2.088 0l7.691-4.142a.75.75 0 0 1 .712 1.32l-7.691 4.142a3.75 3.75 0 0 1-3.482 0l-7.691-4.142a.75.75 0 1 1 .712-1.32Z" />
-            </svg>
+        <div v-else style="display:flex;flex-direction:column;gap:0.5rem;">
+          <!-- Total Points + Partidos -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+            <div style="background:linear-gradient(135deg,#f8f6f2,#f0ede5);border-radius:10px;padding:0.7rem;text-align:center;border:1px solid #e2dcc8;">
+              <div style="font-family:var(--font-header);font-size:1.6rem;color:var(--color-dark);">{{ totalPoints }}</div>
+              <div style="font-size:0.6rem;color:var(--color-gray);font-weight:600;">TOTAL PUNTOS</div>
+            </div>
+            <div style="background:#f8fafc;border-radius:10px;padding:0.7rem;text-align:center;border:1px solid #e2e8f0;">
+              <div style="font-family:var(--font-header);font-size:1.6rem;color:var(--color-dark);">{{ totalPredicted }}/{{ totalAvailable }}</div>
+              <div style="font-size:0.6rem;color:var(--color-gray);font-weight:600;">PRONOSTICADOS</div>
+            </div>
           </div>
-          <div class="ranking-stat-info">
-            <div class="ranking-stat-label">COMODÍN</div>
-            <div class="ranking-stat-value">{{ jokersUsed }}</div>
+          <!-- 4 categorías: Exactos | Resultado | Sin pts | Sin pronóstico -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;">
+            <div style="background:#f0fdf4;border-radius:8px;padding:0.5rem;text-align:center;">
+              <div style="font-family:var(--font-header);font-size:1.1rem;color:var(--color-green);">{{ exactCount }}/{{ totalAvailable }}</div>
+              <div style="font-size:0.55rem;color:var(--color-gray);">Exacto</div>
+              <div style="font-size:0.65rem;font-weight:700;color:var(--color-green);">{{ totalAvailable > 0 ? Math.round(exactCount / totalAvailable * 100) : 0 }}%</div>
+            </div>
+            <div style="background:#fefce8;border-radius:8px;padding:0.5rem;text-align:center;">
+              <div style="font-family:var(--font-header);font-size:1.1rem;color:#ca8a04;">{{ resultCount }}/{{ totalAvailable }}</div>
+              <div style="font-size:0.55rem;color:var(--color-gray);">Resultado</div>
+              <div style="font-size:0.65rem;font-weight:700;color:#ca8a04;">{{ totalAvailable > 0 ? Math.round(resultCount / totalAvailable * 100) : 0 }}%</div>
+            </div>
+            <div style="background:#fef2f2;border-radius:8px;padding:0.5rem;text-align:center;">
+              <div style="font-family:var(--font-header);font-size:1.1rem;color:#ef4444;">{{ sinPuntosCount }}/{{ totalAvailable }}</div>
+              <div style="font-size:0.55rem;color:var(--color-gray);">Sin puntos</div>
+              <div style="font-size:0.65rem;font-weight:700;color:#ef4444;">{{ totalAvailable > 0 ? Math.round(sinPuntosCount / totalAvailable * 100) : 0 }}%</div>
+            </div>
+            <div style="background:#f1f5f9;border-radius:8px;padding:0.5rem;text-align:center;">
+              <div style="font-family:var(--font-header);font-size:1.1rem;color:var(--color-gray);">{{ noPredCount }}/{{ totalAvailable }}</div>
+              <div style="font-size:0.55rem;color:var(--color-gray);">Sin pronóstico</div>
+              <div style="font-size:0.65rem;font-weight:700;color:var(--color-gray);">{{ totalAvailable > 0 ? Math.round(noPredCount / totalAvailable * 100) : 0 }}%</div>
+            </div>
           </div>
-        </div>
-
-        <!-- Champion Pick -->
-        <div class="ranking-stat-card" v-if="championName" style="background: #f0fdf4; border-color: #86efac;">
-          <div class="ranking-stat-icon-box" style="color: var(--color-accent); background: #fef3c7;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 24px; height: 24px;">
-              <path d="M11.584 2.376a.75.75 0 0 1 .832 0l9 6a.75.75 0 0 1-.416 1.374h-.996v10.5a.75.75 0 0 1-.75.75h-12a.75.75 0 0 1-.75-.75v-10.5h-.996a.75.75 0 0 1-.416-1.374l9-6Z" />
-            </svg>
-          </div>
-          <div class="ranking-stat-info">
-            <div class="ranking-stat-label">CAMPEÓN</div>
-            <div class="ranking-stat-value" style="font-size: 0.9rem;">{{ championName }} {{ championPoints > 0 ? '+'+championPoints+' PTS' : '' }}</div>
+          <!-- Champion pick -->
+          <div v-if="championName" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:0.5rem;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:0.4rem;">
+              <span>🏆</span>
+              <span style="font-size:0.7rem;font-weight:600;">Campeón: <span style="color:var(--color-green);">{{ championName }}</span></span>
+            </div>
+            <span v-if="champPoints > 0" style="font-size:0.7rem;font-weight:700;color:var(--color-green);">+{{ champPoints }} pts</span>
           </div>
         </div>
       </div>
+
+      <div style="height:0.75rem;"></div>
 
       <div v-for="group in matchGroups" :key="group.date" class="date-section">
          <div class="date-header">

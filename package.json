@@ -9,6 +9,8 @@
     "dev": "node dev.js",
     "reset": "node scripts/reset.js",
     "seed": "node scripts/seed_groups.js",
+    "rs": "npm run reset && npm run seed",
+    "rsd": "npm run rs && npm run dev",
     "backend": "node backend/server.js",
     "frontend": "node frontend/server.js",
     "test": "curl -s http://localhost:3000/api/health"
