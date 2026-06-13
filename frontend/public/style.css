@@ -506,12 +506,15 @@ img.team-flag {
   transform: translateX(-50%);
   width: 100%;
   max-width: 500px;
-  padding: 0.75rem 1rem;
-  font-size: 0.85rem;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.82rem;
   font-weight: 600;
   display: flex;
-  gap: 0.5rem;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
   align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
   z-index: 1000;
   cursor: pointer;
   animation: slideDown 0.3s ease;
