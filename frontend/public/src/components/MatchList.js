@@ -329,24 +329,34 @@ export default {
             <div v-if="expandedGroup && selectedGroup" style="border:1px solid rgba(0,0,0,0.06);border-radius:8px;overflow:hidden;">
               <div style="padding:0.4rem 0.6rem;background:var(--color-dark);color:white;font-size:0.75rem;font-weight:700;">GRUPO {{ selectedGroup.group }}</div>
               <div style="padding:0.4rem;">
-                <table style="width:100%;border-collapse:collapse;font-size:0.65rem;">
-                  <thead>
-                    <tr style="border-bottom:1px solid rgba(0,0,0,0.06);">
-                      <th style="padding:0.25rem 0.3rem;text-align:left;color:var(--color-gray);width:24px;">#</th>
-                      <th style="padding:0.25rem 0.3rem;text-align:left;color:var(--color-gray);">EQUIPO</th>
-                      <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PJ</th>
-                      <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">Pts</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="(t, i) in selectedGroup.teams" :key="t.name" :style="{background: i < 2 ? 'rgba(22,163,74,0.04)' : '', fontWeight: i < 2 ? 700 : 400, borderBottom: '1px solid rgba(0,0,0,0.03)'}">
-                      <td style="padding:0.3rem 0.3rem;text-align:left;">{{ i + 1 }}</td>
-                      <td style="padding:0.3rem 0.3rem;text-align:left;white-space:nowrap;">
-                        <img v-if="teamFlag(t.name)" :src="teamFlag(t.name)" alt="" style="width:20px;height:14px;border-radius:2px;vertical-align:middle;margin-right:0.25rem;">
-                        {{ t.name }}</td>
-                      <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pj }}</td>
-                      <td style="padding:0.3rem 0.3rem;text-align:center;font-weight:800;color:var(--color-dark);">{{ t.pts }}</td>
-                    </tr>
+                  <table style="width:100%;border-collapse:collapse;font-size:0.65rem;">
+                    <thead>
+                      <tr style="border-bottom:1px solid rgba(0,0,0,0.06);">
+                        <th style="padding:0.25rem 0.3rem;text-align:left;color:var(--color-gray);width:24px;">#</th>
+                        <th style="padding:0.25rem 0.3rem;text-align:left;color:var(--color-gray);">EQUIPO</th>
+                        <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PJ</th>
+                        <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PG</th>
+                        <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PE</th>
+                        <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PP</th>
+                        <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">GF</th>
+                        <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">GC</th>
+                        <th style="padding:0.25rem 0.3rem;text-align:center;font-weight:800;color:var(--color-gray);">Pts</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(t, i) in selectedGroup.teams" :key="t.name" :style="{background: i < 2 ? 'rgba(22,163,74,0.04)' : '', fontWeight: i < 2 ? 700 : 400, borderBottom: '1px solid rgba(0,0,0,0.03)'}">
+                        <td style="padding:0.3rem 0.3rem;text-align:left;">{{ i + 1 }}</td>
+                        <td style="padding:0.3rem 0.3rem;text-align:left;white-space:nowrap;">
+                          <img v-if="teamFlag(t.name)" :src="teamFlag(t.name)" alt="" style="width:20px;height:14px;border-radius:2px;vertical-align:middle;margin-right:0.25rem;">
+                          {{ t.name }}</td>
+                        <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pj }}</td>
+                        <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pg }}</td>
+                        <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pe }}</td>
+                        <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pp }}</td>
+                        <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.gf }}</td>
+                        <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.gc }}</td>
+                        <td style="padding:0.3rem 0.3rem;text-align:center;font-weight:800;color:var(--color-dark);">{{ t.pts }}</td>
+                      </tr>
                   </tbody>
                 </table>
               </div>
