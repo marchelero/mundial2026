@@ -406,7 +406,32 @@ createApp({
     navigator.serviceWorker.addEventListener('message', event => {
       if (event.data?.type === 'PUSH_RECEIVED') {
         const d = event.data.data;
-        this.notify(d.title + ' — ' + d.body, 'success');
+        const nd = d.data || {};
+        if (this.notificationTimer) clearTimeout(this.notificationTimer);
+        if (nd.homeTeam) {
+          this.notification = {
+            type: 'success',
+            visible: true,
+            match: true,
+            homeTeam: nd.homeTeam,
+            awayTeam: nd.awayTeam,
+            homeScore: nd.homeScore,
+            awayScore: nd.awayScore,
+            homeFlagUrl: nd.homeFlagUrl || d.icon,
+            awayFlagUrl: nd.awayFlagUrl || d.badge,
+            body: nd.body || d.body,
+          };
+        } else {
+          this.notification = {
+            visible: true,
+            type: 'success',
+            message: d.title + ' — ' + d.body,
+            flagUrl: nd.flagUrl || d.icon,
+          };
+        }
+        this.notificationTimer = setTimeout(() => {
+          this.notification.visible = false;
+        }, 5000);
       }
     });
     

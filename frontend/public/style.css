@@ -510,7 +510,7 @@ img.team-flag {
   font-size: 0.85rem;
   font-weight: 600;
   display: flex;
-  justify-content: space-between;
+  gap: 0.5rem;
   align-items: center;
   z-index: 1000;
   cursor: pointer;
@@ -530,7 +530,7 @@ img.team-flag {
 .toast-close {
   font-size: 0.9rem;
   opacity: 0.8;
-  margin-left: 1rem;
+  margin-left: auto;
 }
 
 @keyframes slideDown {
@@ -1402,3 +1402,149 @@ img.admin-team-flag {
     white-space: nowrap;
   }
 }
+
+/* =========================================
+   NUEVOS ESTILOS PREMIUM Y RESPONSIVOS
+   ========================================= */
+
+/* Tarjetas Premium Mejoradas */
+.card {
+  background: white;
+  border-radius: 14px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.02);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+@media (min-width: 768px) {
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+    border-color: #cbd5e1;
+  }
+}
+
+/* Inputs de Marcadores Premium */
+.input-score {
+  width: 42px;
+  height: 42px;
+  text-align: center;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 1.15rem;
+  background: #f8fafc;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.input-score:focus {
+  outline: none;
+  border-color: var(--color-green);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+.input-score:disabled {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+
+/* Grilla Adaptable de Estadísticas (2x2 en móvil, 1x4 en desktop) */
+.stat-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.65rem;
+}
+
+@media (min-width: 768px) {
+  .stat-card-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.85rem;
+  }
+}
+
+/* Bloques de Métricas en las Estadísticas */
+.stat-block {
+  background: white;
+  border-radius: 12px;
+  padding: 0.85rem 0.5rem;
+  text-align: center;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.stat-block:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.04);
+  border-color: #cbd5e1;
+}
+
+.stat-block.primary {
+  background: linear-gradient(135deg, #fefbf3 0%, #f6f1e3 100%);
+  border: 1px solid #e2dcc8;
+}
+
+.stat-block.predicted {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.stat-block.exact {
+  border-left: 4px solid var(--color-green);
+  background: #f0fdf4;
+  border-color: #dcfce7;
+}
+
+.stat-block.result {
+  border-left: 4px solid #ca8a04;
+  background: #fefce8;
+  border-color: #fef3c7;
+}
+
+.stat-block.wrong {
+  border-left: 4px solid #ef4444;
+  background: #fef2f2;
+  border-color: #fee2e2;
+}
+
+.stat-block.none {
+  border-left: 4px solid var(--color-gray);
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.stat-block-val {
+  font-family: var(--font-header);
+  font-size: 1.6rem;
+  line-height: 1.1;
+}
+
+.stat-block-label {
+  font-size: 0.6rem;
+  color: var(--color-gray);
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: 3px;
+  letter-spacing: 0.02em;
+}
+
+.stat-block-pct {
+  font-size: 0.65rem;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+/* Fade transition for stats collapse */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+

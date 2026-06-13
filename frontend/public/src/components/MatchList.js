@@ -26,7 +26,6 @@ export default {
   computed: {
     championDeadlinePassed() {
       const now = new Date();
-      // Domingo 28 de junio de 2026 15:00 hora Bolivia (America/La_Paz)
       const deadline = new Date('2026-06-28T15:00:00-04:00');
       return now >= deadline;
     },
@@ -257,11 +256,11 @@ export default {
         </div>
       </div>
 
-      <!-- Champion Pick -->
-      <div class="card" style="display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem; padding: 1.25rem;">
-        <div class="stat-icon" style="width: 48px; height: 48px; background: #fffcf0; border: 1px solid #fee2e2; border-radius: 12px; font-size: 2rem;">🏆</div>
+      <!-- Champion Pick (Siempre Arriba) -->
+      <div class="card" style="display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.25rem; padding: 1.25rem;">
+        <div class="stat-icon" style="width: 48px; height: 48px; background: #fffcf0; border: 1px solid #fee2e2; border-radius: 12px; font-size: 2rem; display:flex; align-items:center; justify-content:center;">🏆</div>
         <div style="flex: 1;">
-          <h3 class="stat-label" style="margin-bottom: 0.25rem; color: var(--color-dark);">PRONÓSTICO DEL CAMPEÓN</h3>
+          <h3 class="stat-label" style="margin-bottom: 0.25rem; color: var(--color-dark); font-size:0.85rem; font-weight:700;">PRONÓSTICO DEL CAMPEÓN</h3>
           
           <!-- STATE 1: ALREADY PICKED -->
           <template v-if="hasChampionPick">
@@ -279,39 +278,39 @@ export default {
           <!-- STATE 2: OPEN FOR PICKING -->
           <template v-else-if="championPickOpen">
             <p style="font-size: 0.65rem; color: var(--color-gray); margin-bottom: 0.75rem; font-family: var(--font-main);">Selecciona el equipo que crees que ganará la copa.</p>
-            <div style="display: flex; gap: 0.5rem; align-items: stretch;">
+            <div style="display: flex; gap: 0.5rem; align-items: center; max-width: 480px;">
               <select v-model="championSelected" style="flex: 1; padding: 0.65rem; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: var(--font-main); font-size: 0.9rem; background: #f8fafc; color: var(--color-dark); cursor: pointer;">
                  <option value="">Seleccionar...</option>
                  <option v-for="c in countries" :key="c.name" :value="c.name">{{ c.name }}</option>
               </select>
-              <button class="btn btn-primary" @click="saveChampionPick" :disabled="!championSelected" style="padding: 0 1.25rem; font-family: var(--font-header); font-size: 1rem; border-radius: 8px; letter-spacing: 0.05em;">GUARDAR</button>
+              <button class="btn btn-primary" @click="saveChampionPick" :disabled="!championSelected" style="padding: 0 1.25rem; font-family: var(--font-header); font-size: 1rem; border-radius: 8px; letter-spacing: 0.05em; height: 38px;">GUARDAR</button>
             </div>
           </template>
 
           <!-- STATE 3: COMING SOON -->
           <template v-else-if="!championDeadlinePassed">
             <p style="font-size: 0.65rem; color: var(--color-gray); margin-bottom: 0.75rem; font-family: var(--font-main);">La selección del campeón se habilitará pronto según las reglas del admin.</p>
-            <div style="padding: 0.75rem; background: #f1f5f9; border-radius: 8px; text-align: center; color: #64748b; font-size: 0.85rem; font-family: var(--font-header); letter-spacing: 0.05em; opacity: 0.7;">
+            <div style="padding: 0.75rem; background: #f1f5f9; border-radius: 8px; text-align: center; color: #64748b; font-size: 0.85rem; font-family: var(--font-header); letter-spacing: 0.05em; opacity: 0.7; max-width: 300px;">
               ⏳ PRÓXIMAMENTE
             </div>
           </template>
 
-          <!-- STATE 4: CLOSED BY RULES (PAST DEADLINE &amp; NO PICK) -->
+          <!-- STATE 4: CLOSED BY RULES -->
           <template v-else>
             <p style="font-size: 0.65rem; color: #ef4444; margin-bottom: 0.75rem; font-family: var(--font-main); font-weight: 500;">La fecha límite para el pronóstico del campeón ya pasó.</p>
-            <div style="padding: 0.75rem; background: #fef2f2; border: 1px solid #fee2e2; border-radius: 8px; text-align: center; color: #991b1b; font-size: 0.85rem; font-family: var(--font-header); letter-spacing: 0.05em;">
+            <div style="padding: 0.75rem; background: #fef2f2; border: 1px solid #fee2e2; border-radius: 8px; text-align: center; color: #991b1b; font-size: 0.85rem; font-family: var(--font-header); letter-spacing: 0.05em; max-width: 400px;">
               🚫 TE PERDISTE EL PRONÓSTICO DEL CAMPEÓN
             </div>
           </template>
         </div>
       </div>
 
-      <!-- Group Standings -->
-      <div class="card" style="padding: 0.75rem;">
+      <!-- Group Standings (Siempre Arriba) -->
+      <div class="card" style="padding: 0.75rem; margin-bottom: 1.25rem;">
         <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" @click="showGroupsPanel = !showGroupsPanel; if(showGroupsPanel && groups.length) expandedGroup = groups[0].group">
           <div style="display:flex;align-items:center;gap:0.5rem;">
             <span style="font-size:1.2rem;">#</span>
-            <span style="font-weight:700;font-size:0.85rem;">TABLA DE GRUPOS</span>
+            <span style="font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.02em;">TABLA DE GRUPOS</span>
           </div>
           <span style="font-size:0.85rem;color:var(--color-gray);transition:transform 0.2s;" :style="{transform: showGroupsPanel ? 'rotate(180deg)' : ''}">▼</span>
         </div>
@@ -336,12 +335,7 @@ export default {
                       <th style="padding:0.25rem 0.3rem;text-align:left;color:var(--color-gray);width:24px;">#</th>
                       <th style="padding:0.25rem 0.3rem;text-align:left;color:var(--color-gray);">EQUIPO</th>
                       <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PJ</th>
-                      <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PG</th>
-                      <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PE</th>
-                      <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PP</th>
-                      <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">GF</th>
-                      <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">GC</th>
-                      <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);font-weight:800;">Pts</th>
+                      <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">Pts</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -351,11 +345,6 @@ export default {
                         <img v-if="teamFlag(t.name)" :src="teamFlag(t.name)" alt="" style="width:20px;height:14px;border-radius:2px;vertical-align:middle;margin-right:0.25rem;">
                         {{ t.name }}</td>
                       <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pj }}</td>
-                      <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pg }}</td>
-                      <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pe }}</td>
-                      <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pp }}</td>
-                      <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.gf }}</td>
-                      <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.gc }}</td>
                       <td style="padding:0.3rem 0.3rem;text-align:center;font-weight:800;color:var(--color-dark);">{{ t.pts }}</td>
                     </tr>
                   </tbody>
@@ -380,6 +369,10 @@ export default {
           <div>PASADO MAÑANA</div>
           <div style="font-size: 0.55rem; opacity: 0.7; margin-top: 2px;">{{ compactDate(dayAfterTomorrowStr) }}</div>
         </button>
+      </div>
+
+      <div v-if="filteredGroups.length === 0" class="card" style="text-align:center;padding:2rem;color:var(--color-gray);">
+        No hay partidos programados para este día.
       </div>
 
       <div v-for="group in filteredGroups" :key="group.date" class="date-section">

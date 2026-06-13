@@ -107,63 +107,71 @@ export default {
         <span>El ranking se actualiza automáticamente después de cada partido.</span>
       </div>
 
-      <div class="card" style="padding: 0;">
-        <table style="width: 100%; border-collapse: collapse;">
-          <thead style="background: rgba(0,0,0,0.05);">
-            <tr>
-              <th style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">#</th>
-              <th style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">PARTICIPANTE</th>
-              <th style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">CORREO</th>
-              <th style="padding: 0.5rem; text-align: right; font-size: 0.65rem;">PTS</th>
-            </tr>
-          </thead>
-          <tbody>
-            <template v-for="(r, i) in rankingsData || []" :key="r ? r.id : i">
-            <tr style="border-bottom: 1px solid rgba(0,0,0,0.05); cursor:pointer;" @click="r && toggleUser(r.id)">
-              <td style="padding: 0.5rem;">
-                <span v-if="i === 0">🥇</span>
-                <span v-else-if="i === 1">🥈</span>
-                <span v-else-if="i === 2">🥉</span>
-                <span v-else style="font-size: 0.8rem; color: var(--color-gray); font-weight: 700;">{{ i + 1 }}</span>
-              </td>
-              <td style="padding: 0.5rem; font-weight: 600; font-size: 0.85rem;">{{ r.name }}</td>
-              <td style="padding: 0.5rem; font-size: 0.7rem; color: var(--color-gray);">{{ r.email }}</td>
-              <td style="padding: 0.5rem; text-align: right; font-weight: bold; font-size: 1rem; white-space: nowrap;">{{ r.points }}<span v-if="r.potential_points > 0" class="pts-potential-rank">+{{ r.potential_points }}</span></td>
-            </tr>
-            <tr v-if="r && expandedUser === r.id">
-              <td colspan="4" style="padding: 0.5rem 0.5rem 0.5rem;">
-                <template v-if="userBreakdown">
-                <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-end;">
-                  <div style="display:flex;gap:0.35rem;flex-wrap:wrap;font-size:0.75rem;justify-content:flex-end;">
-                    <span style="background:#f0fdf4;color:#16a34a;border:1px solid #dcfce7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">{{ userBreakdown.exactos }}× Exacto ({{ userBreakdown.exactos * 3 }}pts)</span>
-                    <span style="background:#fefce8;color:#ca8a04;border:1px solid #fef3c7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">{{ userBreakdown.resultados }}× Resultado ({{ userBreakdown.resultados * 1 }}pts)</span>
-                    <span style="background:#fef2f2;color:#ef4444;border:1px solid #fee2e2;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">{{ userBreakdown.errors }}× Error (0pts)</span>
-                    <span v-if="userBreakdown.comodines > 0" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🍀 {{ userBreakdown.comodines }}× Comodín</span>
-                    <span v-if="userBreakdown.champBonus > 0" style="background:#fff7ed;color:#d97706;border:1px solid #ffedd5;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🏆 Campeón (+{{ userBreakdown.champBonus }}pts)</span>
-                  </div>
-                  <div style="font-size:0.7rem;font-weight:700;text-align:right;color:var(--color-dark);border-top:1px solid #e2e8f0;padding-top:0.3rem;width:100%;">
-                    Total: <span style="color:var(--color-green);">{{ userBreakdown.exactos * 3 + userBreakdown.resultados * 1 + userBreakdown.champBonus }} pts</span>
-                    ({{ userBreakdown.exactos * 3 }}{{ userBreakdown.resultados > 0 ? ' + ' + userBreakdown.resultados : '' }}{{ userBreakdown.champBonus > 0 ? ' + ' + userBreakdown.champBonus + ' (🏆)' : '' }})
-                  </div>
-                </div>
+      <div class="desktop-grid">
+        <!-- Columna Izquierda: Tabla de posiciones -->
+        <div class="main-content-flow">
+          <div class="card" style="padding: 0;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead style="background: rgba(0,0,0,0.05);">
+                <tr>
+                  <th style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">#</th>
+                  <th style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">PARTICIPANTE</th>
+                  <th style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">CORREO</th>
+                  <th style="padding: 0.5rem; text-align: right; font-size: 0.65rem;">PTS</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="(r, i) in rankingsData || []" :key="r ? r.id : i">
+                <tr style="border-bottom: 1px solid rgba(0,0,0,0.05); cursor:pointer;" @click="r && toggleUser(r.id)">
+                  <td style="padding: 0.5rem;">
+                    <span v-if="i === 0">🥇</span>
+                    <span v-else-if="i === 1">🥈</span>
+                    <span v-else-if="i === 2">🥉</span>
+                    <span v-else style="font-size: 0.8rem; color: var(--color-gray); font-weight: 700;">{{ i + 1 }}</span>
+                  </td>
+                  <td style="padding: 0.5rem; font-weight: 600; font-size: 0.85rem;">{{ r.name }}</td>
+                  <td style="padding: 0.5rem; font-size: 0.7rem; color: var(--color-gray);">{{ r.email }}</td>
+                  <td style="padding: 0.5rem; text-align: right; font-weight: bold; font-size: 1rem; white-space: nowrap;">{{ r.points }}<span v-if="r.potential_points > 0" class="pts-potential-rank">+{{ r.potential_points }}</span></td>
+                </tr>
+                <tr v-if="r && expandedUser === r.id">
+                  <td colspan="4" style="padding: 0.5rem 0.5rem 0.5rem;">
+                    <template v-if="userBreakdown">
+                    <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-end;">
+                      <div style="display:flex;gap:0.35rem;flex-wrap:wrap;font-size:0.75rem;justify-content:flex-end;">
+                        <span style="background:#f0fdf4;color:#16a34a;border:1px solid #dcfce7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">{{ userBreakdown.exactos }}× Exacto ({{ userBreakdown.exactos * 3 }}pts)</span>
+                        <span style="background:#fefce8;color:#ca8a04;border:1px solid #fef3c7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">{{ userBreakdown.resultados }}× Resultado ({{ userBreakdown.resultados * 1 }}pts)</span>
+                        <span style="background:#fef2f2;color:#ef4444;border:1px solid #fee2e2;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">{{ userBreakdown.errors }}× Error (0pts)</span>
+                        <span v-if="userBreakdown.comodines > 0" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🍀 {{ userBreakdown.comodines }}× Comodín</span>
+                        <span v-if="userBreakdown.champBonus > 0" style="background:#fff7ed;color:#d97706;border:1px solid #ffedd5;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🏆 Campeón (+{{ userBreakdown.champBonus }}pts)</span>
+                      </div>
+                      <div style="font-size:0.7rem;font-weight:700;text-align:right;color:var(--color-dark);border-top:1px solid #e2e8f0;padding-top:0.3rem;width:100%;">
+                        Total: <span style="color:var(--color-green);">{{ userBreakdown.exactos * 3 + userBreakdown.resultados * 1 + userBreakdown.champBonus }} pts</span>
+                        ({{ userBreakdown.exactos * 3 }}{{ userBreakdown.resultados > 0 ? ' + ' + userBreakdown.resultados : '' }}{{ userBreakdown.champBonus > 0 ? ' + ' + userBreakdown.champBonus + ' (🏆)' : '' }})
+                      </div>
+                    </div>
+                    </template>
+                    <div v-else style="font-size:0.6rem;color:var(--color-gray);text-align:center;padding:0.25rem;">
+                      ⏳ Cargando detalle...
+                    </div>
+                  </td>
+                </tr>
                 </template>
-                <div v-else style="font-size:0.6rem;color:var(--color-gray);text-align:center;padding:0.25rem;">
-                  ⏳ Cargando detalle...
-                </div>
-              </td>
-            </tr>
-            </template>
-          </tbody>
-        </table>
-      </div>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-      <div class="card" style="margin-top: 1rem; background: var(--color-dark); color: white; display: flex; gap: 1rem; align-items: center;">
-         <span style="font-size: 1.5rem;">⭐</span>
-         <div style="font-size: 0.75rem; line-height: 1.4;">
-           <strong>RECUERDA</strong><br>
-           +3 PUNTOS por acertar el Score Exacto.<br>
-           +1 PUNTO por acertar el Resultado (Gana, Pierde o Empate).
-         </div>
+        <!-- Columna Derecha: Reglas y Puntos -->
+        <div class="sticky-sidebar">
+          <div class="card" style="margin-top: 0; background: var(--color-dark); color: white; display: flex; gap: 1rem; align-items: center;">
+             <span style="font-size: 1.5rem;">⭐</span>
+             <div style="font-size: 0.75rem; line-height: 1.4;">
+               <strong>RECUERDA</strong><br>
+               +3 PUNTOS por acertar el Score Exacto.<br>
+               +1 PUNTO por acertar el Resultado (Gana, Pierde o Empate).
+             </div>
+          </div>
+        </div>
       </div>
     </div>
   `

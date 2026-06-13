@@ -25,19 +25,25 @@ function sendNotification(subscription, payload) {
 
 function sendMatchResultPush(match, homeFlag, awayFlag, pointsSummary) {
   const total = pointsSummary.reduce((s, r) => s + r.count, 0);
-  const title = `${homeFlag} ${match.home_team} ${match.home_score} - ${match.away_score} ${match.away_team} ${awayFlag}`;
+  const title = `${match.home_team} ${match.home_score} - ${match.away_score} ${match.away_team}`;
   const body = `Resultado finalizado — ${total} pronóstico(s). Tocá para ver los detalles.`;
 
   const payload = {
     title,
     body,
     icon: flagUrl(homeFlag) || '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    badge: flagUrl(awayFlag) || '/icons/icon-192.png',
     vibrate: [200, 100, 200],
-    image: flagUrl(awayFlag) || undefined,
     data: {
       url: '/',
       matchId: match.id,
+      homeFlagUrl: flagUrl(homeFlag),
+      awayFlagUrl: flagUrl(awayFlag),
+      homeTeam: match.home_team,
+      awayTeam: match.away_team,
+      homeScore: match.home_score,
+      awayScore: match.away_score,
+      body,
     },
   };
 
@@ -57,7 +63,7 @@ function sendMatchResultPush(match, homeFlag, awayFlag, pointsSummary) {
 
 function sendChampionPickPush(user, champion, flag) {
   const name = user.name || user.email?.split('@')[0] || 'Usuario';
-  const title = `🏆 ${flag} ${champion}`;
+  const title = `🏆 ${champion}`;
   const body = `${name} eligió a ${champion} como campeón mundial.`;
 
   const payload = {
@@ -66,7 +72,7 @@ function sendChampionPickPush(user, champion, flag) {
     icon: flagUrl(flag) || '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     vibrate: [200, 100, 200],
-    data: { url: '/' },
+    data: { url: '/', flagUrl: flagUrl(flag), champion, body },
   };
 
   const { db } = require('../db');
@@ -81,7 +87,7 @@ function sendChampionPickPush(user, champion, flag) {
 }
 
 function sendChampionAwardPush(winner, flag) {
-  const title = `🏆 ${flag} ${winner} ES EL CAMPEÓN MUNDIAL 2026 🏆`;
+  const title = `🏆 ${winner} ES EL CAMPEÓN MUNDIAL 2026 🏆`;
   const body = `El campeón del mundo es ${winner}. Ingresá a la app para ver los resultados.`;
 
   const payload = {
@@ -90,7 +96,7 @@ function sendChampionAwardPush(winner, flag) {
     icon: flagUrl(flag) || '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     vibrate: [200, 100, 200],
-    data: { url: '/' },
+    data: { url: '/', flagUrl: flagUrl(flag), champion: winner, body },
   };
 
   const { db } = require('../db');

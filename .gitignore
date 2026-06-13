@@ -20,3 +20,8 @@ app.json
 passengerfile.json
 
 sync_config.jsonc
+
+# Base de datos SQLite
+data/*.db
+data/*.db-shm
+data/*.db-wal

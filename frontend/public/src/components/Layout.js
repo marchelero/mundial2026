@@ -36,7 +36,18 @@ export default {
   template: `
     <div class="app-layout">
       <div v-if="notification.visible" class="toast" :class="'toast-' + notification.type" @click="$emit('clear-notification')">
-        <span>{{ notification.message }}</span>
+        <template v-if="notification.match">
+          <img :src="notification.homeFlagUrl" alt="" style="width:28px;height:20px;border-radius:3px;flex-shrink:0;">
+          <span style="font-weight:700;">{{ notification.homeTeam }}</span>
+          <span style="font-weight:700;color:#ffd700;">{{ notification.homeScore }} - {{ notification.awayScore }}</span>
+          <img :src="notification.awayFlagUrl" alt="" style="width:28px;height:20px;border-radius:3px;flex-shrink:0;">
+          <span style="font-weight:700;">{{ notification.awayTeam }}</span>
+          <span style="opacity:0.85;font-size:0.8rem;">— {{ notification.body }}</span>
+        </template>
+        <template v-else>
+          <img v-if="notification.flagUrl" :src="notification.flagUrl" alt="" style="width:28px;height:20px;border-radius:3px;flex-shrink:0;">
+          <span>{{ notification.message }}</span>
+        </template>
         <span class="toast-close">✕</span>
       </div>
 
