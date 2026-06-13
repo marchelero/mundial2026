@@ -222,11 +222,12 @@ export default {
 
       <div style="height:0.75rem;"></div>
 
-      <div v-for="group in matchGroups" :key="group.date" class="date-section">
-         <div class="date-header">
-           <span>{{ formatDate(group.date) }}</span>
-           <span v-if="groupPoints(group) > 0" class="pts-total">{{ groupPoints(group) }} PTS</span>
-         </div>
+       <div v-for="group in matchGroups" :key="group.date" class="date-section">
+          <div class="date-header">
+            <span>{{ formatDate(group.date) }}</span>
+            <span v-if="groupPoints(group) > 0" style="background:var(--color-accent);color:var(--color-dark);padding:0.15rem 0.5rem;border-radius:4px;font-family:var(--font-main);font-size:0.7rem;font-weight:800;letter-spacing:0.03em;">{{ groupPoints(group) }} PTS</span>
+            <span v-else-if="group.matches.some(m => m.status === 'finished')" style="background:#e2e8f0;color:#64748b;padding:0.15rem 0.5rem;border-radius:4px;font-family:var(--font-main);font-size:0.7rem;font-weight:700;">0 PTS</span>
+          </div>
          <div v-for="match in group.matches" :key="match.id" class="card" style="margin-bottom: 0.5rem;">
             <div class="match-row" style="border: none;">
                <div class="team-info home">

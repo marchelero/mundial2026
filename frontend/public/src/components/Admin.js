@@ -272,12 +272,13 @@ export default {
         </div>
       </transition>
 
-      <div class="card">
-        <div class="tabs-container" style="background: none; border-bottom: 1px solid rgba(0,0,0,0.1); border-radius: 0; margin-bottom: 0.75rem;">
-          <button class="tab-btn" :class="{active: adminTab === 'nuevos'}" @click="adminTab = 'nuevos'">PRÓXIMOS</button>
-          <button class="tab-btn" :class="{active: adminTab === 'antiguos'}" @click="adminTab = 'antiguos'">FINALIZADOS</button>
-        </div>
-        
+      <div class="tabs-container" style="background: none; border-bottom: 1px solid rgba(0,0,0,0.1); border-radius: 0; margin-bottom: 0.75rem;">
+        <button class="tab-btn" :class="{active: adminTab === 'nuevos'}" @click="adminTab = 'nuevos'">PRÓXIMOS</button>
+        <button class="tab-btn" :class="{active: adminTab === 'antiguos'}" @click="adminTab = 'antiguos'">FINALIZADOS</button>
+        <button class="tab-btn" :class="{active: adminTab === 'config'}" @click="adminTab = 'config'">CONFIGURACIÓN</button>
+      </div>
+
+      <div class="card" v-if="adminTab !== 'config'">
         <div v-for="match in filteredMatches" :key="match.id" class="admin-match-row" :class="{'admin-match-finished': match.status === 'finished'}" style="flex-direction: column; align-items: stretch;">
            <div style="display: flex; align-items: center; width: 100%;">
               <div class="admin-col-time">
@@ -316,73 +317,76 @@ export default {
               {{ match.date }} — {{ match.time }}
         </div>
       </div>
-      <div class="card">
-        <div style="display: flex; align-items: flex-start; gap: 1rem;">
-          <span style="font-size: 1.5rem;">👑</span>
-          <div style="flex: 1;">
-            <h3 class="form-label" style="font-size: 0.8rem; margin: 0;">OTORGAR PUNTOS DE CAMPEÓN</h3>
-            <p style="font-size: 0.6rem; color: var(--color-gray); margin-top: 0.2rem;">
-              Una vez finalizado el mundial, seleccioná al campeón y otorgá +5 pts a quienes acertaron.
-            </p>
-            <div v-if="championWinner" style="margin-top: 0.75rem; padding: 0.75rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #166534;">✅ CAMPEÓN REGISTRADO</div>
-              <div style="font-size: 1rem; font-weight: 800; color: var(--color-dark); margin-top: 0.25rem;">{{ championWinner }}</div>
-              <div v-if="awardDone" style="font-size: 0.7rem; color: #15803d; margin-top: 0.25rem;">{{ awardCount }} usuario(s) recibieron +5 pts</div>
+      </div>
+      <div v-if="adminTab === 'config'" style="display:flex;flex-direction:column;gap:0.75rem;">
+        <div class="card">
+          <div style="display: flex; align-items: flex-start; gap: 1rem;">
+            <span style="font-size: 1.5rem; line-height: 1;">👑</span>
+            <div style="flex: 1;">
+              <h3 style="font-family:var(--font-header);font-size:0.95rem;letter-spacing:0.04em;margin:0;">OTORGAR PUNTOS DE CAMPEÓN</h3>
+              <p style="font-size: 0.65rem; color: var(--color-gray); margin-top: 0.15rem; font-family:var(--font-main);">
+                Una vez finalizado el mundial, seleccioná al campeón y otorgá +5 pts a quienes acertaron.
+              </p>
+              <div v-if="championWinner" style="margin-top: 0.75rem; padding: 0.75rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+                <div style="font-family:var(--font-header);font-size:0.8rem;letter-spacing:0.04em;color:#166534;">✅ CAMPEÓN REGISTRADO</div>
+                <div style="font-size: 0.95rem; font-weight: 800; color: var(--color-dark); margin-top: 0.15rem;">{{ championWinner }}</div>
+                <div v-if="awardDone" style="font-size: 0.65rem; color: #15803d; margin-top: 0.15rem;">{{ awardCount }} usuario(s) recibieron +5 pts</div>
+              </div>
+              <div v-else style="display: flex; gap: 0.5rem; margin-top: 0.75rem; align-items: stretch;">
+                <select v-model="championAwardSelected" style="flex: 1; padding: 0.5rem; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: var(--font-main); font-size: 0.8rem; background: #f8fafc; cursor: pointer;">
+                  <option value="">Seleccionar campeón...</option>
+                  <option v-for="c in countries" :key="c.name" :value="c.name">{{ c.name }}</option>
+                </select>
+                <button class="btn btn-primary" :disabled="!championAwardSelected || awardLoading" @click="awardChampion" style="padding: 0.5rem 0.8rem; font-size: 0.7rem; white-space: nowrap;">
+                  {{ awardLoading ? 'OTORGANDO...' : 'OTORGAR +5 PTS' }}
+                </button>
+              </div>
             </div>
-            <div v-else style="display: flex; gap: 0.5rem; margin-top: 0.75rem; align-items: stretch;">
-              <select v-model="championAwardSelected" style="flex: 1; padding: 0.5rem; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: var(--font-main); font-size: 0.85rem; background: #f8fafc; cursor: pointer;">
-                <option value="">Seleccionar campeón...</option>
-                <option v-for="c in countries" :key="c.name" :value="c.name">{{ c.name }}</option>
-              </select>
-              <button class="btn btn-primary" :disabled="!championAwardSelected || awardLoading" @click="awardChampion" style="padding: 0.5rem 1rem; font-size: 0.75rem; white-space: nowrap;">
-                {{ awardLoading ? 'OTORGANDO...' : 'OTORGAR +5 PTS' }}
+          </div>
+        </div>
+        <div class="card">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <span style="font-size: 1.5rem; line-height: 1;">🏆</span>
+            <div style="flex: 1;">
+              <h3 style="font-family:var(--font-header);font-size:0.95rem;letter-spacing:0.04em;margin:0;">PRONÓSTICO DEL CAMPEÓN</h3>
+              <p style="font-size: 0.65rem; color: var(--color-gray); margin-top: 0.15rem; font-family:var(--font-main);">Cierre: Dom 28 jun 2026, 15:00.</p>
+            </div>
+            <div style="text-align: right;">
+              <div :style="{fontSize:'0.55rem', fontWeight:700, textTransform:'uppercase', marginBottom:'0.15rem', color: settings.champion_pick_open === 'true' ? '#16a34a' : '#ef4444'}">{{ settings.champion_pick_open === 'true' ? 'HABILITADO' : 'DESHABILITADO' }}</div>
+              <button @click="$emit('save-setting', { key: 'champion_pick_open', value: settings.champion_pick_open === 'true' ? 'false' : 'true' })" :style="{padding:'0.25rem 0.5rem', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:600, fontSize:'0.65rem', background: settings.champion_pick_open === 'true' ? '#ef4444' : '#16a34a', color:'white'}">
+                {{ settings.champion_pick_open === 'true' ? 'DESHABILITAR' : 'HABILITAR' }}
               </button>
             </div>
           </div>
         </div>
-      </div>
-      <div class="card">
-        <div style="display: flex; align-items: center; gap: 1rem;">
-          <span style="font-size: 1.5rem;">🏆</span>
-          <div style="flex: 1;">
-            <h3 class="form-label" style="font-size: 0.8rem; margin: 0;">PRONÓSTICO DEL CAMPEÓN</h3>
-            <p style="font-size: 0.6rem; color: var(--color-gray);">Cierre: Dom 28 jun 2026, 15:00.</p>
+        <div class="card">
+          <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.65rem;">
+            <span style="font-size: 1.5rem; line-height: 1;">👥</span>
+            <div style="flex: 1;">
+              <h3 style="font-family:var(--font-header);font-size:0.95rem;letter-spacing:0.04em;margin:0;">USUARIOS REGISTRADOS</h3>
+              <p style="font-size: 0.65rem; color: var(--color-gray); margin-top: 0.15rem; font-family:var(--font-main);">
+                Solo estos correos pueden ingresar. Agregá nuevos usuarios para que puedan acceder.
+              </p>
+            </div>
           </div>
-          <div style="text-align: right;">
-            <div :style="{fontSize:'0.55rem', fontWeight:700, textTransform:'uppercase', marginBottom:'0.15rem', color: settings.champion_pick_open === 'true' ? '#16a34a' : '#ef4444'}">{{ settings.champion_pick_open === 'true' ? 'HABILITADO' : 'DESHABILITADO' }}</div>
-            <button @click="$emit('save-setting', { key: 'champion_pick_open', value: settings.champion_pick_open === 'true' ? 'false' : 'true' })" :style="{padding:'0.3rem 0.6rem', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:600, fontSize:'0.7rem', background: settings.champion_pick_open === 'true' ? '#ef4444' : '#16a34a', color:'white'}">
-              {{ settings.champion_pick_open === 'true' ? 'DESHABILITAR' : 'HABILITAR' }}
-            </button>
+
+          <div v-if="!userLoaded" style="text-align:center;padding:0.5rem;font-size:0.7rem;color:var(--color-gray);font-family:var(--font-main);">Cargando...</div>
+
+          <div v-for="u in users" :key="u.id" style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid rgba(0,0,0,0.05);font-size:0.8rem;">
+            <span style="flex:1;">
+              ✉️ {{ u.email }}
+              <span v-if="u.google_id" style="font-size:0.55rem;color:var(--color-green);margin-left:0.35rem;font-weight:600;">✅ Google vinculado</span>
+              <span v-else style="font-size:0.55rem;color:var(--color-gray);margin-left:0.35rem;">⏳ Sin vincular</span>
+            </span>
+            <button v-if="!u.google_id" @click="deleteUser(u.id)" title="Eliminar usuario" style="background:none;border:none;color:var(--color-red);cursor:pointer;font-size:0.9rem;padding:0 0.2rem;">✕</button>
           </div>
-        </div>
-      </div>
-      <div class="card">
-        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem;">
-          <span style="font-size: 1.5rem;">👥</span>
-          <div style="flex: 1;">
-            <h3 class="form-label" style="font-size: 0.8rem; margin: 0;">USUARIOS REGISTRADOS</h3>
-            <p style="font-size: 0.6rem; color: var(--color-gray); margin-top: 0.2rem;">
-              Solo estos correos pueden ingresar. Agregá nuevos usuarios para que puedan acceder.
-            </p>
+
+          <div style="display:flex;gap:0.5rem;margin-top:0.65rem;">
+            <input type="email" v-model="userInput" @keyup.enter="addUser" placeholder="correo@ejemplo.com" class="form-input" style="flex:1;padding:0.35rem 0.5rem;font-size:0.75rem;">
+            <button class="btn btn-primary" :disabled="!userInput || !userInput.includes('@')" @click="addUser" style="padding:0.35rem 0.7rem;font-size:0.7rem;">AGREGAR</button>
           </div>
+          <span v-if="userCreated" style="color:var(--color-green);font-size:0.7rem;margin-top:0.3rem;display:block;font-weight:600;">✅ Usuario creado</span>
         </div>
-
-        <div v-if="!userLoaded" style="text-align:center;padding:0.5rem;font-size:0.75rem;color:var(--color-gray);">Cargando...</div>
-
-        <div v-for="u in users" :key="u.id" style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;border-bottom:1px solid rgba(0,0,0,0.05);font-size:0.85rem;">
-          <span style="flex:1;">
-            ✉️ {{ u.email }}
-            <span v-if="u.google_id" style="font-size:0.6rem;color:var(--color-green);margin-left:0.5rem;font-weight:600;">✅ Google vinculado</span>
-            <span v-else style="font-size:0.6rem;color:var(--color-gray);margin-left:0.5rem;">⏳ Sin vincular</span>
-          </span>
-          <button v-if="!u.google_id" @click="deleteUser(u.id)" title="Eliminar usuario" style="background:none;border:none;color:var(--color-red);cursor:pointer;font-size:1rem;padding:0 0.25rem;">✕</button>
-        </div>
-
-        <div style="display:flex;gap:0.5rem;margin-top:0.75rem;">
-          <input type="email" v-model="userInput" @keyup.enter="addUser" placeholder="correo@ejemplo.com" class="form-input" style="flex:1;padding:0.4rem 0.5rem;font-size:0.8rem;">
-          <button class="btn btn-primary" :disabled="!userInput || !userInput.includes('@')" @click="addUser" style="padding:0.4rem 0.8rem;font-size:0.75rem;">AGREGAR</button>
-        </div>
-        <span v-if="userCreated" style="color:var(--color-green);font-size:0.75rem;margin-top:0.3rem;display:block;">✅ Usuario creado</span>
       </div>
 
       <!-- Finish Modal -->
