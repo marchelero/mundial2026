@@ -2,7 +2,7 @@ const express = require('express');
 const { db, generateId } = require('../db');
 const { authRequired, adminRequired } = require('../middleware/auth');
 const { sendMatchResult } = require('../services/whatsapp');
-const { flagEmoji } = require('../services/whatsapp');
+const { flagEmoji } = require('../data/countries');
 const { sendMatchResultPush } = require('../services/push');
 
 const router = express.Router();

@@ -40,7 +40,7 @@ createApp({
     <template v-else>
       <Login v-if="!user" :auth-error="authError" />
       
-      <Layout v-else :user="user" :current-view="view" :is-admin="isAdmin" :notification="notification" @change-view="view = $event" @logout="handleLogout" @clear-notification="notification.visible = false">
+      <Layout v-else :user="user" :current-view="view" :is-admin="isAdmin" :app-version="appVersion" :notification="notification" @change-view="view = $event" @logout="handleLogout" @clear-notification="notification.visible = false">
         <template v-if="view === 'votar'">
           <Matchlist 
             :match-groups="matchGroups" 
@@ -99,6 +99,7 @@ createApp({
     };
   },
   computed: {
+    appVersion() { return window.APP_VERSION || '2.0.0'; },
     isAdmin() {
       const email = this.user?.email || '';
       return (typeof ADMIN_EMAILS !== 'undefined' ? ADMIN_EMAILS : [])

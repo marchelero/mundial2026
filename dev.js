@@ -1,3 +1,5 @@
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+
 const { spawn } = require('child_process');
 const path = require('path');
 
@@ -10,7 +12,7 @@ const backend = spawn('node', ['backend/server.js'], {
 const frontend = spawn('node', ['frontend/server.js'], {
   cwd: __dirname,
   stdio: 'inherit',
-  env: { ...process.env, PORT: process.env.FRONTEND_PORT || '3000' },
+  env: { ...process.env, PORT: process.env.FRONTEND_PORT || process.env.PORT || '3000' },
 });
 
 process.on('SIGINT', () => {

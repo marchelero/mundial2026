@@ -59,6 +59,7 @@ app.get('/config.js', (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
   const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
   res.send(
+    `var APP_VERSION = ${JSON.stringify(process.env.APP_VERSION || require('./package.json').version)};\n` +
     `var ADMIN_EMAILS = ${JSON.stringify(adminEmails)};\n` +
     `var GOOGLE_CLIENT_ID = ${JSON.stringify(process.env.GOOGLE_CLIENT_ID || '')};\n` +
     `var VAPID_PUBLIC_KEY = ${JSON.stringify(process.env.VAPID_PUBLIC_KEY || '')};\n`

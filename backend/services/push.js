@@ -1,4 +1,5 @@
 const webpush = require('web-push');
+const { flagUrl } = require('../data/countries');
 
 const publicKey = process.env.VAPID_PUBLIC_KEY;
 const privateKey = process.env.VAPID_PRIVATE_KEY;
@@ -30,9 +31,10 @@ function sendMatchResultPush(match, homeFlag, awayFlag, pointsSummary) {
   const payload = {
     title,
     body,
-    icon: '/icons/icon-192.png',
+    icon: flagUrl(homeFlag) || '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     vibrate: [200, 100, 200],
+    image: flagUrl(awayFlag) || undefined,
     data: {
       url: '/',
       matchId: match.id,
@@ -61,7 +63,7 @@ function sendChampionPickPush(user, champion, flag) {
   const payload = {
     title,
     body,
-    icon: '/icons/icon-192.png',
+    icon: flagUrl(flag) || '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     vibrate: [200, 100, 200],
     data: { url: '/' },
@@ -85,7 +87,7 @@ function sendChampionAwardPush(winner, flag) {
   const payload = {
     title,
     body,
-    icon: '/icons/icon-192.png',
+    icon: flagUrl(flag) || '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     vibrate: [200, 100, 200],
     data: { url: '/' },

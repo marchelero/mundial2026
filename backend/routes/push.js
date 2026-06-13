@@ -12,6 +12,11 @@ router.post('/subscribe', authRequired, (req, res) => {
       return res.status(400).json({ error: 'Faltan datos de suscripción' });
     }
 
+    const user = db.prepare('SELECT id FROM users WHERE id = ?').get(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado. Volvé a iniciar sesión.' });
+    }
+
     const existing = db.prepare(
       'SELECT id FROM push_subscriptions WHERE user_id = ? AND endpoint = ?'
     ).get(req.user.id, endpoint);

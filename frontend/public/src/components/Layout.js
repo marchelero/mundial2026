@@ -1,5 +1,5 @@
 export default {
-  props: ['user', 'currentView', 'isAdmin', 'notification'],
+  props: ['user', 'currentView', 'isAdmin', 'appVersion', 'notification'],
   emits: ['change-view', 'logout', 'clear-notification'],
   data() {
     return { deferredPrompt: window.__DEFERRED_PROMPT || null, showInstallBtn: !!window.__DEFERRED_PROMPT, showMenu: false };
@@ -47,6 +47,7 @@ export default {
            </div>
            <div style="display: flex; align-items: center; gap: 0.75rem;">
              <button v-if="showInstallBtn" @click="installApp" class="install-btn" title="Instalar app">📲</button>
+             <span style="font-size: 0.6rem; font-weight: 600; padding: 0.15rem 0.4rem; border-radius: 3px; background: var(--color-gray); color: white;">v{{ appVersion }}</span>
              <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.2rem 0.5rem; border-radius: 4px; background: var(--color-dark); color: white;">{{ isAdmin ? 'ADMIN' : 'INVITADO' }}</span>
              <div class="user-menu" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; position: relative;" @click.stop="showMenu = !showMenu">
                <span style="font-size: 0.8rem; font-weight: bold;">{{ user?.name || user?.email?.split('@')[0] }}</span>

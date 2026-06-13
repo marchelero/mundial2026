@@ -30,7 +30,7 @@ router.post('/google', async (req, res) => {
       return res.status(403).json({ error: 'No tienes acceso. Tu correo no está registrado. Contacta al administrador.' });
     }
     if (!user.google_id) {
-      db.prepare('UPDATE users SET google_id = ?, name = ? WHERE id = ?').run(googleId, name || null, user.id);
+      db.prepare('UPDATE users SET google_id = ? WHERE id = ?').run(googleId, user.id);
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
     } else if (user.google_id !== googleId) {
       return res.status(403).json({ error: 'Este correo ya está vinculado a otra cuenta de Google.' });

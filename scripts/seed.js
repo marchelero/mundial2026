@@ -6,6 +6,52 @@ const dataDir = path.join(__dirname, '..', 'data');
 const matchesData = JSON.parse(fs.readFileSync(path.join(dataDir, 'matches.json'), 'utf8'));
 const emails = JSON.parse(fs.readFileSync(path.join(dataDir, 'users.json'), 'utf8'));
 
+const NAME_TO_EMAIL = {
+  'Alejandro Quea': 'alejandroquea25@gmail.com',
+  'Andreina Fernandez': 'andrefer.13.8@gmail.com',
+  'Andres Blanco': 'andresbr763@gmail.com',
+  'Bety Condori': 'azumy24k@gmail.com',
+  'Brayan Janco': 'brayan.janco@gmail.com',
+  'Brian Salazar': 'rodrigo.salazar.v1@gmail.com',
+  'Daniel Pinto': 'danielpinto9001@gmail.com',
+  'Dennys Flores': 'ardennmar@gmail.com',
+  'Esteban Canaza': 'ecanaza232@gmail.com',
+  'Franco Yllatarco': 'franco.harold.yllatarco.castillo@gmail.com',
+  'Gerson Andrade': 'g.gerson51@gmail.com',
+  'Horacio Ramos': 'scabelhrf@gmail.com',
+  'Johnny Yujra': 'johnnycarmelo17@gmail.com',
+  'Jonas Maidana': 'jonasmaidana47@gmail.com',
+  'Jose Vargas': 'jvargas.eth@gmail.com',
+  'Juan Carlos Mamani': 'juanqui.cay@gmail.com',
+  'Karen Sanchez': 'lizzysanchez1550@gmail.com',
+  'Madai Zamudio': 'madai.zamudio@gmail.com',
+  'Marcelo Albis': 'marcheloalbis@gmail.com',
+  'Marco Yana': 'marcosyana01@gmail.com',
+  'Maribel Patzi': 'maribelpatziv2@gmail.com',
+  'MariCruz Chambi': 'maricruzchambi15@gmail.com',
+  'Milton Chirinos': 'miltonchirinos45@gmail.com',
+  'Norma Saravia': 'norsargo@gmail.com',
+  'Oliver': 'liver97mars@gmail.com',
+  'Oscar Marin': 'oscarmm280599@gmail.com',
+  'Pablo Cruz': 'pabloivanc5@gmail.com',
+  'Ramiro Loza': 'ramirolozacmj@gmail.com',
+  'Rene Ergueta': 'renergueta@gmail.com',
+  'Roberto Albarracin': 'wr71albarracin@gmail.com',
+  'Roxana Layme': 'paolitap085@gmail.com',
+  'Ruben Machaca': 'rmachaca.anb@gmail.com',
+  'Ruddy Condori': 'rucocool@gmail.com',
+  'Valeria': 'valerytc1407@gmail.com',
+  'Erik Rubens': 'eiquipito160381@gmail.com',
+  'Alvaro Quena': 'alvaro.quena1@gmail.com',
+  'Miguel Mollo': 'miguelvmmh@gmail.com',
+  'Jenny Mendoza': 'jmendozam2015@gmail.com',
+  'Orlando Callisaya': 'ocallisaya777@gmail.com',
+  'Osmar Hinojosa': 'osmarhinojosa@gmail.com',
+};
+const EMAIL_TO_NAME = Object.fromEntries(
+  Object.entries(NAME_TO_EMAIL).map(([name, email]) => [email, name])
+);
+
 console.log('\n🌱 Sembrando base de datos...\n');
 
 // 1. MATCHES
@@ -34,10 +80,10 @@ console.log(`  ✅ ${count} partidos de fase de grupos insertados`);
 console.log('\n👥 Usuarios:');
 const userCount = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
 if (userCount === 0) {
-  const insertUser = db.prepare('INSERT INTO users (id, google_id, email, name) VALUES (?, NULL, ?, NULL)');
+  const insertUser = db.prepare('INSERT INTO users (id, google_id, email, name) VALUES (?, NULL, ?, ?)');
   const insertMany = db.transaction((list) => {
     for (const email of list) {
-      insertUser.run(generateId(), email);
+      insertUser.run(generateId(), email, EMAIL_TO_NAME[email] || null);
     }
   });
   insertMany(emails);
@@ -86,48 +132,6 @@ console.log(`  ${resCount} partidos marcados como finished`);
 
 // 5. PREDICCIONES DE PLANILLA (partidos ya jugados)
 console.log('\n📝 Predicciones de planilla:');
-const NAME_TO_EMAIL = {
-  'Alejandro Quea': 'alejandroquea25@gmail.com',
-  'Andreina Fernandez': 'andrefer.13.8@gmail.com',
-  'Andres Blanco': 'andresbr763@gmail.com',
-  'Bety Condori': 'azumy24k@gmail.com',
-  'Brayan Janco': 'brayan.janco@gmail.com',
-  'Brian Salazar': 'rodrigo.salazar.v1@gmail.com',
-  'Daniel Pinto': 'danielpinto9001@gmail.com',
-  'Dennys Flores': 'ardennmar@gmail.com',
-  'Esteban Canaza': 'ecanaza232@gmail.com',
-  'Franco Yllatarco': 'franco.harold.yllatarco.castillo@gmail.com',
-  'Gerson Andrade': 'g.gerson51@gmail.com',
-  'Horacio Ramos': 'scabelhrf@gmail.com',
-  'Johnny Yujra': 'johnnycarmelo17@gmail.com',
-  'Jonas Maidana': 'jonasmaidana47@gmail.com',
-  'Jose Vargas': 'jvargas.eth@gmail.com',
-  'Juan Carlos Mamani': 'juanqui.cay@gmail.com',
-  'Karen Sanchez': 'lizzysanchez1550@gmail.com',
-  'Madai Zamudio': 'madai.zamudio@gmail.com',
-  'Marcelo Albis': 'marcheloalbis@gmail.com',
-  'Marco Yana': 'marcosyana01@gmail.com',
-  'Maribel Patzi': 'maribelpatziv2@gmail.com',
-  'MariCruz Chambi': 'maricruzchambi15@gmail.com',
-  'Milton Chirinos': 'miltonchirinos45@gmail.com',
-  'Norma Saravia': 'norsargo@gmail.com',
-  'Oliver': 'liver97mars@gmail.com',
-  'Oscar Marin': 'oscarmm280599@gmail.com',
-  'Pablo Cruz': 'pabloivanc5@gmail.com',
-  'Ramiro Loza': 'ramirolozacmj@gmail.com',
-  'Rene Ergueta': 'renergueta@gmail.com',
-  'Roberto Albarracin': 'wr71albarracin@gmail.com',
-  'Roxana Layme': 'paolitap085@gmail.com',
-  'Ruben Machaca': 'rmachaca.anb@gmail.com',
-  'Ruddy Condori': 'rucocool@gmail.com',
-  'Valeria': 'valerytc1407@gmail.com',
-  'Erik Rubens': 'eiquipito160381@gmail.com',
-  'Alvaro Quena': 'alvaro.quena1@gmail.com',
-  'Miguel Mollo': 'miguelvmmh@gmail.com',
-  'Jenny Mendoza': 'jmendozam2015@gmail.com',
-  'Orlando Callisaya': 'ocallisaya777@gmail.com',
-  'Osmar Hinojosa': 'osmarhinojosa@gmail.com',
-};
 const P_MATCHES = [
   { home: 'México', away: 'Sudáfrica' },
   { home: 'Corea del Sur', away: 'República Checa' },

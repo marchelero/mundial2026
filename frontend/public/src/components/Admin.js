@@ -75,10 +75,11 @@ export default {
         this.newMatch.timeMinute !== '';
     },
     filteredMatches() {
+      const dir = this.adminTab === 'antiguos' ? -1 : 1;
       return this.matches.filter(m => {
         if (this.adminTab === 'nuevos') return m.status !== 'finished';
         return m.status === 'finished';
-      }).sort((a, b) => (a.date + ' ' + (a.time || '00:00')).localeCompare(b.date + ' ' + (b.time || '00:00')));
+      }).sort((a, b) => dir * (a.date + ' ' + (a.time || '00:00')).localeCompare(b.date + ' ' + (b.time || '00:00')));
     }
   },
   methods: {

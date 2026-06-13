@@ -18,3 +18,5 @@ fix-voto-unico.sh
 public/config.js
 app.json
 passengerfile.json
+
+sync_config.jsonc
