@@ -1,7 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
-const { db, generateId } = require('../db');
+const { db } = require('../db');
 const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
@@ -25,31 +25,15 @@ router.post('/google', async (req, res) => {
       return res.status(400).json({ error: 'Email no disponible en el token' });
     }
 
-    const allowedSetting = db.prepare("SELECT value FROM settings WHERE key = 'allowed_emails'").get();
-    let allowedList = [];
-    if (allowedSetting && allowedSetting.value && allowedSetting.value.trim()) {
-      const raw = allowedSetting.value.trim();
-      try { allowedList = JSON.parse(raw); } catch (_) { allowedList = raw.split(',').map(e => e.trim().toLowerCase()).filter(Boolean); }
-    }
-    if (allowedList.length === 0) {
-      return res.status(403).json({ error: 'Acceso restringido. No hay emails permitidos configurados. Contacta al administrador.' });
-    }
-    if (!allowedList.includes(email.toLowerCase())) {
-      return res.status(403).json({ error: 'Acceso no autorizado. Tu correo no está en la lista de permitidos. Contacta al administrador.' });
-    }
-
-    let user = db.prepare('SELECT * FROM users WHERE google_id = ?').get(googleId);
+    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
     if (!user) {
-      user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
-      if (user) {
-        db.prepare('UPDATE users SET google_id = ? WHERE id = ?').run(googleId, user.id);
-        user = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
-      } else {
-        const id = generateId();
-        const userName = name || email.split('@')[0];
-        db.prepare('INSERT INTO users (id, google_id, email, name) VALUES (?, ?, ?, ?)').run(id, googleId, email, userName);
-        user = { id, google_id: googleId, email, name: userName };
-      }
+      return res.status(403).json({ error: 'No tienes acceso. Tu correo no está registrado. Contacta al administrador.' });
+    }
+    if (!user.google_id) {
+      db.prepare('UPDATE users SET google_id = ?, name = ? WHERE id = ?').run(googleId, name || null, user.id);
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+    } else if (user.google_id !== googleId) {
+      return res.status(403).json({ error: 'Este correo ya está vinculado a otra cuenta de Google.' });
     }
 
     const token = jwt.sign(

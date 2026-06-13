@@ -6,9 +6,9 @@ const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Load group definitions from seed data
-const seedPath = path.join(__dirname, '..', '..', 'data', 'seed_data.json');
-const seedData = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
+// Load group definitions from matches data
+const matchesPath = path.join(__dirname, '..', '..', 'data', 'matches.json');
+const matchesData = JSON.parse(fs.readFileSync(matchesPath, 'utf8'));
 
 router.get('/standings', authRequired, (req, res) => {
   try {
@@ -16,7 +16,7 @@ router.get('/standings', authRequired, (req, res) => {
       SELECT * FROM matches WHERE round = 'group' AND status = 'finished'
     `).all();
 
-    const groups = seedData.groups.map(g => {
+    const groups = matchesData.groups.map(g => {
       // Initialize team stats
       const teams = {};
       for (const name of g.teams) {

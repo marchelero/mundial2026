@@ -1,8 +1,59 @@
 const express = require('express');
-const { db } = require('../db');
-const { authRequired } = require('../middleware/auth');
+const { db, generateId } = require('../db');
+const { authRequired, adminRequired } = require('../middleware/auth');
 
 const router = express.Router();
+
+router.get('/', authRequired, adminRequired, (req, res) => {
+  try {
+    const users = db.prepare('SELECT id, email, name, google_id, created_at, COALESCE(total_points, 0) as total_points FROM users ORDER BY created_at DESC').all();
+    res.json(users);
+  } catch (e) {
+    console.error('Error listing users:', e);
+    res.status(500).json({ error: 'Error al obtener usuarios' });
+  }
+});
+
+router.post('/', authRequired, adminRequired, (req, res) => {
+  try {
+    const { email, name } = req.body;
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ error: 'Email requerido' });
+    }
+    const cleanEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return res.status(400).json({ error: 'Email inválido' });
+    }
+    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(cleanEmail);
+    if (existing) {
+      return res.status(409).json({ error: 'El email ya está registrado' });
+    }
+    const id = generateId();
+    const userName = (name || '').trim() || cleanEmail.split('@')[0];
+    db.prepare('INSERT INTO users (id, google_id, email, name) VALUES (?, NULL, ?, ?)').run(id, cleanEmail, userName);
+    const user = db.prepare('SELECT id, email, name, google_id, created_at FROM users WHERE id = ?').get(id);
+    res.status(201).json(user);
+  } catch (e) {
+    console.error('Error creating user:', e);
+    res.status(500).json({ error: 'Error al crear usuario' });
+  }
+});
+
+router.delete('/:id', authRequired, adminRequired, (req, res) => {
+  try {
+    const user = db.prepare('SELECT id, google_id FROM users WHERE id = ?').get(req.params.id);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    if (user.google_id) {
+      return res.status(400).json({ error: 'No se puede eliminar un usuario que ya vinculó su cuenta de Google' });
+    }
+    db.prepare('DELETE FROM users WHERE id = ?').run(user.id);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Error deleting user:', e);
+    res.status(500).json({ error: 'Error al eliminar usuario' });
+  }
+});
 
 router.get('/rankings', authRequired, (req, res) => {
   try {

@@ -21,23 +21,6 @@ router.post('/', authRequired, adminRequired, (req, res) => {
     const cleanKey = key.trim();
     let cleanValue = value ?? '';
 
-    if (cleanKey === 'allowed_emails') {
-      let emails = [];
-      try { emails = JSON.parse(cleanValue); } catch { emails = []; }
-      if (!Array.isArray(emails)) emails = [];
-      emails = emails.map(e => e.trim().toLowerCase()).filter(Boolean);
-      emails = [...new Set(emails)];
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const invalid = emails.filter(e => !emailRegex.test(e));
-      if (invalid.length > 0) {
-        return res.status(400).json({ error: `Emails inválidos: ${invalid.join(', ')}` });
-      }
-      if (emails.length === 0) {
-        return res.status(400).json({ error: 'Debe haber al menos 1 email en la lista de permitidos' });
-      }
-      cleanValue = JSON.stringify(emails);
-    }
-
     const existing = db.prepare('SELECT * FROM settings WHERE key = ?').get(cleanKey);
     if (existing) {
       db.prepare('UPDATE settings SET value = ? WHERE key = ?').run(cleanValue, cleanKey);

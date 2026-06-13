@@ -21,10 +21,10 @@ export default {
       showAddForm: false,
       errors: {},
       adminTab: 'nuevos',
-      whitelist: [],
-      whitelistInput: '',
-      whitelistSaved: false,
-      whitelistLoaded: false,
+      users: [],
+      userInput: '',
+      userCreated: false,
+      userLoaded: false,
       totalUsers: 0,
       showFinishModal: false,
       finishMatchData: null,
@@ -50,8 +50,13 @@ export default {
       const s = {};
       for (const item of r) s[item.key] = item.value;
       this.championWinner = s.champion_winner || '';
-      this._loadWhitelist(s.allowed_emails);
     } catch (_) { }
+
+    // Load registered users
+    try {
+      this.users = await api.get('/users');
+    } catch (_) { }
+    this.userLoaded = true;
   },
   computed: {
     flagMap() {
@@ -78,33 +83,27 @@ export default {
   },
   methods: {
     roundLabel,
-    _loadWhitelist(raw) {
-      if (!raw || raw === '[]') { this.whitelist = []; this.whitelistLoaded = true; return; }
-      try {
-        const parsed = JSON.parse(raw);
-        this.whitelist = Array.isArray(parsed) ? parsed : [];
-      } catch {
-        this.whitelist = raw.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-      }
-      this.whitelistLoaded = true;
-    },
-    addToWhitelist() {
-      const email = this.whitelistInput.trim().toLowerCase();
+    async addUser() {
+      const email = this.userInput.trim().toLowerCase();
       if (!email || !email.includes('@')) return;
-      if (this.whitelist.includes(email)) { this.whitelistInput = ''; return; }
-      this.whitelist.push(email);
-      this.whitelistInput = '';
-      this._saveWhitelist();
+      try {
+        await api.post('/users', { email });
+        this.users = await api.get('/users');
+        this.userInput = '';
+        this.userCreated = true;
+        setTimeout(() => this.userCreated = false, 3000);
+      } catch (e) {
+        alert(e.message || 'Error al crear usuario');
+      }
     },
-    removeFromWhitelist(email) {
-      this.whitelist = this.whitelist.filter(e => e !== email);
-      this._saveWhitelist();
-    },
-    _saveWhitelist() {
-      this.whitelistSaved = false;
-      this.$emit('save-setting', { key: 'allowed_emails', value: JSON.stringify(this.whitelist) });
-      this.whitelistSaved = true;
-      setTimeout(() => this.whitelistSaved = false, 3000);
+    async deleteUser(userId) {
+      if (!confirm('¿Eliminar este usuario? Solo se permite si no ha vinculado Google aún.')) return;
+      try {
+        await api.delete(`/users/${userId}`);
+        this.users = await api.get('/users');
+      } catch (e) {
+        alert(e.message || 'Error al eliminar usuario');
+      }
     },
     openFinishModal(match) {
       this.finishMatchData = match;
@@ -359,29 +358,31 @@ export default {
       </div>
       <div class="card">
         <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem;">
-          <span style="font-size: 1.5rem;">📋</span>
+          <span style="font-size: 1.5rem;">👥</span>
           <div style="flex: 1;">
-            <h3 class="form-label" style="font-size: 0.8rem; margin: 0;">LISTA DE PERMITIDOS</h3>
+            <h3 class="form-label" style="font-size: 0.8rem; margin: 0;">USUARIOS REGISTRADOS</h3>
             <p style="font-size: 0.6rem; color: var(--color-gray); margin-top: 0.2rem;">
-              Solo estos correos pueden ingresar. Vacío = todos pueden ingresar.
+              Solo estos correos pueden ingresar. Agregá nuevos usuarios para que puedan acceder.
             </p>
           </div>
         </div>
 
-        <div v-if="whitelist.length === 0" style="padding:0.5rem;background:#fef2f2;border:1px solid #fecaca;border-radius:4px;text-align:center;font-size:0.75rem;color:var(--color-red);margin-bottom:0.5rem;">
-          ⚠️ Agrega al menos un email — sin emails configurados, NADIE puede ingresar
-        </div>
+        <div v-if="!userLoaded" style="text-align:center;padding:0.5rem;font-size:0.75rem;color:var(--color-gray);">Cargando...</div>
 
-        <div v-for="(email, i) in whitelist" :key="i" style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;border-bottom:1px solid rgba(0,0,0,0.05);font-size:0.85rem;">
-          <span style="flex:1;">✉️ {{ email }}</span>
-          <button @click="removeFromWhitelist(email)" :disabled="whitelist.length <= 1" :title="whitelist.length <= 1 ? 'Debe haber al menos 1 email permitido' : 'Eliminar'" style="background:none;border:none;color:var(--color-red);cursor:pointer;font-size:1rem;padding:0 0.25rem;opacity:whitelist.length <= 1 ? 0.4 : 1;">✕</button>
+        <div v-for="u in users" :key="u.id" style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;border-bottom:1px solid rgba(0,0,0,0.05);font-size:0.85rem;">
+          <span style="flex:1;">
+            ✉️ {{ u.email }}
+            <span v-if="u.google_id" style="font-size:0.6rem;color:var(--color-green);margin-left:0.5rem;font-weight:600;">✅ Google vinculado</span>
+            <span v-else style="font-size:0.6rem;color:var(--color-gray);margin-left:0.5rem;">⏳ Sin vincular</span>
+          </span>
+          <button v-if="!u.google_id" @click="deleteUser(u.id)" title="Eliminar usuario" style="background:none;border:none;color:var(--color-red);cursor:pointer;font-size:1rem;padding:0 0.25rem;">✕</button>
         </div>
 
         <div style="display:flex;gap:0.5rem;margin-top:0.75rem;">
-          <input type="email" v-model="whitelistInput" @keyup.enter="addToWhitelist" placeholder="correo@ejemplo.com" class="form-input" style="flex:1;padding:0.4rem 0.5rem;font-size:0.8rem;">
-          <button class="btn btn-primary" :disabled="!whitelistInput || !whitelistInput.includes('@')" @click="addToWhitelist" style="padding:0.4rem 0.8rem;font-size:0.75rem;">AGREGAR</button>
+          <input type="email" v-model="userInput" @keyup.enter="addUser" placeholder="correo@ejemplo.com" class="form-input" style="flex:1;padding:0.4rem 0.5rem;font-size:0.8rem;">
+          <button class="btn btn-primary" :disabled="!userInput || !userInput.includes('@')" @click="addUser" style="padding:0.4rem 0.8rem;font-size:0.75rem;">AGREGAR</button>
         </div>
-        <span v-if="whitelistSaved" style="color:var(--color-green);font-size:0.75rem;margin-top:0.3rem;display:block;">✅ Guardado</span>
+        <span v-if="userCreated" style="color:var(--color-green);font-size:0.75rem;margin-top:0.3rem;display:block;">✅ Usuario creado</span>
       </div>
 
       <!-- Finish Modal -->

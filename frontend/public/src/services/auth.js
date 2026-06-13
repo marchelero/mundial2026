@@ -45,8 +45,7 @@ export function renderGoogleButton() {
         await loginGoogle(response.credential);
       } catch (e) {
         console.error('Login failed:', e);
-        const msg = e.message || '';
-        showGoogleError(msg.includes('permitido') || msg.includes('no autorizado') ? msg : 'Error: ' + msg);
+        showGoogleError(e.message || 'Error al iniciar sesión');
       }
     },
     auto_select: false,
@@ -70,15 +69,10 @@ export function showGoogleError(msg) {
   document.querySelectorAll('.login-error-box').forEach(el => el.remove());
   const container = document.getElementById('google-signin-btn');
   if (!container) return;
-  const isWhitelist = msg.toLowerCase().includes('no autorizado') || msg.toLowerCase().includes('permitido');
   const err = document.createElement('div');
   err.className = 'login-error-box';
-  err.style.cssText = 'margin: 1rem auto 0;padding:0.75rem;border-radius:6px;font-size:0.8rem;text-align:center;line-height:1.5;width:100%;max-width:300px;box-sizing:border-box;' + (isWhitelist
-    ? 'background:#fef2f2;border:1px solid #fecaca;color:#991b1b;'
-    : 'background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;');
-  err.innerHTML = isWhitelist
-    ? '<div style="font-size:1.5rem;margin-bottom:0.25rem;">🚫</div><strong>Acceso restringido</strong><br>Tu correo no está autorizado. Contactá al administrador para que te agregue a la lista de permitidos.'
-    : '<div style="font-size:1.5rem;margin-bottom:0.25rem;">⚠️</div>' + msg;
+  err.style.cssText = 'margin: 1rem auto 0;padding:0.75rem;border-radius:6px;font-size:0.8rem;text-align:center;line-height:1.5;width:100%;max-width:300px;box-sizing:border-box;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;';
+  err.innerHTML = '<div style="font-size:1.5rem;margin-bottom:0.25rem;">🚫</div>' + msg;
   container.insertAdjacentElement('afterend', err);
 }
 

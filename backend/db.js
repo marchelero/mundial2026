@@ -27,7 +27,7 @@ try {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
-      google_id TEXT UNIQUE NOT NULL,
+      google_id TEXT UNIQUE,
       email TEXT UNIQUE NOT NULL,
       name TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -78,6 +78,30 @@ try {
     );
     CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id);
   `);
+
+  // Migration: make google_id nullable (pre-2026-06-12 schema)
+  const usersInfo = db.prepare("PRAGMA table_info('users')").all();
+  const googleIdCol = usersInfo.find(c => c.name === 'google_id');
+  if (googleIdCol && googleIdCol.notnull === 1) {
+    db.pragma('foreign_keys = OFF');
+    const hasTotalPts = usersInfo.find(c => c.name === 'total_points');
+    db.exec(`
+      CREATE TABLE users_v2 (
+        id TEXT PRIMARY KEY,
+        google_id TEXT UNIQUE,
+        email TEXT UNIQUE NOT NULL,
+        name TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        total_points INTEGER DEFAULT 0
+      );
+      INSERT INTO users_v2 (id, google_id, email, name, created_at${hasTotalPts ? ', total_points' : ''})
+        SELECT id, google_id, email, name, created_at${hasTotalPts ? ', total_points' : ''} FROM users;
+      DROP TABLE users;
+      ALTER TABLE users_v2 RENAME TO users;
+    `);
+    db.pragma('foreign_keys = ON');
+    console.log('Migrated users table: google_id is now nullable');
+  }
 
   // Migrations for points columns
   const hasPoints = db.prepare("SELECT name FROM pragma_table_info('predictions') WHERE name = 'points'").get();

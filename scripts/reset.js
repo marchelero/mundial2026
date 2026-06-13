@@ -1,39 +1,32 @@
-/**
- * Reset: Vaciar la base de datos
- * Elimina todos los pronósticos, partidos y picks de campeón
- *
- * Uso: node scripts/reset.js
- *
- * La tabla users NO se toca (los usuarios registrados se conservan)
- */
+const path = require('path');
+const fs = require('fs');
 
-const { db } = require('../backend/db');
+const dbPath = path.join(__dirname, '..', 'data', 'mundial2026.db');
 
-console.log('🧹 Limpiando base de datos...\n');
+console.log('🧹 Limpiando base de datos...');
 
-try {
-  const preds = db.prepare('SELECT COUNT(*) as c FROM predictions').get().c;
-  db.prepare('DELETE FROM predictions').run();
-  console.log(`  ✅ ${preds} pronósticos eliminados`);
-} catch (e) { console.log('  ⚠️  predictions:', e.message); }
+// Opción 1: borrar archivo (solo si ningún otro proceso lo usa)
+let fileDeleted = false;
+for (const suffix of ['', '-wal', '-shm']) {
+  try {
+    fs.unlinkSync(dbPath + suffix);
+    fileDeleted = true;
+  } catch (_) {}
+}
 
-try {
-  const picks = db.prepare('SELECT COUNT(*) as c FROM champion_picks').get().c;
-  db.prepare('DELETE FROM champion_picks').run();
-  console.log(`  ✅ ${picks} picks de campeón eliminados`);
-} catch (e) { console.log('  ⚠️  champion_picks:', e.message); }
+if (fileDeleted) {
+  console.log('  Archivo eliminado, recreando...');
+  require('../backend/db');
+} else {
+  // Opción 2: vaciar tablas (BD en uso por otro proceso)
+  console.log('  BD en uso por otro proceso, vaciando tablas...');
+  const { db } = require('../backend/db');
+  const tables = ['predictions', 'champion_picks', 'push_subscriptions', 'matches', 'settings', 'users'];
+  db.exec('PRAGMA foreign_keys = OFF');
+  for (const t of tables) {
+    db.exec(`DELETE FROM ${t}`);
+  }
+  db.exec('PRAGMA foreign_keys = ON');
+}
 
-try {
-  const matches = db.prepare('SELECT COUNT(*) as c FROM matches').get().c;
-  db.prepare('DELETE FROM matches').run();
-  console.log(`  ✅ ${matches} partidos eliminados`);
-} catch (e) { console.log('  ⚠️  matches:', e.message); }
-
-try {
-  const settings = db.prepare('SELECT COUNT(*) as c FROM settings').get().c;
-  db.prepare('DELETE FROM settings').run();
-  console.log(`  ✅ ${settings} settings eliminados`);
-} catch (e) { console.log('  ⚠️  settings:', e.message); }
-
-console.log('\n✅ Base de datos vaciada (usuarios conservados)');
-console.log('📌 Reiniciá la app para que los cambios tengan efecto');
+console.log('✅ Base de datos reiniciada');
