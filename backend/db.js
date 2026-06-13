@@ -56,6 +56,7 @@ try {
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       champion TEXT NOT NULL,
+      points INTEGER DEFAULT NULL,
       UNIQUE(user_id)
     );
     CREATE TABLE IF NOT EXISTS settings (
@@ -111,6 +112,11 @@ try {
   const hasTotalPoints = db.prepare("SELECT name FROM pragma_table_info('users') WHERE name = 'total_points'").get();
   if (!hasTotalPoints) {
     db.exec("ALTER TABLE users ADD COLUMN total_points INTEGER DEFAULT 0");
+  }
+
+  const hasChampPoints = db.prepare("SELECT name FROM pragma_table_info('champion_picks') WHERE name = 'points'").get();
+  if (!hasChampPoints) {
+    db.exec("ALTER TABLE champion_picks ADD COLUMN points INTEGER DEFAULT NULL");
   }
 
   console.log('Database initialized');

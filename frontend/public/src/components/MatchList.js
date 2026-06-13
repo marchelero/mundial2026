@@ -148,7 +148,8 @@ export default {
     ptsClass(match) {
       const pts = this.getPoints(match);
       if (pts === null) return '';
-      if (pts > 0) return 'exact';
+      if (pts >= 3) return 'exact';
+      if (pts > 0) return 'winner';
       return 'wrong';
     },
     shareChampion(e) {
@@ -473,13 +474,13 @@ export default {
           <div v-if="expandedMatch === match.id && matchStats" style="margin-top:0.4rem;padding:0.5rem;background:#f8fafc;border-radius:6px;font-size:0.7rem;border:1px solid rgba(0,0,0,0.06);">
             <div style="display:flex;gap:0.75rem;margin-bottom:0.5rem;text-align:center;">
               <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;">{{ matchStats.total }}</div><div style="color:var(--color-gray);font-size:0.6rem;">VOTOS</div></div>
-              <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#16a34a;">{{ matchStats.homeWins }}</div><div style="color:var(--color-gray);font-size:0.6rem;">{{ match.home_flag }} GANA</div></div>
+              <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#16a34a;">{{ matchStats.homeWins }}</div><div style="color:var(--color-gray);font-size:0.6rem;"><img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> GANA</div></div>
               <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#d4af37;">{{ matchStats.draws }}</div><div style="color:var(--color-gray);font-size:0.6rem;">EMPATE</div></div>
-              <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#2563eb;">{{ matchStats.awayWins }}</div><div style="color:var(--color-gray);font-size:0.6rem;">{{ match.away_flag }} GANA</div></div>
+              <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#2563eb;">{{ matchStats.awayWins }}</div><div style="color:var(--color-gray);font-size:0.6rem;"><img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> GANA</div></div>
             </div>
             <div v-if="matchStats.topScores.length > 0" style="border-top:1px solid rgba(0,0,0,0.06);padding-top:0.35rem;">
               <div v-for="([score, count], i) in matchStats.topScores" :key="i" style="display:flex;justify-content:space-between;padding:0.1rem 0;font-size:0.65rem;">
-                <span style="font-weight:600;">{{ match.home_team }} {{ match.home_flag }} {{ score }} {{ match.away_flag }} {{ match.away_team }}</span>
+                <span style="font-weight:600;">{{ match.home_team }} <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> {{ score }} <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> {{ match.away_team }}</span>
                 <span style="color:var(--color-gray);">{{ count }} voto(s)</span>
               </div>
             </div>

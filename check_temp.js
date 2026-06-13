@@ -1,0 +1,1 @@
+﻿const { db } = require("./backend/db"); const p = db.prepare("PRAGMA table_info('predictions')").all(); const u = db.prepare("PRAGMA table_info('users')").all(); const c = db.prepare("PRAGMA table_info('champion_picks')").all(); console.log("PREDICTIONS:", p.map(x=>x.name)); console.log("USERS:", u.map(x=>x.name)); console.log("CHAMPION:", c.map(x=>x.name)); process.exit(0);

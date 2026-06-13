@@ -63,6 +63,7 @@ body {
 
 .pts-badge.winner {
   background-color: var(--color-accent);
+  color: #422006;
 }
 
 .pts-badge.wrong {
@@ -785,9 +786,12 @@ img.team-flag {
 }
 
 .date-header .pts-total {
-  font-size: 0.75rem;
-  opacity: 0.9;
+  font-size: 0.7rem;
   font-family: var(--font-main);
+  background: rgba(255,255,255,0.15);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 700;
 }
 
 /* Install Button */
@@ -1377,6 +1381,14 @@ img.admin-team-flag {
 
 /* Group standings table responsive */
 @media (max-width: 767px) {
+  .date-header {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.6rem;
+    margin-bottom: 0.65rem;
+  }
+  .date-header .pts-total {
+    font-size: 0.6rem;
+  }
   .group-standings-table th,
   .group-standings-table td {
     font-size: 0.6rem;

@@ -131,14 +131,20 @@ export default {
               <td style="padding: 0.5rem; text-align: right; font-weight: bold; font-size: 1rem; white-space: nowrap;">{{ r.points }}<span v-if="r.potential_points > 0" class="pts-potential-rank">+{{ r.potential_points }}</span></td>
             </tr>
             <tr v-if="r && expandedUser === r.id">
-              <td colspan="4" style="padding: 0.25rem 0.5rem 0.5rem;">
+              <td colspan="4" style="padding: 0.5rem 0.5rem 0.5rem;">
                 <template v-if="userBreakdown">
-                <div style="display:flex;gap:0.4rem;flex-wrap:wrap;font-size:0.6rem;justify-content:flex-end;">
-                  <span style="background:#f0fdf4;color:#16a34a;border:1px solid #dcfce7;padding:0.15rem 0.4rem;border-radius:4px;font-weight:700;">{{ userBreakdown.exactos }}× Exacto (+3)</span>
-                  <span style="background:#fefce8;color:#ca8a04;border:1px solid #fef3c7;padding:0.15rem 0.4rem;border-radius:4px;font-weight:700;">{{ userBreakdown.resultados }}× Resultado (+1)</span>
-                  <span style="background:#fef2f2;color:#ef4444;border:1px solid #fee2e2;padding:0.15rem 0.4rem;border-radius:4px;font-weight:700;">{{ userBreakdown.errors }}× Error (+0)</span>
-                  <span v-if="userBreakdown.comodines > 0" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:0.15rem 0.4rem;border-radius:4px;font-weight:700;">🍀 {{ userBreakdown.comodines }}× Comodín</span>
-                  <span v-if="userBreakdown.champBonus > 0" style="background:#fff7ed;color:#d97706;border:1px solid #ffedd5;padding:0.15rem 0.4rem;border-radius:4px;font-weight:700;">🏆 Campeón +{{ userBreakdown.champBonus }}</span>
+                <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-end;">
+                  <div style="display:flex;gap:0.35rem;flex-wrap:wrap;font-size:0.75rem;justify-content:flex-end;">
+                    <span style="background:#f0fdf4;color:#16a34a;border:1px solid #dcfce7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">{{ userBreakdown.exactos }}× Exacto ({{ userBreakdown.exactos * 3 }}pts)</span>
+                    <span style="background:#fefce8;color:#ca8a04;border:1px solid #fef3c7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">{{ userBreakdown.resultados }}× Resultado ({{ userBreakdown.resultados * 1 }}pts)</span>
+                    <span style="background:#fef2f2;color:#ef4444;border:1px solid #fee2e2;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">{{ userBreakdown.errors }}× Error (0pts)</span>
+                    <span v-if="userBreakdown.comodines > 0" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🍀 {{ userBreakdown.comodines }}× Comodín</span>
+                    <span v-if="userBreakdown.champBonus > 0" style="background:#fff7ed;color:#d97706;border:1px solid #ffedd5;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🏆 Campeón (+{{ userBreakdown.champBonus }}pts)</span>
+                  </div>
+                  <div style="font-size:0.7rem;font-weight:700;text-align:right;color:var(--color-dark);border-top:1px solid #e2e8f0;padding-top:0.3rem;width:100%;">
+                    Total: <span style="color:var(--color-green);">{{ userBreakdown.exactos * 3 + userBreakdown.resultados * 1 + userBreakdown.champBonus }} pts</span>
+                    ({{ userBreakdown.exactos * 3 }}{{ userBreakdown.resultados > 0 ? ' + ' + userBreakdown.resultados : '' }}{{ userBreakdown.champBonus > 0 ? ' + ' + userBreakdown.champBonus + ' (🏆)' : '' }})
+                  </div>
                 </div>
                 </template>
                 <div v-else style="font-size:0.6rem;color:var(--color-gray);text-align:center;padding:0.25rem;">

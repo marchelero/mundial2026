@@ -45,7 +45,7 @@ export default {
         if (!p?.id || p.points == null) return sum;
         return sum + p.points;
       }, 0);
-      return matchPts + (this.championPoints || 0);
+      return matchPts + (this.champPoints || 0);
     },
     champPoints() {
       return this.championPick?.points || 0;
@@ -256,13 +256,13 @@ export default {
           <div v-if="expandedMatch === match.id" style="margin-top:0.3rem;padding:0.4rem;background:#f8fafc;border-radius:6px;font-size:0.65rem;border:1px solid rgba(0,0,0,0.06);">
             <div style="display:flex;gap:0.5rem;margin-bottom:0.3rem;text-align:center;">
               <div style="flex:1;"><span style="font-weight:700;">{{ matchStats?.total ?? 0 }}</span><br><span style="color:var(--color-gray);font-size:0.55rem;">VOTOS</span></div>
-              <div style="flex:1;"><span style="font-weight:700;color:#16a34a;">{{ matchStats?.homeWins ?? 0 }}</span><br><span style="color:var(--color-gray);font-size:0.55rem;">{{ match.home_flag || '' }} GANA</span></div>
+              <div style="flex:1;"><span style="font-weight:700;color:#16a34a;">{{ matchStats?.homeWins ?? 0 }}</span><br><span style="color:var(--color-gray);font-size:0.55rem;"><img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> GANA</span></div>
               <div style="flex:1;"><span style="font-weight:700;color:#d4af37;">{{ matchStats?.draws ?? 0 }}</span><br><span style="color:var(--color-gray);font-size:0.55rem;">EMPATE</span></div>
-              <div style="flex:1;"><span style="font-weight:700;color:#2563eb;">{{ matchStats?.awayWins ?? 0 }}</span><br><span style="color:var(--color-gray);font-size:0.55rem;">{{ match.away_flag || '' }} GANA</span></div>
+              <div style="flex:1;"><span style="font-weight:700;color:#2563eb;">{{ matchStats?.awayWins ?? 0 }}</span><br><span style="color:var(--color-gray);font-size:0.55rem;"><img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> GANA</span></div>
             </div>
             <div v-if="matchStats?.topScores?.length" style="border-top:1px solid rgba(0,0,0,0.06);padding-top:0.25rem;">
               <div v-for="([s, c]) in matchStats.topScores" :key="s" style="display:flex;justify-content:space-between;padding:0.05rem 0;font-size:0.6rem;">
-                <span style="font-weight:600;">{{ match.home_team || '' }} {{ match.home_flag || '' }} {{ s }} {{ match.away_flag || '' }} {{ match.away_team || '' }}</span>
+                <span style="font-weight:600;">{{ match.home_team || '' }} <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> {{ s }} <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> {{ match.away_team || '' }}</span>
                 <span style="color:var(--color-gray);">{{ c }} voto(s)</span>
               </div>
             </div>
