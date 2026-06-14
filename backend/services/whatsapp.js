@@ -4,7 +4,7 @@ const { flagEmoji } = require('../data/countries');
 const API_HOST = process.env.WHATSAPP_HOST || 'localhost';
 const API_PORT = process.env.WHATSAPP_PORT || 8080;
 const API_PATH = process.env.WHATSAPP_PATH || '/message/sendText/teste';
-const API_KEY = process.env.WHATSAPP_API_KEY || '96CF28F9329F-44A3-80DB-5190D7B27185';
+const API_KEY = process.env.WHATSAPP_API_KEY || '75458825-888B-4536-B2F2-5B054D5F4C82';
 const GROUP_NUMBER = process.env.WHATSAPP_GROUP || '120363409786684123@g.us';
 
 function formatPredictions(predictions) {

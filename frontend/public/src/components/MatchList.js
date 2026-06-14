@@ -449,25 +449,25 @@ export default {
               <span class="team-name">{{ match.away_team }}</span>
             </div>
           </div>
-            
-          <div v-if="matchState(match) === 'open' && !predictions[match.id]?.comodin && !comodinUsado" style="margin-top: 0.5rem; text-align: center;">
-            <button class="comodin-btn" @click="$emit('toggle-comodin', match.id)">
-              🍀 Usar Comodín
-            </button>
-          </div>
 
-          <div v-if="isMatchPast(match) && match.status !== 'finished'" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.06); font-size: 0.75rem;">
-            <span style="color: var(--color-gray);">
-              <template v-if="match.home_score != null && match.away_score != null">Resultado: {{ match.home_score }} - {{ match.away_score }}</template>
-              <template v-else>⚽ En juego</template>
-            </span>
-            <span v-if="potentialPoints(match) !== null" class="pts-badge pts-potential">{{ potentialPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }} ⏳</span>
-            <span v-else-if="predictions[match.id]?.id" style="font-size:0.6rem;color:var(--color-gray);font-style:italic;">Esperando resultado...</span>
-          </div>
-          <div v-if="match.status === 'finished'" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.06); font-size: 0.75rem;">
-            <span style="color: var(--color-gray);">Resultado: {{ match.home_score }} - {{ match.away_score }}</span>
-            <span v-if="predictions[match.id]?.id" class="pts-badge" :class="ptsClass(match)">{{ getPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }}</span>
+          <div v-if="match.status === 'finished'" style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.02);border-radius:6px;padding-left:0.5rem;padding-right:0.5rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;flex:1;justify-content:center;">
+              <span style="font-size:0.6rem;font-weight:700;color:var(--color-gray);letter-spacing:0.08em;">RESULTADO</span>
+              <span style="font-size:1.4rem;font-weight:900;color:var(--color-dark);background:white;padding:0.1rem 0.7rem;border-radius:6px;border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,0.06);">{{ match.home_score }} - {{ match.away_score }}</span>
+            </div>
+            <span v-if="predictions[match.id]?.id" class="pts-badge" :class="ptsClass(match)" style="font-size:0.85rem;">{{ getPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }}</span>
             <span v-else class="pts-badge wrong">0 PTS</span>
+          </div>
+          <div v-if="isMatchPast(match) && match.status !== 'finished'" style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.02);border-radius:6px;padding-left:0.5rem;padding-right:0.5rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;flex:1;justify-content:center;">
+              <span style="font-size:0.6rem;font-weight:700;color:var(--color-gray);letter-spacing:0.08em;">RESULTADO</span>
+              <span style="font-size:1.4rem;font-weight:900;color:var(--color-dark);background:white;padding:0.1rem 0.7rem;border-radius:6px;border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,0.06);">
+                <template v-if="match.home_score != null && match.away_score != null">{{ match.home_score }} - {{ match.away_score }}</template>
+                <template v-else>⚽ En juego</template>
+              </span>
+            </div>
+            <span v-if="potentialPoints(match) !== null" class="pts-badge pts-potential" style="font-size:0.85rem;">{{ potentialPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }} ⏳</span>
+            <span v-else-if="predictions[match.id]?.id" style="font-size:0.7rem;color:var(--color-gray);font-style:italic;">Esperando resultado...</span>
           </div>
 
           <button @click="toggleMatchStats(match.id)" style="width:100%;margin-top:0.4rem;padding:0.25rem;border:none;border-radius:4px;background:rgba(0,0,0,0.03);color:var(--color-gray);font-size:0.6rem;cursor:pointer;font-weight:600;transition:background 0.2s;" @mouseover="$event.target.style.background='rgba(0,0,0,0.07)'" @mouseout="$event.target.style.background='rgba(0,0,0,0.03)'">
@@ -475,16 +475,29 @@ export default {
           </button>
 
           <div v-if="expandedMatch === match.id && matchStats" style="margin-top:0.4rem;padding:0.5rem;background:#f8fafc;border-radius:6px;font-size:0.7rem;border:1px solid rgba(0,0,0,0.06);">
+            <div v-if="match.status === 'finished'" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;background:rgba(0,0,0,0.02);border-radius:6px;padding:0.3rem 0.5rem;">
+              <div style="display:flex;align-items:center;gap:0.5rem;flex:1;justify-content:center;">
+                <span style="font-size:0.6rem;font-weight:700;color:var(--color-gray);letter-spacing:0.08em;">RESULTADO</span>
+                <span style="font-size:1.4rem;font-weight:900;color:var(--color-dark);background:white;padding:0.1rem 0.7rem;border-radius:6px;border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,0.06);">{{ match.home_score }} - {{ match.away_score }}</span>
+              </div>
+            </div>
             <div style="display:flex;gap:0.75rem;margin-bottom:0.5rem;text-align:center;">
               <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;">{{ matchStats.total }}</div><div style="color:var(--color-gray);font-size:0.6rem;">VOTOS</div></div>
               <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#16a34a;">{{ matchStats.homeWins }}</div><div style="color:var(--color-gray);font-size:0.6rem;"><img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> GANA</div></div>
               <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#d4af37;">{{ matchStats.draws }}</div><div style="color:var(--color-gray);font-size:0.6rem;">EMPATE</div></div>
               <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#2563eb;">{{ matchStats.awayWins }}</div><div style="color:var(--color-gray);font-size:0.6rem;"><img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> GANA</div></div>
             </div>
-            <div v-if="matchStats.topScores.length > 0" style="border-top:1px solid rgba(0,0,0,0.06);padding-top:0.35rem;">
-              <div v-for="([score, count], i) in matchStats.topScores" :key="i" style="display:flex;justify-content:space-between;padding:0.1rem 0;font-size:0.65rem;">
-                <span style="font-weight:600;">{{ match.home_team }} <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> {{ score }} <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> {{ match.away_team }}</span>
-                <span style="color:var(--color-gray);">{{ count }} voto(s)</span>
+            <div v-if="matchStats.topScores.length > 0" style="border-top:1px solid rgba(0,0,0,0.06);padding-top:0.5rem;">
+              <div style="font-size:0.6rem;font-weight:700;color:var(--color-gray);text-align:center;margin-bottom:0.35rem;">PRONÓSTICOS MÁS VOTADOS</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.3rem;">
+                <div v-for="([score, count], i) in matchStats.topScores" :key="i" style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;padding:0.4rem 0.3rem;text-align:center;">
+                  <div style="font-weight:700;font-size:0.8rem;white-space:nowrap;">
+                    <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:16px;height:11px;border-radius:2px;vertical-align:middle;">
+                    {{ score }}
+                    <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:16px;height:11px;border-radius:2px;vertical-align:middle;">
+                  </div>
+                  <div style="font-size:0.6rem;color:var(--color-gray);font-weight:600;">{{ count }} voto(s)</div>
+                </div>
               </div>
             </div>
           </div>
