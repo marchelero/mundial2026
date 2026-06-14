@@ -34,7 +34,16 @@ export default {
       championAwardSelected: '',
       awardLoading: false,
       awardDone: false,
-      awardCount: 0
+      awardCount: 0,
+      manualScoreExpanded: null,
+      unlinkedUsers: [],
+      linkedUsersNoPred: [],
+      manualScores: {},
+      manualSaving: false,
+      showManualModal: false,
+      manualConfirmData: null,
+      linkedSelected: {},
+      linkedScores: {}
     };
   },
   async created() {
@@ -172,6 +181,76 @@ export default {
       const key = e.key;
       if (key === 'Backspace' || key === 'Delete' || key === 'Tab' || key === 'ArrowLeft' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowDown' || key === 'Home' || key === 'End') return;
       if (!/^\d$/.test(key)) e.preventDefault();
+    },
+    async toggleManualScore(matchId) {
+      if (this.manualScoreExpanded === matchId) {
+        this.manualScoreExpanded = null;
+        return;
+      }
+      try {
+        const [existingPreds, unlinked] = await Promise.all([
+          api.get(`/predictions/match/${encodeURIComponent(matchId)}`).catch(() => []),
+          api.get('/users/unlinked')
+        ]);
+        const existingUserIds = new Set(existingPreds.map(p => p.user));
+        this.manualScores = {};
+        this.linkedScores = {};
+        this.linkedSelected = {};
+
+        this.unlinkedUsers = unlinked.filter(u => !existingUserIds.has(u.id));
+        for (const u of this.unlinkedUsers) {
+          this.manualScores[u.id] = { home: '', away: '' };
+        }
+
+        this.linkedUsersNoPred = this.users.filter(u => u.google_id && !existingUserIds.has(u.id));
+        for (const u of this.linkedUsersNoPred) {
+          this.linkedScores[u.id] = { home: '', away: '' };
+          this.linkedSelected[u.id] = false;
+        }
+
+        this.manualScoreExpanded = matchId;
+      } catch (e) {
+        alert('Error al cargar datos: ' + e.message);
+      }
+    },
+    async prepareManualSave(matchId) {
+      const predictions = [];
+      for (const u of this.unlinkedUsers) {
+        const s = this.manualScores[u.id];
+        if (s.home !== '' && s.away !== '' && s.home !== null && s.away !== null) {
+          predictions.push({ user_id: u.id, name: u.name || u.email.split('@')[0], home_score: Number(s.home), away_score: Number(s.away) });
+        }
+      }
+      for (const u of this.linkedUsersNoPred) {
+        if (!this.linkedSelected[u.id]) continue;
+        const s = this.linkedScores[u.id];
+        if (s.home !== '' && s.away !== '' && s.home !== null && s.away !== null) {
+          predictions.push({ user_id: u.id, name: u.name || u.email.split('@')[0], home_score: Number(s.home), away_score: Number(s.away) });
+        }
+      }
+      if (predictions.length === 0) {
+        alert('No hay scores para guardar. Completá al menos un marcador.');
+        return;
+      }
+      this.manualConfirmData = { matchId, predictions };
+      this.showManualModal = true;
+    },
+    confirmManualSave() {
+      if (!this.manualConfirmData) return;
+      const { matchId, predictions } = this.manualConfirmData;
+      this.showManualModal = false;
+      this.manualSaving = true;
+      api.post('/predictions/admin-bulk', { match_id: matchId, predictions: predictions.map(p => ({ user_id: p.user_id, home_score: p.home_score, away_score: p.away_score })) })
+        .then(result => {
+          this.manualScoreExpanded = null;
+          alert(`✅ ${result.saved.length} pronósticos guardados${result.errors.length > 0 ? ', ' + result.errors.length + ' errores' : ''}`);
+        })
+        .catch(e => { alert('Error al guardar: ' + e.message); })
+        .finally(() => { this.manualSaving = false; this.manualConfirmData = null; });
+    },
+    cancelManualSave() {
+      this.showManualModal = false;
+      this.manualConfirmData = null;
     },
   },
   template: `
@@ -311,12 +390,39 @@ export default {
                   <button class="btn" @click="openFinishModal(match)" :disabled="match.home_score == null || match.away_score == null" style="padding: 0.3rem 0.4rem; font-size: 0.65rem; background: var(--color-accent); color: white;" title="Finalizar partido">🏁</button>
                 </div>
             </div>
-            <div v-if="match.status === 'finished'" style="width: 100%; text-align: center; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed rgba(0,0,0,0.1);">
-              <span style="font-size: 0.6rem; color: var(--color-green); cursor: pointer; font-weight: 600;" @click="$emit('export-match', match)">📥 Exportar predicciones</span>
+             <div style="width: 100%; display: flex; justify-content: center; gap: 0.75rem; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed rgba(0,0,0,0.1);">
+              <div v-if="match.status === 'finished'">
+                <span style="font-size: 0.6rem; color: var(--color-green); cursor: pointer; font-weight: 600;" @click="$emit('export-match', match)">📥 Exportar predicciones</span>
+              </div>
+              <span style="font-size: 0.6rem; color: var(--color-blue); cursor: pointer; font-weight: 600;" @click="toggleManualScore(match.id)">📝 Subir Score Manual</span>
             </div>
-            <div v-else style="width: 100%; text-align: center; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed rgba(0,0,0,0.05); font-size: 0.55rem; color: var(--color-gray);">
-              {{ match.date }} — {{ match.time }}
-        </div>
+            <div v-if="manualScoreExpanded === match.id" style="width:100%;margin-top:0.5rem;padding:0.5rem;background:#f8fafc;border-radius:6px;border:1px solid rgba(0,0,0,0.06);">
+              <div style="font-size:0.65rem;font-weight:700;margin-bottom:0.4rem;">Usuarios que no usan la app</div>
+              <div v-if="unlinkedUsers.length === 0" style="font-size:0.6rem;color:var(--color-gray);text-align:center;padding:0.25rem;">No hay usuarios pendientes</div>
+              <div v-for="u in unlinkedUsers" :key="u.id" style="display:flex;align-items:center;gap:0.35rem;padding:0.2rem 0;font-size:0.7rem;">
+                <span style="flex:1;font-weight:600;">{{ u.name || u.email.split('@')[0] }}</span>
+                <input type="text" class="input-score" :value="manualScores[u.id]?.home ?? ''" @input="manualScores[u.id] ? manualScores[u.id].home = $event.target.value : null" @keypress="onlyDigits" @paste.prevent inputmode="numeric" style="width:40px;height:28px;font-size:0.8rem;">
+                <span style="font-weight:700;">-</span>
+                <input type="text" class="input-score" :value="manualScores[u.id]?.away ?? ''" @input="manualScores[u.id] ? manualScores[u.id].away = $event.target.value : null" @keypress="onlyDigits" @paste.prevent inputmode="numeric" style="width:40px;height:28px;font-size:0.8rem;">
+              </div>
+
+              <div v-if="linkedUsersNoPred.length > 0" style="margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid rgba(0,0,0,0.06);">
+                <div style="font-size:0.65rem;font-weight:700;margin-bottom:0.4rem;">Usuarios que registraron via whatsapp</div>
+                <div v-for="u in linkedUsersNoPred" :key="u.id" style="display:flex;align-items:center;gap:0.35rem;padding:0.2rem 0;font-size:0.7rem;">
+                  <input type="checkbox" v-model="linkedSelected[u.id]" style="cursor:pointer;">
+                  <span style="flex:1;font-weight:600;">{{ u.name || u.email.split('@')[0] }}</span>
+                  <template v-if="linkedSelected[u.id]">
+                    <input type="text" class="input-score" :value="linkedScores[u.id]?.home ?? ''" @input="linkedScores[u.id] ? linkedScores[u.id].home = $event.target.value : null" @keypress="onlyDigits" @paste.prevent inputmode="numeric" style="width:40px;height:28px;font-size:0.8rem;">
+                    <span style="font-weight:700;">-</span>
+                    <input type="text" class="input-score" :value="linkedScores[u.id]?.away ?? ''" @input="linkedScores[u.id] ? linkedScores[u.id].away = $event.target.value : null" @keypress="onlyDigits" @paste.prevent inputmode="numeric" style="width:40px;height:28px;font-size:0.8rem;">
+                  </template>
+                </div>
+              </div>
+
+              <button class="btn btn-primary" @click="prepareManualSave(match.id)" :disabled="manualSaving" style="margin-top:0.4rem;padding:0.3rem 0.6rem;font-size:0.65rem;">
+                {{ manualSaving ? 'GUARDANDO...' : 'GUARDAR PRONÓSTICOS' }}
+              </button>
+            </div>
       </div>
       </div>
       <div v-if="adminTab === 'config'" style="display:flex;flex-direction:column;gap:0.75rem;">
@@ -429,6 +535,27 @@ export default {
         <p style="font-size: 0.75rem; color: #92400e;">
           ⚠️ <strong>ADMIN:</strong> 💾 guarda el score sin cerrar el partido. 🏁 finaliza y activa el cálculo de puntos.
         </p>
+      </div>
+
+      <!-- Manual Save Modal -->
+      <div v-if="showManualModal && manualConfirmData" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;" @click.self="cancelManualSave">
+        <div style="background:white;border-radius:16px;padding:1.5rem;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+          <div style="text-align:center;margin-bottom:1rem;">
+            <div style="font-size:2rem;margin-bottom:0.3rem;">📋</div>
+            <h3 style="font-family:var(--font-header);font-size:1.1rem;margin:0 0 0.2rem;">CONFIRMAR PRONÓSTICOS</h3>
+            <p style="font-size:0.7rem;color:var(--color-gray);margin:0;">Se guardarán {{ manualConfirmData.predictions.length }} pronósticos</p>
+          </div>
+          <div style="background:#f8fafc;border-radius:12px;padding:0.75rem;margin-bottom:1rem;max-height:260px;overflow-y:auto;border:1px solid #e2e8f0;">
+            <div v-for="(p, i) in manualConfirmData.predictions" :key="i" style="display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0;border-bottom:1px solid rgba(0,0,0,0.04);font-size:0.75rem;">
+              <span style="font-weight:600;">{{ p.name }}</span>
+              <span style="font-weight:800;background:white;padding:0.1rem 0.5rem;border-radius:4px;border:1px solid #e2e8f0;">{{ p.home_score }} - {{ p.away_score }}</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.6rem;">
+            <button @click="cancelManualSave" style="flex:1;padding:0.65rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.8rem;">CANCELAR</button>
+            <button @click="confirmManualSave" style="flex:1;padding:0.65rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:600;cursor:pointer;font-size:0.8rem;">CONFIRMAR</button>
+          </div>
+        </div>
       </div>
 
       <!-- Award Champion Modal -->

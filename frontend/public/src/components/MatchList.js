@@ -458,15 +458,8 @@ export default {
             <span v-if="predictions[match.id]?.id" class="pts-badge" :class="ptsClass(match)" style="font-size:0.85rem;">{{ getPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }}</span>
             <span v-else class="pts-badge wrong">0 PTS</span>
           </div>
-          <div v-if="isMatchPast(match) && match.status !== 'finished'" style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.02);border-radius:6px;padding-left:0.5rem;padding-right:0.5rem;">
-            <div style="display:flex;align-items:center;gap:0.5rem;flex:1;justify-content:center;">
-              <span style="font-size:0.6rem;font-weight:700;color:var(--color-gray);letter-spacing:0.08em;">RESULTADO</span>
-              <span style="font-size:1.4rem;font-weight:900;color:var(--color-dark);background:white;padding:0.1rem 0.7rem;border-radius:6px;border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,0.06);">
-                <template v-if="match.home_score != null && match.away_score != null">{{ match.home_score }} - {{ match.away_score }}</template>
-                <template v-else>⚽ En juego</template>
-              </span>
-            </div>
-            <span v-if="potentialPoints(match) !== null" class="pts-badge pts-potential" style="font-size:0.85rem;">{{ potentialPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }} ⏳</span>
+          <div v-if="isMatchPast(match) && match.status !== 'finished'" style="display:flex;justify-content:flex-end;align-items:center;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid rgba(0,0,0,0.06);">
+            <span v-if="potentialPoints(match) !== null" class="pts-badge pts-potential" style="font-size:0.85rem;animation:pulse 1.5s infinite;">{{ potentialPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }} ⏳</span>
             <span v-else-if="predictions[match.id]?.id" style="font-size:0.7rem;color:var(--color-gray);font-style:italic;">Esperando resultado...</span>
           </div>
 

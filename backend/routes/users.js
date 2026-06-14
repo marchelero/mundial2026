@@ -55,6 +55,16 @@ router.delete('/:id', authRequired, adminRequired, (req, res) => {
   }
 });
 
+router.get('/unlinked', authRequired, adminRequired, (req, res) => {
+  try {
+    const users = db.prepare('SELECT id, email, name FROM users WHERE google_id IS NULL ORDER BY email ASC').all();
+    res.json(users);
+  } catch (e) {
+    console.error('Error listing unlinked users:', e);
+    res.status(500).json({ error: 'Error al obtener usuarios' });
+  }
+});
+
 router.get('/rankings', authRequired, (req, res) => {
   try {
     // Base rankings: all users with their total_points

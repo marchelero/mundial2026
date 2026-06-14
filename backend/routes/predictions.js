@@ -122,6 +122,45 @@ function formatPrediction(p) {
   return { id: p.id, user: p.user_id, match: p.match_id, home_score: p.home_score, away_score: p.away_score, comodin: !!p.comodin, points: p.points ?? null };
 }
 
+router.post('/admin-bulk', authRequired, adminRequired, (req, res) => {
+  try {
+    const items = req.body.predictions;
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Se requiere un array de pronósticos' });
+    }
+    const matchId = req.body.match_id;
+    if (!matchId) return res.status(400).json({ error: 'match_id requerido' });
+
+    const upsertOne = db.prepare(`
+      INSERT INTO predictions (id, user_id, match_id, home_score, away_score, comodin)
+      VALUES (?, ?, ?, ?, ?, 0)
+      ON CONFLICT(user_id, match_id) DO UPDATE SET home_score=excluded.home_score, away_score=excluded.away_score
+    `);
+
+    const results = [];
+    const errors = [];
+
+    const runBatch = db.transaction(() => {
+      for (const item of items) {
+        const { user_id, home_score, away_score } = item;
+        if (!user_id || home_score == null || away_score == null) {
+          errors.push({ user_id, error: 'Campos incompletos' }); continue;
+        }
+        const user = db.prepare('SELECT id FROM users WHERE id = ?').get(user_id);
+        if (!user) { errors.push({ user_id, error: 'Usuario no encontrado' }); continue; }
+        upsertOne.run(generateId(), user_id, matchId, home_score, away_score);
+        results.push({ user_id, match_id: matchId, home_score, away_score });
+      }
+    });
+
+    runBatch();
+    res.json({ saved: results, errors });
+  } catch (e) {
+    console.error('Admin bulk error:', e);
+    res.status(500).json({ error: 'Error al guardar pronósticos' });
+  }
+});
+
 router.post('/batch', authRequired, (req, res) => {
   try {
     const items = req.body.predictions;
