@@ -11,6 +11,32 @@ export default {
     },
     playedMatches() {
       return this.allMatches.filter(m => m.status === 'finished').length;
+    },
+    rankingsWithPrize() {
+      const LABELS = [
+        { label: '1ro 45%', color: '#f59e0b' },
+        { label: '2do 25%', color: '#6b7280' },
+        { label: '3ro 15%', color: '#b45309' },
+        { label: '4to 10%', color: '#3b82f6' },
+        { label: '5to 5%',  color: '#10b981' },
+      ];
+      const data = this.rankingsData || [];
+      const result = [];
+      let rank = 0;
+      let i = 0;
+      while (i < data.length) {
+        const group = [data[i]];
+        let j = i + 1;
+        while (j < data.length && data[j].points === data[i].points) {
+          group.push(data[j]);
+          j++;
+        }
+        const prizeInfo = rank < LABELS.length ? LABELS[rank] : null;
+        for (const u of group) result.push({ ...u, prize: prizeInfo });
+        rank++;
+        i = j;
+      }
+      return result;
     }
   },
   methods: {
@@ -118,23 +144,21 @@ export default {
                   <th style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">PARTICIPANTE</th>
                   <th style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">CORREO</th>
                   <th style="padding: 0.5rem; text-align: right; font-size: 0.65rem;">PTS</th>
+                  <th style="padding: 0.5rem; text-align: right; font-size: 0.65rem;">PREMIO</th>
                 </tr>
               </thead>
               <tbody>
-                <template v-for="(r, i) in rankingsData || []" :key="r ? r.id : i">
+                <template v-for="(r, i) in rankingsWithPrize" :key="r ? r.id : i">
                 <tr style="border-bottom: 1px solid rgba(0,0,0,0.05); cursor:pointer;" @click="r && toggleUser(r.id)">
-                  <td style="padding: 0.5rem;">
-                    <span v-if="i === 0">🥇</span>
-                    <span v-else-if="i === 1">🥈</span>
-                    <span v-else-if="i === 2">🥉</span>
-                    <span v-else style="font-size: 0.8rem; color: var(--color-gray); font-weight: 700;">{{ i + 1 }}</span>
-                  </td>
+                  <td style="padding: 0.5rem; font-size: 0.8rem; color: var(--color-gray); font-weight: 700;">{{ i + 1 }}</td>
                   <td style="padding: 0.5rem; font-weight: 600; font-size: 0.85rem;">{{ r.name }}</td>
                   <td style="padding: 0.5rem; font-size: 0.7rem; color: var(--color-gray);">{{ r.email }}</td>
                   <td style="padding: 0.5rem; text-align: right; font-weight: bold; font-size: 1rem; white-space: nowrap;">{{ r.points }}<span v-if="r.potential_points > 0" class="pts-potential-rank">+{{ r.potential_points }}</span></td>
+                  <td style="padding: 0.5rem; text-align: right; font-weight: 700; font-size: 0.7rem; white-space: nowrap;" v-if="r.prize"><span :style="{ color: r.prize.color }">{{ r.prize.label }}</span></td>
+                  <td style="padding: 0.5rem; text-align: right; font-size: 0.7rem; color: #ccc;" v-else>-</td>
                 </tr>
                 <tr v-if="r && expandedUser === r.id">
-                  <td colspan="4" style="padding: 0.5rem 0.5rem 0.5rem;">
+                  <td colspan="5" style="padding: 0.5rem 0.5rem 0.5rem;">
                     <template v-if="userBreakdown">
                     <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-end;">
                       <div style="display:flex;gap:0.35rem;flex-wrap:wrap;font-size:0.75rem;justify-content:flex-end;">
@@ -161,7 +185,7 @@ export default {
           </div>
         </div>
 
-        <!-- Columna Derecha: Reglas y Puntos -->
+        <!-- Columna Derecha: Puntos y Premios -->
         <div class="sticky-sidebar">
           <div class="card" style="margin-top: 0; background: var(--color-dark); color: white; display: flex; gap: 1rem; align-items: center;">
              <span style="font-size: 1.5rem;">⭐</span>
@@ -170,6 +194,17 @@ export default {
                +3 PUNTOS por acertar el Score Exacto.<br>
                +1 PUNTO por acertar el Resultado (Gana, Pierde o Empate).
              </div>
+          </div>
+          <div class="card" style="background: #fefce8; border: 1px solid #fde68a; color: #92400e; font-size: 0.75rem; line-height: 1.5;">
+            <strong style="display:block;margin-bottom:0.35rem;">🏆 PREMIOS</strong>
+            <div><span style="color:#f59e0b;font-weight:700;">●</span> 1ro — 45%</div>
+            <div><span style="color:#6b7280;font-weight:700;">●</span> 2do — 25%</div>
+            <div><span style="color:#b45309;font-weight:700;">●</span> 3ro — 15%</div>
+            <div><span style="color:#3b82f6;font-weight:700;">●</span> 4to — 10%</div>
+            <div><span style="color:#10b981;font-weight:700;">●</span> 5to — 5%</div>
+            <div style="margin-top:0.35rem;border-top:1px solid #fde68a;padding-top:0.35rem;">
+              <strong>Empates:</strong> si dos o más personas tienen los mismos puntos, el premio se divide en partes iguales.
+            </div>
           </div>
         </div>
       </div>
