@@ -142,7 +142,6 @@ export default {
                 <tr>
                   <th style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">#</th>
                   <th style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">PARTICIPANTE</th>
-                  <th style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">CORREO</th>
                   <th style="padding: 0.5rem; text-align: right; font-size: 0.65rem;">PTS</th>
                   <th style="padding: 0.5rem; text-align: right; font-size: 0.65rem;">PREMIO</th>
                 </tr>
@@ -151,14 +150,16 @@ export default {
                 <template v-for="(r, i) in rankingsWithPrize" :key="r ? r.id : i">
                 <tr style="border-bottom: 1px solid rgba(0,0,0,0.05); cursor:pointer;" @click="r && toggleUser(r.id)">
                   <td style="padding: 0.5rem; font-size: 0.8rem; color: var(--color-gray); font-weight: 700;">{{ i + 1 }}</td>
-                  <td style="padding: 0.5rem; font-weight: 600; font-size: 0.85rem;">{{ r.name }}</td>
-                  <td style="padding: 0.5rem; font-size: 0.7rem; color: var(--color-gray);">{{ r.email }}</td>
+                  <td style="padding: 0.5rem; line-height: 1.3;">
+                    <div style="font-weight: 600; font-size: 0.85rem;">{{ r.name }}</div>
+                    <div style="font-size: 0.55rem; color: var(--color-gray); opacity: 0.45;">{{ r.email }}</div>
+                  </td>
                   <td style="padding: 0.5rem; text-align: right; font-weight: bold; font-size: 1rem; white-space: nowrap;">{{ r.points }}<span v-if="r.potential_points > 0" class="pts-potential-rank">+{{ r.potential_points }}</span></td>
                   <td style="padding: 0.5rem; text-align: right; font-weight: 700; font-size: 0.7rem; white-space: nowrap;" v-if="r.prize"><span :style="{ color: r.prize.color }">{{ r.prize.label }}</span></td>
                   <td style="padding: 0.5rem; text-align: right; font-size: 0.7rem; color: #ccc;" v-else>-</td>
                 </tr>
                 <tr v-if="r && expandedUser === r.id">
-                  <td colspan="5" style="padding: 0.5rem 0.5rem 0.5rem;">
+                  <td colspan="4" style="padding: 0.5rem 0.5rem 0.5rem;">
                     <template v-if="userBreakdown">
                     <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-end;">
                       <div style="display:flex;gap:0.35rem;flex-wrap:wrap;font-size:0.75rem;justify-content:flex-end;">
