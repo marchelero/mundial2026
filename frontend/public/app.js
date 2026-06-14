@@ -303,13 +303,25 @@ createApp({
         const BOM = '\uFEFF';
         const sep = ',';
         let csv = BOM;
-        csv += ['Usuario','Nombre','Partido','Pronóstico Local','Pronóstico Visitante','Resultado Local','Resultado Visitante','Comodín','Puntos'].join(sep) + '\n';
+        csv += ['Usuario','Nombre','Fecha','Partido','Pronóstico Local','Pronóstico Visitante','Resultado Local','Resultado Visitante','Comodín','Puntos'].join(sep) + '\n';
 
-        records.forEach(r => {
+        const sorted = records.slice().sort((a, b) => {
+          const na = (a.expand?.user?.name || '').toLowerCase();
+          const nb = (b.expand?.user?.name || '').toLowerCase();
+          if (na !== nb) return na.localeCompare(nb);
+          const da = a.expand?.match?.date || '';
+          const db = b.expand?.match?.date || '';
+          const ta = a.expand?.match?.time || '';
+          const tb = b.expand?.match?.time || '';
+          return (da + ta).localeCompare(db + tb);
+        });
+
+        sorted.forEach(r => {
           const m = r.expand?.match;
           const row = [
             r.expand?.user?.email || '?',
             r.expand?.user?.name || r.expand?.user?.email?.split('@')[0] || '?',
+            m?.date ? m.date.split('-').reverse().join('/') : '?',
             m ? `${m.home_team} vs ${m.away_team}` : '?',
             r.home_score,
             r.away_score,
@@ -340,7 +352,13 @@ createApp({
         let csv = BOM;
         csv += ['Usuario','Nombre','Pronóstico Local','Pronóstico Visitante','Resultado Local','Resultado Visitante','Comodín','Puntos'].join(sep) + '\n';
 
-        records.forEach(r => {
+        const sorted = records.slice().sort((a, b) => {
+          const na = (a.expand?.user?.name || '').toLowerCase();
+          const nb = (b.expand?.user?.name || '').toLowerCase();
+          return na.localeCompare(nb);
+        });
+
+        sorted.forEach(r => {
           const row = [
             r.expand?.user?.email || '?',
             r.expand?.user?.name || r.expand?.user?.email?.split('@')[0] || '?',
