@@ -475,12 +475,6 @@ export default {
           </button>
 
           <div v-if="expandedMatch === match.id && matchStats" style="margin-top:0.4rem;padding:0.5rem;background:#f8fafc;border-radius:6px;font-size:0.7rem;border:1px solid rgba(0,0,0,0.06);">
-            <div v-if="match.status === 'finished'" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;background:rgba(0,0,0,0.02);border-radius:6px;padding:0.3rem 0.5rem;">
-              <div style="display:flex;align-items:center;gap:0.5rem;flex:1;justify-content:center;">
-                <span style="font-size:0.6rem;font-weight:700;color:var(--color-gray);letter-spacing:0.08em;">RESULTADO</span>
-                <span style="font-size:1.4rem;font-weight:900;color:var(--color-dark);background:white;padding:0.1rem 0.7rem;border-radius:6px;border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,0.06);">{{ match.home_score }} - {{ match.away_score }}</span>
-              </div>
-            </div>
             <div style="display:flex;gap:0.75rem;margin-bottom:0.5rem;text-align:center;">
               <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;">{{ matchStats.total }}</div><div style="color:var(--color-gray);font-size:0.6rem;">VOTOS</div></div>
               <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#16a34a;">{{ matchStats.homeWins }}</div><div style="color:var(--color-gray);font-size:0.6rem;"><img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> GANA</div></div>

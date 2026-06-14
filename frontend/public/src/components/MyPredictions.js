@@ -255,11 +255,11 @@ export default {
                   <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" class="team-flag">
                   <span v-else class="team-flag">{{ match.home_flag }}</span>
                </div>
-               
+
                <div class="score-box">
-                  <span class="stat-value" style="font-size: 1.2rem;">{{ predictions[match.id]?.home ?? '-' }}</span>
+                  <span class="input-score" style="line-height: 35px; background: #f1f5f9; cursor: default;">{{ predictions[match.id]?.home ?? '-' }}</span>
                   <span>-</span>
-                  <span class="stat-value" style="font-size: 1.2rem;">{{ predictions[match.id]?.away ?? '-' }}</span>
+                  <span class="input-score" style="line-height: 35px; background: #f1f5f9; cursor: default;">{{ predictions[match.id]?.away ?? '-' }}</span>
                </div>
 
                <div class="team-info away">
@@ -268,23 +268,35 @@ export default {
                   <span class="team-name">{{ match.away_team }}</span>
                </div>
             </div>
-            <div v-if="match.status === 'finished'" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; font-size: 0.8rem; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 0.5rem;">
-               <span style="color: var(--color-gray);">Resultado: {{ match.home_score }} - {{ match.away_score }}</span>
-               <span v-if="predictions[match.id]?.id" class="pts-badge" :class="ptsClass(match)">{{ getPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }}</span>
-                <span v-else class="pts-badge wrong">0 PTS</span>
-             </div>
-            <button @click="toggleMatchStats(match.id)" style="width:100%;margin-top:0.4rem;padding:0.2rem;border:none;border-radius:4px;background:rgba(0,0,0,0.03);color:var(--color-gray);font-size:0.6rem;cursor:pointer;font-weight:600;">👥 {{ expandedMatch === match.id ? 'OCULTAR' : 'VER PRONÓSTICOS' }}</button>
-            <div v-if="expandedMatch === match.id" style="margin-top:0.3rem;padding:0.4rem;background:#f8fafc;border-radius:6px;font-size:0.65rem;border:1px solid rgba(0,0,0,0.06);">
-              <div style="display:flex;gap:0.5rem;margin-bottom:0.3rem;text-align:center;">
-                <div style="flex:1;"><span style="font-weight:700;">{{ matchStats?.total ?? 0 }}</span><br><span style="color:var(--color-gray);font-size:0.55rem;">VOTOS</span></div>
-                <div style="flex:1;"><span style="font-weight:700;color:#16a34a;">{{ matchStats?.homeWins ?? 0 }}</span><br><span style="color:var(--color-gray);font-size:0.55rem;"><img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> GANA</span></div>
-                <div style="flex:1;"><span style="font-weight:700;color:#d4af37;">{{ matchStats?.draws ?? 0 }}</span><br><span style="color:var(--color-gray);font-size:0.55rem;">EMPATE</span></div>
-                <div style="flex:1;"><span style="font-weight:700;color:#2563eb;">{{ matchStats?.awayWins ?? 0 }}</span><br><span style="color:var(--color-gray);font-size:0.55rem;"><img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> GANA</span></div>
+            <div v-if="match.status === 'finished'" style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.02);border-radius:6px;padding-left:0.5rem;padding-right:0.5rem;">
+              <div style="display:flex;align-items:center;gap:0.5rem;flex:1;justify-content:center;">
+                <span style="font-size:0.6rem;font-weight:700;color:var(--color-gray);letter-spacing:0.08em;">RESULTADO</span>
+                <span style="font-size:1.4rem;font-weight:900;color:var(--color-dark);background:white;padding:0.1rem 0.7rem;border-radius:6px;border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,0.06);">{{ match.home_score }} - {{ match.away_score }}</span>
               </div>
-              <div v-if="matchStats?.topScores?.length" style="border-top:1px solid rgba(0,0,0,0.06);padding-top:0.25rem;">
-                <div v-for="([s, c]) in matchStats.topScores" :key="s" style="display:flex;justify-content:space-between;padding:0.05rem 0;font-size:0.6rem;">
-                  <span style="font-weight:600;">{{ match.home_team || '' }} <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> {{ s }} <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> {{ match.away_team || '' }}</span>
-                  <span style="color:var(--color-gray);">{{ c }} voto(s)</span>
+              <span v-if="predictions[match.id]?.id" class="pts-badge" :class="ptsClass(match)" style="font-size:0.85rem;">{{ getPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }}</span>
+              <span v-else class="pts-badge wrong">0 PTS</span>
+            </div>
+            <button @click="toggleMatchStats(match.id)" style="width:100%;margin-top:0.4rem;padding:0.25rem;border:none;border-radius:4px;background:rgba(0,0,0,0.03);color:var(--color-gray);font-size:0.6rem;cursor:pointer;font-weight:600;transition:background 0.2s;" @mouseover="$event.target.style.background='rgba(0,0,0,0.07)'" @mouseout="$event.target.style.background='rgba(0,0,0,0.03)'">
+              👥 {{ expandedMatch === match.id ? 'OCULTAR' : 'VER PRONÓSTICOS' }}
+            </button>
+            <div v-if="expandedMatch === match.id" style="margin-top:0.4rem;padding:0.5rem;background:#f8fafc;border-radius:6px;font-size:0.7rem;border:1px solid rgba(0,0,0,0.06);">
+              <div style="display:flex;gap:0.75rem;margin-bottom:0.5rem;text-align:center;">
+                <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;">{{ matchStats?.total ?? 0 }}</div><div style="color:var(--color-gray);font-size:0.6rem;">VOTOS</div></div>
+                <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#16a34a;">{{ matchStats?.homeWins ?? 0 }}</div><div style="color:var(--color-gray);font-size:0.6rem;"><img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> GANA</div></div>
+                <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#d4af37;">{{ matchStats?.draws ?? 0 }}</div><div style="color:var(--color-gray);font-size:0.6rem;">EMPATE</div></div>
+                <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#2563eb;">{{ matchStats?.awayWins ?? 0 }}</div><div style="color:var(--color-gray);font-size:0.6rem;"><img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> GANA</div></div>
+              </div>
+              <div v-if="matchStats?.topScores?.length" style="border-top:1px solid rgba(0,0,0,0.06);padding-top:0.5rem;">
+                <div style="font-size:0.6rem;font-weight:700;color:var(--color-gray);text-align:center;margin-bottom:0.35rem;">PRONÓSTICOS MÁS VOTADOS</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.3rem;">
+                  <div v-for="([s, c]) in matchStats.topScores" :key="s" style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;padding:0.4rem 0.3rem;text-align:center;">
+                    <div style="font-weight:700;font-size:0.8rem;white-space:nowrap;">
+                      <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:16px;height:11px;border-radius:2px;vertical-align:middle;">
+                      {{ s }}
+                      <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:16px;height:11px;border-radius:2px;vertical-align:middle;">
+                    </div>
+                    <div style="font-size:0.6rem;color:var(--color-gray);font-weight:600;">{{ c }} voto(s)</div>
+                  </div>
                 </div>
               </div>
             </div>
