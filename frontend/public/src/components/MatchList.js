@@ -476,8 +476,8 @@ export default {
             </div>
             <div v-if="matchStats.topScores.length > 0" style="border-top:1px solid rgba(0,0,0,0.06);padding-top:0.5rem;">
               <div style="font-size:0.6rem;font-weight:700;color:var(--color-gray);text-align:center;margin-bottom:0.35rem;">PRONÓSTICOS MÁS VOTADOS</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.3rem;">
-                <div v-for="([score, count], i) in matchStats.topScores" :key="i" style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;padding:0.4rem 0.3rem;text-align:center;">
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:0.3rem;">
+                <div v-for="([score, count], i) in matchStats.topScores" :key="i" style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;padding:0.4rem 0.3rem;text-align:center;max-width:130px;">
                   <div style="font-weight:700;font-size:0.8rem;white-space:nowrap;">
                     <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:16px;height:11px;border-radius:2px;vertical-align:middle;">
                     {{ score }}

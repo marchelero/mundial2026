@@ -3,7 +3,7 @@ import { api } from '../services/api.js';
 export default {
   props: ['rankingsData', 'rankingsLoading', 'allMatches'],
   data() {
-    return { expandedUser: null, userBreakdown: null };
+    return { expandedUser: null, userBreakdown: null, statFilter: null, userPreds: [] };
   },
   computed: {
     totalMatches() {
@@ -44,11 +44,14 @@ export default {
       if (this.expandedUser === userId) {
         this.expandedUser = null;
         this.userBreakdown = null;
+        this.statFilter = null;
+        this.userPreds = [];
         return;
       }
       try {
         const records = await api.get('/predictions/rankings');
         const userPreds = records.filter(r => r.user === userId);
+        this.userPreds = userPreds;
         let exactos = 0, resultados = 0, errors = 0, comodines = 0;
         const matches = this.allMatches.filter(m => m.status === 'finished');
         userPreds.forEach(p => {
@@ -65,16 +68,36 @@ export default {
             else errors++;
           }
         });
-        // Champion bonus
         const champPicks = await api.get('/champion-picks/all').catch(() => []);
         const champPick = champPicks.find(cp => cp.user === userId);
         const champBonus = champPick ? 5 : 0;
         this.userBreakdown = { exactos, resultados, errors, comodines, champBonus };
+        this.statFilter = null;
         this.expandedUser = userId;
       } catch (_) {
         this.userBreakdown = null;
+        this.statFilter = null;
         this.expandedUser = userId;
       }
+    },
+    getStatMatches(type) {
+      if (!this.userPreds.length) return [];
+      const matches = this.allMatches.filter(m => m.status === 'finished');
+      return this.userPreds.filter(p => {
+        const match = matches.find(m => m.id === p.match);
+        if (!match || match.home_score == null) return false;
+        const ph = Number(p.home_score), pa = Number(p.away_score);
+        const mh = Number(match.home_score), ma = Number(match.away_score);
+        const exact = ph === mh && pa === ma;
+        const result = !exact && ((ph - pa === mh - ma && mh - ma === 0) || (ph - pa > 0 && mh - ma > 0) || (ph - pa < 0 && mh - ma < 0));
+        if (type === 'exact') return exact;
+        if (type === 'result') return result;
+        if (type === 'wrong') return !exact && !result;
+        return false;
+      }).map(p => matches.find(m => m.id === p.match)).filter(Boolean);
+    },
+    toggleStat(type) {
+      this.statFilter = this.statFilter === type ? null : type;
     }
   },
   template: `
@@ -142,8 +165,8 @@ export default {
                 <tr>
                   <th style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">#</th>
                   <th style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">PARTICIPANTE</th>
-                  <th style="padding: 0.5rem; text-align: right; font-size: 0.65rem;">PTS</th>
                   <th style="padding: 0.5rem; text-align: right; font-size: 0.65rem;">PREMIO</th>
+                  <th style="padding: 0.5rem; text-align: right; font-size: 0.65rem;">PTS</th>
                 </tr>
               </thead>
               <tbody>
@@ -154,34 +177,39 @@ export default {
                     <div style="font-weight: 600; font-size: 0.85rem;">{{ r.name }}</div>
                     <div style="font-size: 0.55rem; color: var(--color-gray); opacity: 0.45;">{{ r.email }}</div>
                   </td>
-                  <td style="padding: 0.5rem; text-align: right; font-weight: bold; font-size: 1rem; white-space: nowrap;">{{ r.points }}<span v-if="r.potential_points > 0" class="pts-potential-rank">+{{ r.potential_points }}</span></td>
                   <td style="padding: 0.5rem; text-align: right; font-weight: 700; font-size: 0.7rem; white-space: nowrap;" v-if="r.prize"><span :style="{ color: r.prize.color }">{{ r.prize.label }}</span></td>
                   <td style="padding: 0.5rem; text-align: right; font-size: 0.7rem; color: #ccc;" v-else>-</td>
+                  <td style="padding: 0.5rem; text-align: right; font-weight: bold; font-size: 1rem; white-space: nowrap;">{{ r.points }}<span v-if="r.potential_points > 0" class="pts-potential-rank">+{{ r.potential_points }}</span></td>
                 </tr>
                 <tr v-if="r && expandedUser === r.id">
                   <td colspan="4" style="padding: 0.5rem 0.5rem 0.5rem;">
                     <template v-if="userBreakdown">
-                    <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-end;">
-                      <div style="display:flex;gap:0.35rem;flex-wrap:wrap;font-size:0.75rem;justify-content:flex-end;">
-                        <span style="background:#f0fdf4;color:#16a34a;border:1px solid #dcfce7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">{{ userBreakdown.exactos }}× Exacto ({{ userBreakdown.exactos * 3 }}pts)</span>
-                        <span style="background:#fefce8;color:#ca8a04;border:1px solid #fef3c7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">{{ userBreakdown.resultados }}× Resultado ({{ userBreakdown.resultados * 1 }}pts)</span>
-                        <span style="background:#fef2f2;color:#ef4444;border:1px solid #fee2e2;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">{{ userBreakdown.errors }}× Error (0pts)</span>
-                        <span v-if="userBreakdown.comodines > 0" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🍀 {{ userBreakdown.comodines }}× Comodín</span>
-                        <span v-if="userBreakdown.champBonus > 0" style="background:#fff7ed;color:#d97706;border:1px solid #ffedd5;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🏆 Campeón (+{{ userBreakdown.champBonus }}pts)</span>
-                      </div>
-                      <div style="font-size:0.7rem;font-weight:700;text-align:right;color:var(--color-dark);border-top:1px solid #e2e8f0;padding-top:0.3rem;width:100%;">
+                    <div style="width:100%;text-align:right;">
+                      <div style="font-size:0.7rem;font-weight:700;color:var(--color-dark);margin-bottom:0.3rem;">
                         Total: <span style="color:var(--color-green);">{{ userBreakdown.exactos * 3 + userBreakdown.resultados * 1 + userBreakdown.champBonus }} pts</span>
                         ({{ userBreakdown.exactos * 3 }}{{ userBreakdown.resultados > 0 ? ' + ' + userBreakdown.resultados : '' }}{{ userBreakdown.champBonus > 0 ? ' + ' + userBreakdown.champBonus + ' (🏆)' : '' }})
                       </div>
+                      <div style="display:flex;gap:0.35rem;flex-wrap:wrap;font-size:0.75rem;justify-content:flex-end;">
+                        <span v-if="userBreakdown.exactos > 0" @click="toggleStat('exact')" style="cursor:pointer;background:#f0fdf4;color:#16a34a;border:1px solid #dcfce7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'exact' ? 'box-shadow:0 0 0 2px #16a34a;' : ''">{{ userBreakdown.exactos }}× Exacto ({{ userBreakdown.exactos * 3 }}pts)</span>
+                        <span v-if="userBreakdown.resultados > 0" @click="toggleStat('result')" style="cursor:pointer;background:#fefce8;color:#ca8a04;border:1px solid #fef3c7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'result' ? 'box-shadow:0 0 0 2px #ca8a04;' : ''">{{ userBreakdown.resultados }}× Resultado ({{ userBreakdown.resultados * 1 }}pts)</span>
+                        <span v-if="userBreakdown.errors > 0" @click="toggleStat('wrong')" style="cursor:pointer;background:#fef2f2;color:#ef4444;border:1px solid #fee2e2;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'wrong' ? 'box-shadow:0 0 0 2px #ef4444;' : ''">{{ userBreakdown.errors }}× Error (0pts)</span>
+                        <span v-if="userBreakdown.comodines > 0" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🍀 {{ userBreakdown.comodines }}× Comodín</span>
+                        <span v-if="userBreakdown.champBonus > 0" style="background:#fff7ed;color:#d97706;border:1px solid #ffedd5;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🏆 Campeón (+{{ userBreakdown.champBonus }}pts)</span>
+                      </div>
+                    </div>
+                    <div v-if="statFilter && getStatMatches(statFilter).length > 0" style="width:100%;display:flex;flex-wrap:wrap;gap:0.3rem;justify-content:flex-end;margin-top:0.4rem;padding-top:0.4rem;border-top:1px solid #e2e8f0;">
+                      <div v-for="match in getStatMatches(statFilter)" :key="match.id" style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;padding:0.3rem 0.4rem;text-align:center;width:120px;">
+                        <div style="font-weight:700;font-size:0.75rem;white-space:nowrap;">
+                          <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;">
+                          {{ match.home_score }}-{{ match.away_score }}
+                          <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;">
+                        </div>
+                        <div style="font-size:0.55rem;color:var(--color-gray);font-weight:600;">{{ match.home_team }} vs {{ match.away_team }}</div>
+                      </div>
                     </div>
                     </template>
-                    <div v-else style="font-size:0.6rem;color:var(--color-gray);text-align:center;padding:0.25rem;">
-                      ⏳ Cargando detalle...
-                    </div>
                   </td>
                 </tr>
-                </template>
-              </tbody>
             </table>
           </div>
         </div>
