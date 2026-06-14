@@ -1,25 +1,10 @@
 const path = require('path');
 const fs = require('fs');
 const { db } = require('../backend/db');
+const { RESULTS } = require('./predictions-data');
 
 const dataDir = path.join(__dirname, '..', 'data');
 const matchesData = JSON.parse(fs.readFileSync(path.join(dataDir, 'matches.json'), 'utf8'));
-
-const RESULTS = {
-  // --- GRUPO A (11 Jun) ---
-  'México vs Sudáfrica':              { home: 2, away: 0 },
-  'Corea del Sur vs República Checa': { home: 2, away: 1 },
-
-  // --- GRUPO B (12 Jun) ---
-  'Canadá vs Bosnia y Herzegovina':   { home: 1, away: 1 },
-
-  // --- GRUPO D (12 Jun) ---
-  'Estados Unidos vs Paraguay':       { home: 4, away: 1 },
-};
-
-function matchKey(home, away) {
-  return `${home} vs ${away}`;
-}
 
 console.log('\n🏆 Sembrando resultados de partidos jugados...\n');
 
@@ -38,7 +23,7 @@ let notFound = 0;
 
 for (const group of matchesData.groups) {
   for (const m of group.matches) {
-    const key = matchKey(m.home_team, m.away_team);
+    const key = `${m.home_team} vs ${m.away_team}`;
     if (RESULTS[key]) {
       const existing = checkMatch.get(m.home_team, m.away_team);
       if (existing) {

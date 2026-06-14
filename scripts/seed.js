@@ -1,53 +1,12 @@
 const path = require('path');
 const fs = require('fs');
 const { db, generateId } = require('../backend/db');
+const { NAME_TO_EMAIL, P_MATCHES, PREDICTIONS, RESULTS } = require('./predictions-data');
 
 const dataDir = path.join(__dirname, '..', 'data');
 const matchesData = JSON.parse(fs.readFileSync(path.join(dataDir, 'matches.json'), 'utf8'));
 const emails = JSON.parse(fs.readFileSync(path.join(dataDir, 'users.json'), 'utf8'));
 
-const NAME_TO_EMAIL = {
-  'Alejandro Quea': 'alejandroquea25@gmail.com',
-  'Andreina Fernandez': 'andrefer.13.8@gmail.com',
-  'Andres Blanco': 'andresbr763@gmail.com',
-  'Bety Condori': 'azumy24k@gmail.com',
-  'Brayan Janco': 'brayan.janco@gmail.com',
-  'Brian Salazar': 'rodrigo.salazar.v1@gmail.com',
-  'Daniel Pinto': 'danielpinto9001@gmail.com',
-  'Dennys Flores': 'ardennmar@gmail.com',
-  'Esteban Canaza': 'ecanaza232@gmail.com',
-  'Franco Yllatarco': 'franco.harold.yllatarco.castillo@gmail.com',
-  'Gerson Andrade': 'g.gerson51@gmail.com',
-  'Horacio Ramos': 'scabelhrf@gmail.com',
-  'Johnny Yujra': 'johnnycarmelo17@gmail.com',
-  'Jonas Maidana': 'jonasmaidana47@gmail.com',
-  'Jose Vargas': 'jvargas.eth@gmail.com',
-  'Juan Carlos Mamani': 'juanqui.cay@gmail.com',
-  'Karen Sanchez': 'lizzysanchez1550@gmail.com',
-  'Madai Zamudio': 'madai.zamudio@gmail.com',
-  'Marcelo Albis': 'marcheloalbis@gmail.com',
-  'Marco Yana': 'marcosyana01@gmail.com',
-  'Maribel Patzi': 'maribelpatziv2@gmail.com',
-  'MariCruz Chambi': 'maricruzchambi15@gmail.com',
-  'Milton Chirinos': 'miltonchirinos45@gmail.com',
-  'Norma Saravia': 'norsargo@gmail.com',
-  'Oliver': 'liver97mars@gmail.com',
-  'Oscar Marin': 'oscarmm280599@gmail.com',
-  'Pablo Cruz': 'pabloivanc5@gmail.com',
-  'Ramiro Loza': 'ramirolozacmj@gmail.com',
-  'Rene Ergueta': 'renergueta@gmail.com',
-  'Roberto Albarracin': 'wr71albarracin@gmail.com',
-  'Roxana Layme': 'paolitap085@gmail.com',
-  'Ruben Machaca': 'rmachaca.anb@gmail.com',
-  'Ruddy Condori': 'rucocool@gmail.com',
-  'Valeria': 'valerytc1407@gmail.com',
-  'Erik Rubens': 'eiquipito160381@gmail.com',
-  'Alvaro Quena': 'alvaro.quena1@gmail.com',
-  'Miguel Mollo': 'miguelvmmh@gmail.com',
-  'Jenny Mendoza': 'jmendozam2015@gmail.com',
-  'Orlando Callisaya': 'ocallisaya777@gmail.com',
-  'Osmar Hinojosa': 'osmarhinojosa@gmail.com',
-};
 const EMAIL_TO_NAME = Object.fromEntries(
   Object.entries(NAME_TO_EMAIL).map(([name, email]) => [email, name])
 );
@@ -104,15 +63,6 @@ if (!existingCPO) {
 
 // 4. RESULTADOS REALES (partidos ya jugados)
 console.log('\n🏆 Resultados reales:');
-const RESULTS = {
-  'México vs Sudáfrica':              { home: 2, away: 0 },
-  'Corea del Sur vs República Checa': { home: 2, away: 1 },
-  'Canadá vs Bosnia y Herzegovina':   { home: 1, away: 1 },
-  'Estados Unidos vs Paraguay':       { home: 4, away: 1 },
-  'Catar vs Suiza':                   { home: 1, away: 1 },
-  'Brasil vs Marruecos':              { home: 1, away: 1 },
-  'Haití vs Escocia':                 { home: 0, away: 1 },
-};
 
 const updateResult = db.prepare(`
   UPDATE matches SET home_score = ?, away_score = ?, status = 'finished'
@@ -135,38 +85,6 @@ console.log(`  ${resCount} partidos marcados como finished`);
 
 // 5. PREDICCIONES DE PLANILLA (partidos ya jugados)
 console.log('\n📝 Predicciones de planilla:');
-const P_MATCHES = [
-  { home: 'México', away: 'Sudáfrica' },
-  { home: 'Corea del Sur', away: 'República Checa' },
-  { home: 'Canadá', away: 'Bosnia y Herzegovina' },
-  { home: 'Estados Unidos', away: 'Paraguay' },
-  { home: 'Catar', away: 'Suiza' },
-  { home: 'Brasil', away: 'Marruecos' },
-  { home: 'Haití', away: 'Escocia' },
-  { home: 'Australia', away: 'Turquía' },
-];
-const PREDICTIONS = {
-  'Andres Blanco':[[2,0],[2,1],[2,1],[1,0],[0,2],[2,1],[0,3],[1,2]],'Franco Yllatarco':[[2,0],[2,1],[2,1],[2,0],[1,2],[2,1],[0,2],[1,2]],
-  'Milton Chirinos':[[2,0],[2,1],[2,1],[2,1],[0,2],[2,1],[0,2],[0,1]],'Ruben Machaca':[[2,0],[2,1],[2,1],[1,1],[0,2],[2,1],[0,2],[0,1]],
-  'Orlando Callisaya':[[2,1],[1,0],[1,1],[0,2],[1,2],[2,0],[2,1],null],'Jenny Mendoza':[[2,0],[3,1],[1,2],[2,0],[0,3],[2,1],[0,2],[0,2]],
-  'Bety Condori':[[2,1],[2,1],[1,0],[2,1],[0,2],[3,1],[0,2],[0,1]],'Marco Yana':[[2,1],[2,1],null,null,[1,2],[3,1],[0,2],null],
-  'Juan Carlos Mamani':[[1,1],[2,0],[1,1],[1,2],[0,2],[3,1],[0,2],null],'Roxana Layme':[null,[2,0],[1,1],[1,1],[3,1],[3,0],[0,3],[2,0]],
-  'Alvaro Quena':[[2,0],[1,1],[1,0],[1,0],[0,2],[2,1],[0,2],[0,2]],'Esteban Canaza':[[2,0],[1,1],[2,0],[1,0],[0,2],[2,1],[0,1],[0,2]],
-  'Miguel Mollo':[[2,0],[0,1],[2,0],[2,1],[1,2],[2,1],[0,2],null],'Oliver':[[2,0],[1,1],null,[2,1],[0,3],[2,0],null,[2,1]],
-  'Osmar Hinojosa':[null,[2,1],[3,1],[2,0],[0,3],[2,1],[0,2],null],'Ramiro Loza':[[2,0],[1,1],[2,1],[2,1],[0,3],[1,1],[0,3],[1,2]],
-  'Gerson Andrade':[[2,0],[1,1],null,[2,1],[0,3],[2,1],[0,3],[1,2]],'Dennys Flores':[[1,1],[2,1],[2,0],[1,1],[1,2],[2,1],[0,1],[1,2]],
-  'Horacio Ramos':[[1,1],[2,1],[2,1],[1,1],[0,3],[2,1],[0,3],[0,2]],'Jose Vargas':[[2,0],[1,1],[2,1],[1,2],[0,2],[2,1],[0,2],[1,2]],
-  'Andreina Fernandez':[[2,1],[1,0],[2,1],[2,1],[0,2],[3,1],[0,1],null],'Madai Zamudio':[[2,1],[1,0],[2,1],[2,0],[0,2],[2,2],[1,3],null],
-  'Marcelo Albis':[[2,1],[1,0],[1,0],[1,0],[0,2],[2,1],[0,1],[0,2]],'Ruddy Condori':[[2,1],[1,0],[2,1],[1,0],[0,2],[2,1],[0,2],[1,2]],
-  'Alejandro Quea':[[2,1],[1,0],[2,1],[1,1],[1,2],[3,1],[1,2],[1,1]],'Daniel Pinto':[[1,0],[1,0],[1,0],[1,1],[0,1],[3,1],[0,1],[0,1]],
-  'MariCruz Chambi':[[2,1],[2,0],null,[0,1],[2,0],[2,1],[1,0],null],'Valeria':[[2,1],[2,0],null,null,null,null,null,null],
-  'Rene Ergueta':[[2,1],[1,1],[2,2],[1,1],null,null,null,null],'Brayan Janco':[[1,0],[1,1],[2,1],[2,0],[0,2],[2,1],[0,3],null],
-  'Erik Rubens':[[3,1],[1,1],[1,0],[2,1],[1,3],[3,0],[1,2],[1,2]],'Johnny Yujra':[[1,0],[0,0],[2,1],[2,1],[0,2],[2,1],[0,3],[0,1]],
-  'Karen Sanchez':[[2,1],[1,1],[2,0],[2,1],[1,1],[3,0],[0,2],[1,2]],'Maribel Patzi':[[2,1],[1,1],[2,1],[1,0],[0,2],[2,1],[0,2],[0,2]],
-  'Roberto Albarracin':[[2,1],[1,1],[2,1],[2,1],[0,2],[2,1],[0,2],[1,2]],'Norma Saravia':[[1,0],[1,1],[2,1],[1,1],[4,2],[2,0],null,[1,2]],
-  'Brian Salazar':[[1,1],[1,1],[1,0],[1,0],[0,2],[2,1],[0,3],null],'Jonas Maidana':[[0,1],[1,1],[2,0],[1,0],[0,2],[2,1],[0,3],[0,2]],
-  'Oscar Marin':[null,null,[2,1],[2,1],[0,2],[1,1],[0,3],[1,2]],'Pablo Cruz':[[1,1],[0,1],[2,1],[1,1],[0,2],[2,0],[0,4],[1,2]],
-};
 
 const getUserByEmail = db.prepare('SELECT id FROM users WHERE email = ?');
 const getMatchByTeams = db.prepare('SELECT id FROM matches WHERE home_team = ? AND away_team = ?');
