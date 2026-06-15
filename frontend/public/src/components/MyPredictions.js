@@ -3,7 +3,7 @@ import { api } from '../services/api.js';
 
 export default {
   props: ['matchGroups', 'predictions', 'allMatches', 'championPick'],
-  data() { return { statsExpanded: true, statsObserver: null, expandedMatch: null, matchStats: null }; },
+  data() { return { statsExpanded: true, statsObserver: null, expandedMatch: null, matchStats: null, selectedDate: '' }; },
   mounted() {
     this.$nextTick(() => {
       const el = this.$refs?.statsContainer;
@@ -134,6 +134,13 @@ export default {
         else current = 0;
       }
       return max;
+    },
+    availableDates() {
+      return this.matchGroups.map(g => g.date);
+    },
+    filteredGroups() {
+      if (!this.selectedDate) return this.matchGroups;
+      return this.matchGroups.filter(g => g.date === this.selectedDate);
     }
   },
   methods: {
@@ -237,12 +244,21 @@ export default {
           </Transition>
       </div>
 
+      <!-- Filtro por fecha -->
+      <div class="card" style="margin-bottom: 0.75rem; padding: 0.65rem 1rem;">
+        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+          <span style="font-size:0.75rem;font-weight:700;white-space:nowrap;">📅 Filtrar por fecha</span>
+          <input type="date" v-model="selectedDate" style="flex:1;min-width:160px;padding:0.4rem 0.5rem;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font-main);font-size:0.8rem;background:#f8fafc;">
+          <button v-if="selectedDate" @click="selectedDate = ''" style="padding:0.4rem 0.7rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.7rem;white-space:nowrap;">MOSTRAR TODO</button>
+        </div>
+      </div>
+
       <!-- Historial de Partidos -->
       <div class="main-content-flow">
-        <div v-if="matchGroups.length === 0" class="card" style="text-align:center;padding:2rem;color:var(--color-gray);">
-          Aún no tienes pronósticos registrados para partidos finalizados o pasados.
+        <div v-if="filteredGroups.length === 0" class="card" style="text-align:center;padding:2rem;color:var(--color-gray);">
+          {{ selectedDate ? 'No hay partidos para esta fecha.' : 'Aún no tienes pronósticos registrados para partidos finalizados o pasados.' }}
         </div>
-        <div v-for="group in matchGroups" :key="group.date" class="date-section">
+        <div v-for="group in filteredGroups" :key="group.date" class="date-section">
           <div class="date-header">
             <span>{{ formatDate(group.date) }}</span>
             <span v-if="groupPoints(group) > 0" style="background:var(--color-accent);color:var(--color-dark);padding:0.15rem 0.5rem;border-radius:4px;font-family:var(--font-main);font-size:0.7rem;font-weight:800;letter-spacing:0.03em;">{{ groupPoints(group) }} PTS</span>

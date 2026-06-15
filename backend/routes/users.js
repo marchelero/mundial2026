@@ -55,6 +55,41 @@ router.delete('/:id', authRequired, adminRequired, (req, res) => {
   }
 });
 
+router.put('/:id', authRequired, adminRequired, (req, res) => {
+  try {
+    const { email, name } = req.body;
+    const user = db.prepare('SELECT id, email, name, google_id FROM users WHERE id = ?').get(req.params.id);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    if (email !== undefined) {
+      if (typeof email !== 'string' || !email.trim()) {
+        return res.status(400).json({ error: 'Email requerido' });
+      }
+      const cleanEmail = email.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(cleanEmail)) {
+        return res.status(400).json({ error: 'Email inválido' });
+      }
+      const existing = db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(cleanEmail, user.id);
+      if (existing) {
+        return res.status(409).json({ error: 'El email ya está registrado por otro usuario' });
+      }
+      db.prepare('UPDATE users SET email = ? WHERE id = ?').run(cleanEmail, user.id);
+    }
+
+    if (name !== undefined) {
+      const cleanName = (name || '').trim();
+      db.prepare('UPDATE users SET name = ? WHERE id = ?').run(cleanName, user.id);
+    }
+
+    const updated = db.prepare('SELECT id, email, name, google_id, created_at, COALESCE(total_points, 0) as total_points FROM users WHERE id = ?').get(user.id);
+    res.json(updated);
+  } catch (e) {
+    console.error('Error updating user:', e);
+    res.status(500).json({ error: 'Error al actualizar usuario' });
+  }
+});
+
 router.get('/unlinked', authRequired, adminRequired, (req, res) => {
   try {
     const users = db.prepare('SELECT id, email, name FROM users WHERE google_id IS NULL ORDER BY email ASC').all();

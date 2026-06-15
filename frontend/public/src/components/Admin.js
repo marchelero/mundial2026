@@ -43,7 +43,9 @@ export default {
       showManualModal: false,
       manualConfirmData: null,
       linkedSelected: {},
-      linkedScores: {}
+      linkedScores: {},
+      showEditModal: false,
+      editUserData: null
     };
   },
   async created() {
@@ -114,6 +116,30 @@ export default {
       } catch (e) {
         alert(e.message || 'Error al eliminar usuario');
       }
+    },
+    openEditUser(user) {
+      this.editUserData = { id: user.id, email: user.email, name: user.name || '' };
+      this.showEditModal = true;
+    },
+    async saveEdit() {
+      if (!this.editUserData) return;
+      const { id, email, name } = this.editUserData;
+      if (!email || !email.includes('@')) {
+        alert('Email inválido');
+        return;
+      }
+      try {
+        await api.put(`/users/${id}`, { email: email.trim().toLowerCase(), name: name.trim() });
+        this.users = await api.get('/users');
+        this.showEditModal = false;
+        this.editUserData = null;
+      } catch (e) {
+        alert(e.message || 'Error al editar usuario');
+      }
+    },
+    cancelEdit() {
+      this.showEditModal = false;
+      this.editUserData = null;
     },
     openFinishModal(match) {
       this.finishMatchData = match;
@@ -482,9 +508,11 @@ export default {
           <div v-for="u in users" :key="u.id" style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid rgba(0,0,0,0.05);font-size:0.8rem;">
             <span style="flex:1;">
               ✉️ {{ u.email }}
+              <span v-if="u.name" style="font-size:0.65rem;color:var(--color-gray);margin-left:0.35rem;">({{ u.name }})</span>
               <span v-if="u.google_id" style="font-size:0.55rem;color:var(--color-green);margin-left:0.35rem;font-weight:600;">✅ Google vinculado</span>
               <span v-else style="font-size:0.55rem;color:var(--color-gray);margin-left:0.35rem;">⏳ Sin vincular</span>
             </span>
+            <button @click="openEditUser(u)" title="Editar usuario" style="background:none;border:none;color:var(--color-blue);cursor:pointer;font-size:0.9rem;padding:0 0.2rem;">✏️</button>
             <button v-if="!u.google_id" @click="deleteUser(u.id)" title="Eliminar usuario" style="background:none;border:none;color:var(--color-red);cursor:pointer;font-size:0.9rem;padding:0 0.2rem;">✕</button>
           </div>
 
@@ -554,6 +582,31 @@ export default {
           <div style="display:flex;gap:0.6rem;">
             <button @click="cancelManualSave" style="flex:1;padding:0.65rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.8rem;">CANCELAR</button>
             <button @click="confirmManualSave" style="flex:1;padding:0.65rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:600;cursor:pointer;font-size:0.8rem;">CONFIRMAR</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit User Modal -->
+      <div v-if="showEditModal && editUserData" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;" @click.self="cancelEdit">
+        <div style="background:white;border-radius:16px;padding:1.5rem;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+          <div style="text-align:center;margin-bottom:1.25rem;">
+            <div style="font-size:2.5rem;margin-bottom:0.5rem;">✏️</div>
+            <h3 style="font-family:var(--font-header);font-size:1.25rem;margin:0 0 0.25rem;">EDITAR USUARIO</h3>
+            <p style="font-size:0.75rem;color:var(--color-gray);margin:0;">Modificá el email o el nombre del usuario.</p>
+          </div>
+          <div style="margin-bottom:1rem;">
+            <div class="form-group" style="margin-bottom:0.75rem;">
+              <label class="form-label" style="display:block;margin-bottom:0.25rem;">Email</label>
+              <input type="email" v-model="editUserData.email" class="form-input" style="width:100%;padding:0.5rem;font-size:0.85rem;box-sizing:border-box;">
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="display:block;margin-bottom:0.25rem;">Nombre</label>
+              <input type="text" v-model="editUserData.name" class="form-input" style="width:100%;padding:0.5rem;font-size:0.85rem;box-sizing:border-box;" placeholder="Nombre visible">
+            </div>
+          </div>
+          <div style="display:flex;gap:0.6rem;">
+            <button @click="cancelEdit" style="flex:1;padding:0.75rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CANCELAR</button>
+            <button @click="saveEdit" :disabled="!editUserData.email || !editUserData.email.includes('@')" style="flex:1;padding:0.75rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">GUARDAR</button>
           </div>
         </div>
       </div>
