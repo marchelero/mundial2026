@@ -342,32 +342,40 @@ createApp({
     },
     async exportMatchCSV(match) {
       try {
-        const records = await loadMatchPredictions(match.id);
-        if (records.length === 0) {
-          this.notify('No hay predicciones para este partido.', 'error');
-          return;
-        }
+        const [records, allUsers] = await Promise.all([
+          loadMatchPredictions(match.id),
+          api.get('/users')
+        ]);
         const BOM = '\uFEFF';
         const sep = ',';
         let csv = BOM;
         csv += ['Usuario','Nombre','Pronóstico Local','Pronóstico Visitante','Resultado Local','Resultado Visitante','Comodín','Puntos'].join(sep) + '\n';
 
-        const sorted = records.slice().sort((a, b) => {
-          const na = (a.expand?.user?.name || '').toLowerCase();
-          const nb = (b.expand?.user?.name || '').toLowerCase();
-          return na.localeCompare(nb);
-        });
+        const predUserIds = new Set(records.map(r => r.user));
+        const rows = [];
+        for (const u of allUsers) {
+          const pred = records.find(r => r.user === u.id);
+          rows.push({
+            email: u.email,
+            name: u.name || u.email.split('@')[0],
+            home_score: pred ? pred.home_score : '',
+            away_score: pred ? pred.away_score : '',
+            comodin: pred ? pred.comodin : false,
+            points: pred ? (pred.points ?? 0) : 0,
+          });
+        }
+        rows.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
-        sorted.forEach(r => {
+        rows.forEach(r => {
           const row = [
-            r.expand?.user?.email || '?',
-            r.expand?.user?.name || r.expand?.user?.email?.split('@')[0] || '?',
+            r.email,
+            r.name,
             r.home_score,
             r.away_score,
             match.home_score ?? '',
             match.away_score ?? '',
             r.comodin ? 'Sí' : 'No',
-            r.points ?? '',
+            r.points,
           ];
           csv += row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(sep) + '\n';
         });
@@ -375,7 +383,7 @@ createApp({
         const matchName = `${match.home_team.replace(/\s/g,'_')}_vs_${match.away_team.replace(/\s/g,'_')}`;
         const realScore = `${match.home_score ?? '?'}-${match.away_score ?? '?'}`;
         this._downloadCSV(csv, `${matchName}_${realScore}.csv`);
-        this.notify(`Exportado ${records.length} pronósticos de ${match.home_team} vs ${match.away_team}`, 'success');
+        this.notify(`Exportado ${rows.length} pronósticos de ${match.home_team} vs ${match.away_team}`, 'success');
       } catch (e) {
         this.notify('Error al exportar: ' + e.message, 'error');
       }
