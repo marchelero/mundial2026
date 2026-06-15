@@ -3,7 +3,7 @@ import { api } from '../services/api.js';
 
 export default {
   props: ['matchGroups', 'predictions', 'allMatches', 'championPick'],
-  data() { return { statsExpanded: true, statsObserver: null, expandedMatch: null, matchStats: null, selectedDate: '' }; },
+  data() { return { statsExpanded: true, statsObserver: null, expandedMatch: null, matchStats: null, selectedDate: '', showDatePicker: false, calendarYear: 0, calendarMonth: 0, months: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'] }; },
   mounted() {
     this.$nextTick(() => {
       const el = this.$refs?.statsContainer;
@@ -141,6 +141,22 @@ export default {
     filteredGroups() {
       if (!this.selectedDate) return this.matchGroups;
       return this.matchGroups.filter(g => g.date === this.selectedDate);
+    },
+    availableDateSet() {
+      return new Set(this.availableDates);
+    },
+    calendarDays() {
+      const year = this.calendarYear;
+      const month = this.calendarMonth;
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const days = [];
+      for (let i = 0; i < firstDay; i++) days.push(null);
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        days.push({ day: d, dateStr, available: this.availableDateSet.has(dateStr) });
+      }
+      return days;
     }
   },
   methods: {
@@ -163,6 +179,26 @@ export default {
       if (pts >= 3) return 'exact';
       if (pts > 0) return 'winner';
       return 'wrong';
+    },
+    toggleDatePicker() {
+      this.showDatePicker = !this.showDatePicker;
+      if (this.showDatePicker) {
+        const d = this.selectedDate ? new Date(this.selectedDate + 'T12:00:00') : new Date();
+        this.calendarYear = d.getFullYear();
+        this.calendarMonth = d.getMonth();
+      }
+    },
+    prevMonth() {
+      if (this.calendarMonth === 0) { this.calendarMonth = 11; this.calendarYear--; }
+      else this.calendarMonth--;
+    },
+    nextMonth() {
+      if (this.calendarMonth === 11) { this.calendarMonth = 0; this.calendarYear++; }
+      else this.calendarMonth++;
+    },
+    pickDate(dateStr) {
+      this.selectedDate = dateStr;
+      this.showDatePicker = false;
     },
     toggleMatchStats(matchId) {
       if (this.expandedMatch === matchId) { this.expandedMatch = null; this.matchStats = null; return; }
@@ -187,56 +223,65 @@ export default {
       </div>
 
       <!-- Estadísticas (Siempre Arriba) -->
-      <div ref="statsContainer" class="card" style="margin-bottom: 1.25rem; padding: 1.25rem;">
-        <div @click="statsExpanded = !statsExpanded" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0;cursor:pointer;user-select:none;">
-          <span style="font-size:1.2rem;">📊</span>
-          <span style="font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.03em;flex:1;">ESTADÍSTICAS</span>
-          <span style="font-size:0.7rem;color:var(--color-gray);transition:transform 0.2s;" :style="{ transform: statsExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }">▼</span>
+      <div ref="statsContainer" class="card" style="margin-bottom: 1rem; padding: 0;">
+        <div @click="statsExpanded = !statsExpanded" style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;user-select:none;padding:0.75rem 1rem;border-radius:8px;background:#f1f5f9;transition:background 0.2s;" @mouseover="$event.currentTarget.style.background='#e2e8f0'" @mouseout="$event.currentTarget.style.background='#f1f5f9'">
+          <span style="font-size:1rem;">📊</span>
+          <span style="font-weight:700;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.03em;flex:1;">ESTADÍSTICAS</span>
+          <span style="font-size:0.7rem;color:#64748b;font-weight:700;transition:transform 0.2s;" :style="{ transform: statsExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }">▼</span>
         </div>
           <Transition name="fade">
-            <div v-show="statsExpanded" style="padding-top:1rem;">
+            <div v-show="statsExpanded" style="padding:0.65rem 1rem 1rem;">
               <div v-if="totalAvailable === 0" style="text-align:center;padding:0.5rem;font-size:0.75rem;color:var(--color-gray);">
                 Aún no hay datos. Aparecerán cuando finalicen los primeros partidos.
               </div>
-              <div v-else style="display:flex;flex-direction:column;gap:0.75rem;">
-                <div class="stat-card-grid">
-                  <div class="stat-block primary">
-                    <div class="stat-block-val" style="color:var(--color-dark);">{{ totalPoints }}</div>
-                    <div class="stat-block-label">Puntos Totales</div>
-                  </div>
-                  <div class="stat-block predicted">
-                    <div class="stat-block-val" style="color:var(--color-dark);">{{ totalPredicted }}/{{ totalAvailable }}</div>
-                    <div class="stat-block-label">Pronosticados</div>
-                  </div>
-                  <div class="stat-block exact">
-                    <div class="stat-block-val" style="color:var(--color-green);">{{ exactCount }}</div>
-                    <div class="stat-block-label">Exactos</div>
-                    <div class="stat-block-pct" style="color:var(--color-green);">{{ totalAvailable > 0 ? Math.round(exactCount / totalAvailable * 100) : 0 }}%</div>
-                  </div>
-                  <div class="stat-block result">
-                    <div class="stat-block-val" style="color:#ca8a04;">{{ resultCount }}</div>
-                    <div class="stat-block-label">Resultado</div>
-                    <div class="stat-block-pct" style="color:#ca8a04;">{{ totalAvailable > 0 ? Math.round(resultCount / totalAvailable * 100) : 0 }}%</div>
-                  </div>
-                </div>
-                
-                <div class="stat-card-grid">
-                  <div class="stat-block wrong">
-                    <div class="stat-block-val" style="color:#ef4444;">{{ sinPuntosCount }}</div>
-                    <div class="stat-block-label">Sin puntos</div>
-                    <div class="stat-block-pct" style="color:#ef4444;">{{ totalAvailable > 0 ? Math.round(sinPuntosCount / totalAvailable * 100) : 0 }}%</div>
-                  </div>
-                  <div class="stat-block none">
-                    <div class="stat-block-val" style="color:var(--color-gray);">{{ noPredCount }}</div>
-                    <div class="stat-block-label">Sin pronóstico</div>
-                    <div class="stat-block-pct" style="color:var(--color-gray);">{{ totalAvailable > 0 ? Math.round(noPredCount / totalAvailable * 100) : 0 }}%</div>
-                  </div>
-                  <div v-if="championName" style="grid-column: span 2; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:0.75rem; display:flex; align-items:center; justify-content:space-between; box-shadow:inset 0 1px 2px rgba(0,0,0,0.01);">
-                    <div style="display:flex;align-items:center;gap:0.5rem;">
-                      <span style="font-size:1.2rem;">🏆</span>
-                      <span style="font-size:0.75rem;font-weight:600;color:#166534;">Campeón: <span style="font-weight:800;color:var(--color-green);">{{ championName }}</span></span>
+              <div v-else>
+                <div class="stat-grid">
+                  <div class="stat-card primary">
+                    <div class="stat-card-value">{{ totalPoints }}</div>
+                    <div class="stat-card-footer">
+                      <span class="stat-card-label">Puntos</span>
                     </div>
-                    <span v-if="champPoints > 0" style="font-size:0.75rem;font-weight:800;color:var(--color-green);">+{{ champPoints }} pts</span>
+                  </div>
+                  <div class="stat-card predicted">
+                    <div class="stat-card-value">{{ totalPredicted }}/{{ totalAvailable }}</div>
+                    <div class="stat-card-footer">
+                      <span class="stat-card-label">Pronosticados</span>
+                    </div>
+                  </div>
+                  <div class="stat-card exact">
+                    <div class="stat-card-value">{{ exactCount }}</div>
+                    <div class="stat-card-footer">
+                      <span class="stat-card-label">Exactos</span>
+                      <span class="stat-card-pct exact">{{ totalAvailable > 0 ? Math.round(exactCount / totalAvailable * 100) : 0 }}%</span>
+                    </div>
+                  </div>
+                  <div class="stat-card result">
+                    <div class="stat-card-value">{{ resultCount }}</div>
+                    <div class="stat-card-footer">
+                      <span class="stat-card-label">Resultado</span>
+                      <span class="stat-card-pct result">{{ totalAvailable > 0 ? Math.round(resultCount / totalAvailable * 100) : 0 }}%</span>
+                    </div>
+                  </div>
+                  <div class="stat-card wrong">
+                    <div class="stat-card-value">{{ sinPuntosCount }}</div>
+                    <div class="stat-card-footer">
+                      <span class="stat-card-label">Sin puntos</span>
+                      <span class="stat-card-pct wrong">{{ totalAvailable > 0 ? Math.round(sinPuntosCount / totalAvailable * 100) : 0 }}%</span>
+                    </div>
+                  </div>
+                  <div class="stat-card none">
+                    <div class="stat-card-value">{{ noPredCount }}</div>
+                    <div class="stat-card-footer">
+                      <span class="stat-card-label">Sin pred.</span>
+                      <span class="stat-card-pct none">{{ totalAvailable > 0 ? Math.round(noPredCount / totalAvailable * 100) : 0 }}%</span>
+                    </div>
+                  </div>
+                  <div v-if="championName" style="grid-column: 1 / -1; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:0.5rem 0.7rem; display:flex; align-items:center; justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:0.4rem;">
+                      <span style="font-size:1rem;">🏆</span>
+                      <span style="font-size:0.7rem;font-weight:600;color:#166534;">Campeón: <span style="font-weight:800;color:var(--color-green);">{{ championName }}</span></span>
+                    </div>
+                    <span v-if="champPoints > 0" style="font-size:0.7rem;font-weight:800;color:var(--color-green);">+{{ champPoints }} pts</span>
                   </div>
                 </div>
               </div>
@@ -246,10 +291,38 @@ export default {
 
       <!-- Filtro por fecha -->
       <div class="card" style="margin-bottom: 0.75rem; padding: 0.65rem 1rem;">
-        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
-          <span style="font-size:0.75rem;font-weight:700;white-space:nowrap;">📅 Filtrar por fecha</span>
-          <input type="date" v-model="selectedDate" style="flex:1;min-width:160px;padding:0.4rem 0.5rem;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font-main);font-size:0.8rem;background:#f8fafc;">
-          <button v-if="selectedDate" @click="selectedDate = ''" style="padding:0.4rem 0.7rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.7rem;white-space:nowrap;">MOSTRAR TODO</button>
+        <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
+          <span style="font-size:0.75rem;font-weight:700;">📅</span>
+          <button @click="toggleDatePicker" style="flex:1;min-width:140px;padding:0.4rem 0.5rem;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font-main);font-size:0.8rem;background:#f8fafc;cursor:pointer;text-align:left;color:var(--color-dark);">
+            {{ selectedDate ? formatDate(selectedDate) : 'Todas las fechas' }}
+          </button>
+          <button v-if="selectedDate" @click="selectedDate = ''" style="padding:0.4rem 0.6rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.7rem;white-space:nowrap;">✕</button>
+        </div>
+
+        <!-- Calendario -->
+        <div v-if="showDatePicker" style="margin-top:0.65rem;border:1px solid #e2e8f0;border-radius:10px;padding:0.65rem;background:white;user-select:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
+            <button @click="prevMonth" style="background:none;border:none;font-size:1.1rem;cursor:pointer;padding:0.15rem 0.35rem;color:var(--color-dark);font-weight:700;">‹</button>
+            <span style="font-weight:800;font-size:0.85rem;">{{ months[calendarMonth] }} {{ calendarYear }}</span>
+            <button @click="nextMonth" style="background:none;border:none;font-size:1.1rem;cursor:pointer;padding:0.15rem 0.35rem;color:var(--color-dark);font-weight:700;">›</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:0.55rem;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:0.25rem;">
+            <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;">
+            <template v-for="(day, i) in calendarDays" :key="i">
+              <div v-if="!day" style="padding:0.3rem 0;"></div>
+              <div v-else @click="day.available ? pickDate(day.dateStr) : null" :style="{
+                padding:'0.3rem 0',
+                fontSize:'0.75rem',
+                fontWeight: day.available ? 700 : 400,
+                borderRadius:'6px',
+                cursor: day.available ? 'pointer' : 'default',
+                background: day.dateStr === selectedDate ? 'var(--color-dark)' : day.available ? '#f1f5f9' : 'transparent',
+                color: day.dateStr === selectedDate ? 'white' : day.available ? 'var(--color-dark)' : '#d1d5db'
+              }">{{ day.day }}</div>
+            </template>
+          </div>
         </div>
       </div>
 
