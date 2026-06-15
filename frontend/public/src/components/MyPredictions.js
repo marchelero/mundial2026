@@ -163,7 +163,7 @@ export default {
         const home = r.filter(p => Number(p.home_score) > Number(p.away_score)).length;
         const draw = r.filter(p => Number(p.home_score) === Number(p.away_score)).length;
         const away = r.filter(p => Number(p.home_score) < Number(p.away_score)).length;
-        const top = Object.entries(r.reduce((a, p) => { const k = p.home_score+'-'+p.away_score; a[k]=(a[k]||0)+1; return a; }, {})).sort((a,b)=>b[1]-a[1]).slice(0,3);
+        const top = Object.entries(r.reduce((a, p) => { const k = p.home_score+'-'+p.away_score; a[k]=(a[k]||0)+1; return a; }, {})).sort((a,b)=>b[1]-a[1]);
         this.matchStats = { total: r.length, homeWins: home, draws: draw, awayWins: away, topScores: top };
         this.expandedMatch = matchId;
       }).catch(() => { this.matchStats = {total:0}; this.expandedMatch = matchId; });

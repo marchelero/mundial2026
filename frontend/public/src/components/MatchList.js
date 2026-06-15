@@ -199,8 +199,7 @@ export default {
           scoreCounts[key] = (scoreCounts[key] || 0) + 1;
         });
         const topScores = Object.entries(scoreCounts)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 3);
+          .sort((a, b) => b[1] - a[1]);
         this.matchStats = { total, homeWins, draws, awayWins, topScores, predictions };
         this.expandedMatch = matchId;
       } catch (_) {
