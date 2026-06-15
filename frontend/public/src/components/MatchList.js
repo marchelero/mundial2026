@@ -14,7 +14,8 @@ export default {
       championConfirmData: null,
       groups: [],
       groupsLoading: true,
-      showGroupsPanel: false,
+      showGroupsPanel: true,
+      groupsObserver: null,
       expandedGroup: null,
       expandedMatch: null,
       matchStats: null,
@@ -22,6 +23,20 @@ export default {
   },
   async mounted() {
     await this.loadGroups();
+    this.$nextTick(() => {
+      const el = this.$refs?.groupsContainer;
+      if (el && typeof IntersectionObserver !== 'undefined') {
+        this.groupsObserver = new IntersectionObserver(([entry]) => {
+          if (!entry.isIntersecting && this.showGroupsPanel) {
+            this.showGroupsPanel = false;
+          }
+        }, { threshold: 0 });
+        this.groupsObserver.observe(el);
+      }
+    });
+  },
+  unmounted() {
+    if (this.groupsObserver) { this.groupsObserver.disconnect(); this.groupsObserver = null; }
   },
   computed: {
     championDeadlinePassed() {
@@ -305,15 +320,16 @@ export default {
       </div>
 
       <!-- Group Standings (Siempre Arriba) -->
-      <div class="card" style="padding: 0; margin-bottom: 1.25rem;">
-        <div @click="showGroupsPanel = !showGroupsPanel; if(showGroupsPanel && groups.length) expandedGroup = groups[0].group" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding:0.75rem 1rem;border-radius:8px;background:#f1f5f9;transition:background 0.2s;" @mouseover="$event.currentTarget.style.background='#e2e8f0'" @mouseout="$event.currentTarget.style.background='#f1f5f9'">
+      <div ref="groupsContainer" class="card" style="padding: 0; margin-bottom: 1.25rem;">
+        <div @click="showGroupsPanel = !showGroupsPanel; if(showGroupsPanel && groups.length && !expandedGroup) expandedGroup = groups[0].group" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding:0.75rem 1rem;border-radius:8px;background:#f1f5f9;transition:background 0.2s;" @mouseover="$event.currentTarget.style.background='#e2e8f0'" @mouseout="$event.currentTarget.style.background='#f1f5f9'">
           <div style="display:flex;align-items:center;gap:0.5rem;">
             <span style="font-size:1.1rem;">#</span>
             <span style="font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.02em;">TABLA DE GRUPOS</span>
           </div>
           <span style="font-size:0.85rem;color:#64748b;font-weight:700;transition:transform 0.2s;" :style="{transform: showGroupsPanel ? 'rotate(180deg)' : ''}">▼</span>
         </div>
-        <div v-if="showGroupsPanel" style="padding:0.75rem 1rem 1rem;">
+        <Transition name="fade">
+        <div v-show="showGroupsPanel" style="padding:0.75rem 1rem 1rem;">
           <div v-if="groupsLoading" style="text-align:center;padding:0.5rem;font-size:0.75rem;color:var(--color-gray);">Cargando grupos...</div>
           <div v-else-if="groups.length === 0" style="text-align:center;padding:0.5rem;font-size:0.75rem;color:var(--color-gray);">No hay datos de grupos</div>
           <template v-else>
@@ -362,6 +378,7 @@ export default {
             </div>
           </template>
         </div>
+        </Transition>
       </div>
 
       <!-- Tabs -->
