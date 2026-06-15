@@ -4,6 +4,7 @@ const { authRequired, adminRequired } = require('../middleware/auth');
 const { nowStr } = require('../utils/datetime');
 const { sendChampionPick, sendChampionAward, flagEmoji } = require('../services/whatsapp');
 const { sendChampionPickPush, sendChampionAwardPush } = require('../services/push');
+const { recalcUserTotal } = require('../services/scoring');
 
 const router = express.Router();
 
@@ -51,9 +52,7 @@ router.post('/award', authRequired, adminRequired, (req, res) => {
       const picks = db.prepare('SELECT * FROM champion_picks WHERE champion = ?').all(winner.trim());
       for (const pick of picks) {
         updatePick.run(pts, pick.id);
-        const predSum = db.prepare("SELECT COALESCE(SUM(points), 0) as s FROM predictions WHERE user_id = ? AND points IS NOT NULL").get(pick.user_id);
-        const total = predSum.s + pts;
-        db.prepare('UPDATE users SET total_points = ? WHERE id = ?').run(total, pick.user_id);
+        recalcUserTotal(pick.user_id);
       }
       setSetting.run(generateId(), winner.trim());
     });

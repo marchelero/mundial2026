@@ -4,6 +4,7 @@ const { authRequired, adminRequired } = require('../middleware/auth');
 const { sendMatchResult } = require('../services/whatsapp');
 const { flagEmoji } = require('../data/countries');
 const { sendMatchResultPush } = require('../services/push');
+const { recalcAndSavePointsForMatch } = require('../services/scoring');
 
 const router = express.Router();
 
@@ -58,8 +59,7 @@ router.patch('/:id', authRequired, adminRequired, (req, res) => {
     if (transitioningToFinished) {
       const updatedMatch = db.prepare('SELECT * FROM matches WHERE id = ?').get(req.params.id);
       if (updatedMatch.home_score != null && updatedMatch.away_score != null) {
-        calcAndSavePoints(updatedMatch);
-        // Build points summary and send WhatsApp
+        recalcAndSavePointsForMatch(updatedMatch.id);
         const summary = db.prepare(`
           SELECT points, COUNT(*) as count FROM predictions
           WHERE match_id = ? AND points IS NOT NULL
@@ -77,41 +77,6 @@ router.patch('/:id', authRequired, adminRequired, (req, res) => {
     res.status(500).json({ error: 'Error al actualizar partido' });
   }
 });
-
-function calcPointsForPred(predHome, predAway, actualHome, actualAway, comodin) {
-  let pts = 0;
-  if (predHome === actualHome && predAway === actualAway) {
-    pts = 3;
-  } else {
-    const pd = predHome - predAway;
-    const rd = actualHome - actualAway;
-    if ((pd === rd && rd === 0) || (pd > 0 && rd > 0) || (pd < 0 && rd < 0)) {
-      pts = 1;
-    }
-  }
-  return comodin ? pts * 2 : pts;
-}
-
-function calcAndSavePoints(match) {
-  const predictions = db.prepare('SELECT * FROM predictions WHERE match_id = ?').all(match.id);
-  const userIds = [];
-
-  for (const pred of predictions) {
-    const pts = calcPointsForPred(pred.home_score, pred.away_score, match.home_score, match.away_score, !!pred.comodin);
-    db.prepare('UPDATE predictions SET points = ? WHERE id = ?').run(pts, pred.id);
-    if (!userIds.includes(pred.user_id)) userIds.push(pred.user_id);
-  }
-
-  for (const userId of userIds) {
-    const predPts = db.prepare('SELECT COALESCE(SUM(points), 0) as total FROM predictions WHERE user_id = ? AND points IS NOT NULL').get(userId);
-    let total = predPts.total;
-    try {
-      const champPts = db.prepare('SELECT COALESCE(points, 0) as total FROM champion_picks WHERE user_id = ? AND points IS NOT NULL').get(userId);
-      total += champPts ? champPts.total : 0;
-    } catch (_) {}
-    db.prepare('UPDATE users SET total_points = ? WHERE id = ?').run(total, userId);
-  }
-}
 
 router.delete('/:id', authRequired, adminRequired, (req, res) => {
   try {

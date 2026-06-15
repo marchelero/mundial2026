@@ -1,6 +1,7 @@
 const express = require('express');
 const { db, generateId } = require('../db');
 const { authRequired, adminRequired } = require('../middleware/auth');
+const { recalcAllTotals } = require('../services/scoring');
 
 const router = express.Router();
 
@@ -149,6 +150,17 @@ router.get('/rankings', authRequired, (req, res) => {
   } catch (e) {
     console.error('Rankings error:', e);
     res.status(500).json({ error: 'Error al obtener rankings' });
+  }
+});
+
+router.post('/recalculate-totals', authRequired, adminRequired, (req, res) => {
+  try {
+    const result = recalcAllTotals();
+    console.log('[Recalc]', result);
+    res.json({ success: true, ...result });
+  } catch (e) {
+    console.error('Recalculate totals error:', e);
+    res.status(500).json({ error: 'Error al recalcular totales: ' + e.message });
   }
 });
 

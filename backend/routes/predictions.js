@@ -3,6 +3,7 @@ const { db, generateId } = require('../db');
 const { authRequired, adminRequired } = require('../middleware/auth');
 const { nowStr } = require('../utils/datetime');
 const { sendWhatsAppPredictions } = require('../services/whatsapp');
+const { recalcAndSavePointsForMatch } = require('../services/scoring');
 
 const router = express.Router();
 
@@ -131,6 +132,9 @@ router.post('/admin-bulk', authRequired, adminRequired, (req, res) => {
     const matchId = req.body.match_id;
     if (!matchId) return res.status(400).json({ error: 'match_id requerido' });
 
+    const match = db.prepare('SELECT * FROM matches WHERE id = ?').get(matchId);
+    if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
+
     const upsertOne = db.prepare(`
       INSERT INTO predictions (id, user_id, match_id, home_score, away_score, comodin)
       VALUES (?, ?, ?, ?, ?, 0)
@@ -139,6 +143,7 @@ router.post('/admin-bulk', authRequired, adminRequired, (req, res) => {
 
     const results = [];
     const errors = [];
+    const affectedUserIds = new Set();
 
     const runBatch = db.transaction(() => {
       for (const item of items) {
@@ -149,12 +154,19 @@ router.post('/admin-bulk', authRequired, adminRequired, (req, res) => {
         const user = db.prepare('SELECT id FROM users WHERE id = ?').get(user_id);
         if (!user) { errors.push({ user_id, error: 'Usuario no encontrado' }); continue; }
         upsertOne.run(generateId(), user_id, matchId, home_score, away_score);
+        affectedUserIds.add(user_id);
         results.push({ user_id, match_id: matchId, home_score, away_score });
       }
     });
 
     runBatch();
-    res.json({ saved: results, errors });
+
+    let recalculated = null;
+    if (match.status === 'finished' && match.home_score != null && match.away_score != null) {
+      recalculated = recalcAndSavePointsForMatch(matchId);
+    }
+
+    res.json({ saved: results, errors, recalculated });
   } catch (e) {
     console.error('Admin bulk error:', e);
     res.status(500).json({ error: 'Error al guardar pronósticos' });

@@ -52,7 +52,9 @@ export default {
       restoreDone: false,
       reminderMinutesInput: 15,
       reminderSaving: false,
-      reminderSaved: false
+      reminderSaved: false,
+      recalcLoading: false,
+      recalcResult: null
     };
   },
   async created() {
@@ -195,6 +197,21 @@ export default {
         alert(e.message || 'Error al guardar');
       } finally {
         this.reminderSaving = false;
+      }
+    },
+    async recalcTotals() {
+      if (!confirm('¿Recalcular todos los totales? Esto puede tardar unos segundos.')) return;
+      this.recalcLoading = true;
+      this.recalcResult = null;
+      try {
+        const result = await api.post('/users/recalculate-totals');
+        this.recalcResult = result;
+        try { this.users = await api.get('/users'); } catch (_) {}
+        setTimeout(() => { this.recalcResult = null; }, 8000);
+      } catch (e) {
+        alert(e.message || 'Error al recalcular');
+      } finally {
+        this.recalcLoading = false;
       }
     },
     handleRestoreFile(e) {
@@ -638,6 +655,25 @@ export default {
               <div v-if="reminderSaved" style="color:#16a34a;font-size:0.65rem;margin-top:0.4rem;font-weight:600;">✅ Configuración guardada</div>
               <div style="font-size:0.6rem;color:var(--color-gray);margin-top:0.4rem;font-family:var(--font-main);">
                 Valor actual: <strong>{{ settings.match_reminder_minutes || 15 }} minutos</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <span style="font-size: 1.5rem; line-height: 1;">🔄</span>
+            <div style="flex: 1;">
+              <h3 style="font-family:var(--font-header);font-size:0.95rem;letter-spacing:0.04em;margin:0;">RECALCULAR TOTALES</h3>
+              <p style="font-size: 0.65rem; color: var(--color-gray); margin-top: 0.15rem; font-family:var(--font-main);">
+                Recalcula los puntos de todos los pronósticos finalizados y actualiza el ranking. Útil si algo quedó desfasado.
+              </p>
+              <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.65rem;flex-wrap:wrap;">
+                <button @click="recalcTotals" :disabled="recalcLoading" style="padding:0.4rem 0.8rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:700;cursor:pointer;font-size:0.7rem;">
+                  {{ recalcLoading ? 'RECALCULANDO...' : '🔄 RECALCULAR TOTALES' }}
+                </button>
+                <span v-if="recalcResult" style="font-size:0.65rem;color:#16a34a;font-weight:600;">
+                  ✅ {{ recalcResult.matchesProcessed }} partido(s), {{ recalcResult.predictionsUpdated }} pred., {{ recalcResult.usersRecalculated }} usuario(s)
+                </span>
               </div>
             </div>
           </div>
