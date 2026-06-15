@@ -49,7 +49,10 @@ export default {
       backupLoading: false,
       backupDone: false,
       restoreLoading: false,
-      restoreDone: false
+      restoreDone: false,
+      reminderMinutesInput: 15,
+      reminderSaving: false,
+      reminderSaved: false
     };
   },
   async created() {
@@ -172,6 +175,26 @@ export default {
         alert(e.message || 'Error al descargar backup');
       } finally {
         this.backupLoading = false;
+      }
+    },
+    async saveReminderMinutes() {
+      const v = parseInt(this.reminderMinutesInput, 10);
+      if (!Number.isFinite(v) || v < 1 || v > 120) {
+        alert('Ingresá un valor entre 1 y 120 minutos');
+        return;
+      }
+      this.reminderSaving = true;
+      this.reminderSaved = false;
+      try {
+        await api.post('/settings', { key: 'match_reminder_minutes', value: String(v) });
+        this.reminderMinutesInput = v;
+        this.reminderSaved = true;
+        setTimeout(() => { this.reminderSaved = false; }, 2500);
+        try { this.settings = await api.get('/settings'); } catch (_) {}
+      } catch (e) {
+        alert(e.message || 'Error al guardar');
+      } finally {
+        this.reminderSaving = false;
       }
     },
     handleRestoreFile(e) {
@@ -593,6 +616,29 @@ export default {
               <button @click="$emit('save-setting', { key: 'champion_pick_open', value: settings.champion_pick_open === 'true' ? 'false' : 'true' })" :style="{padding:'0.25rem 0.5rem', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:600, fontSize:'0.65rem', background: settings.champion_pick_open === 'true' ? '#ef4444' : '#16a34a', color:'white'}">
                 {{ settings.champion_pick_open === 'true' ? 'DESHABILITAR' : 'HABILITAR' }}
               </button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <span style="font-size: 1.5rem; line-height: 1;">⏰</span>
+            <div style="flex: 1;">
+              <h3 style="font-family:var(--font-header);font-size:0.95rem;letter-spacing:0.04em;margin:0;">RECORDATORIO DE PRONÓSTICOS</h3>
+              <p style="font-size: 0.65rem; color: var(--color-gray); margin-top: 0.15rem; font-family:var(--font-main);">
+                Minutos antes del kickoff se envía un push a todos los suscriptores y un aviso al grupo de WhatsApp.
+              </p>
+              <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.65rem;flex-wrap:wrap;">
+                <label style="font-size:0.7rem;font-weight:600;color:var(--color-dark);">Avisar</label>
+                <input type="number" min="1" max="120" v-model.number="reminderMinutesInput" style="width:70px;padding:0.4rem 0.5rem;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font-main);font-size:0.8rem;background:#f8fafc;text-align:center;">
+                <label style="font-size:0.7rem;font-weight:600;color:var(--color-dark);">minutos antes del partido</label>
+                <button @click="saveReminderMinutes" :disabled="reminderSaving" style="padding:0.4rem 0.8rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:700;cursor:pointer;font-size:0.7rem;">
+                  {{ reminderSaving ? 'GUARDANDO...' : 'GUARDAR' }}
+                </button>
+              </div>
+              <div v-if="reminderSaved" style="color:#16a34a;font-size:0.65rem;margin-top:0.4rem;font-weight:600;">✅ Configuración guardada</div>
+              <div style="font-size:0.6rem;color:var(--color-gray);margin-top:0.4rem;font-family:var(--font-main);">
+                Valor actual: <strong>{{ settings.match_reminder_minutes || 15 }} minutos</strong>
+              </div>
             </div>
           </div>
         </div>

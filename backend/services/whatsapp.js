@@ -108,4 +108,4 @@ function sendChampionAward(winner, flag) {
   sendRaw(text);
 }
 
-module.exports = { sendWhatsAppPredictions, sendChampionPick, sendMatchResult, sendChampionAward, flagEmoji };
+module.exports = { sendWhatsAppPredictions, sendChampionPick, sendMatchResult, sendChampionAward, sendRaw, flagEmoji };

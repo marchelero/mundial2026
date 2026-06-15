@@ -64,4 +64,5 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Backend API running on port ${PORT}`);
+  require('./jobs/reminders').start();
 });

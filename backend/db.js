@@ -78,6 +78,11 @@ try {
       UNIQUE(user_id, endpoint)
     );
     CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id);
+    CREATE TABLE IF NOT EXISTS match_reminders (
+      match_id TEXT PRIMARY KEY REFERENCES matches(id) ON DELETE CASCADE,
+      sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      minutes_before INTEGER
+    );
   `);
 
   // Migration: make google_id nullable (pre-2026-06-12 schema)

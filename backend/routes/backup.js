@@ -10,7 +10,6 @@ const router = express.Router();
 router.get('/', authRequired, adminRequired, async (req, res) => {
   const dbPath = process.env.DB_PATH || path.join(__dirname, '..', '..', 'data', 'mundial2026.db');
   const backupPath = dbPath + '.backup';
-  console.log('[BACKUP-FIX-2026-06-15] GET /api/backup called');
 
   try {
     db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
@@ -28,7 +27,6 @@ router.get('/', authRequired, adminRequired, async (req, res) => {
 });
 
 router.post('/restore', authRequired, adminRequired, async (req, res) => {
-  console.log('[BACKUP-FIX-2026-06-15] POST /api/backup/restore called');
   const dataDir = path.join(__dirname, '..', '..', 'data');
   const tempPath = path.join(dataDir, 'mundial2026-restore.tmp');
   const cleanupTemp = () => {
