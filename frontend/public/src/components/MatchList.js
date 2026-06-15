@@ -466,6 +466,10 @@ export default {
             </div>
           </div>
 
+          <div v-if="!predictions[match.id]?.id && canPredict(match) && !predictions[match.id]?.comodin && !comodinUsado" style="margin-top:0.5rem;text-align:center;">
+            <span @click="$emit('toggle-comodin', match.id)" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem;font-size:0.7rem;font-weight:700;color:#92400e;background:#fef3c7;padding:0.2rem 0.6rem;border-radius:6px;border:1px solid #fcd34d;transition:all 0.2s;" @mouseover="$event.target.style.background='#fde68a'" @mouseout="$event.target.style.background='#fef3c7'">🍀 Usar Comodín</span>
+          </div>
+
           <div v-if="match.status === 'finished'" style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.02);border-radius:6px;padding-left:0.5rem;padding-right:0.5rem;">
             <div style="display:flex;align-items:center;gap:0.5rem;flex:1;justify-content:center;">
               <span style="font-size:0.6rem;font-weight:700;color:var(--color-gray);letter-spacing:0.08em;">RESULTADO</span>

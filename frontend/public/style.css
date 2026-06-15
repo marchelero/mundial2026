@@ -1570,4 +1570,20 @@ img.admin-team-flag {
   opacity: 0;
   transform: translateX(20px);
 }
+
+@keyframes comodinPulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(245, 158, 11, 0.9);
+    transform: scale(1.03);
+  }
+}
+
+@keyframes comodinSpin {
+  0%   { transform: translateY(-50%) rotate(0deg); }
+  100% { transform: translateY(-50%) rotate(360deg); }
+}
 

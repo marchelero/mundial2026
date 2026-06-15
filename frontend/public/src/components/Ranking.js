@@ -96,7 +96,7 @@ export default {
         return false;
       }).map(p => {
         const match = matches.find(m => m.id === p.match);
-        return match ? { match, pred: { home: p.home_score, away: p.away_score } } : null;
+        return match ? { match, pred: { home: p.home_score, away: p.away_score }, comodin: !!p.comodin } : null;
       }).filter(Boolean);
     },
     toggleStat(type) {
@@ -201,7 +201,8 @@ export default {
                       </div>
                     </div>
                     <div v-if="statFilter && getStatMatches(statFilter).length > 0" style="width:100%;display:flex;flex-wrap:wrap;gap:0.3rem;justify-content:flex-end;margin-top:0.4rem;padding-top:0.4rem;border-top:1px solid #e2e8f0;">
-                      <div v-for="({match, pred}) in getStatMatches(statFilter)" :key="match.id" style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;padding:0.3rem 0.4rem;text-align:center;width:120px;">
+                      <div v-for="({match, pred, comodin}) in getStatMatches(statFilter)" :key="match.id" :style="comodin ? 'position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);border:2px solid #f59e0b;border-radius:6px;padding:0.3rem 0.4rem 0.3rem 1.5rem;text-align:center;width:130px;box-shadow:0 0 12px rgba(245,158,11,0.5);animation:comodinPulse 1.8s ease-in-out infinite;' : 'display:flex;flex-direction:column;align-items:center;justify-content:center;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;padding:0.3rem 0.4rem;text-align:center;width:120px;'">
+                        <span v-if="comodin" style="position:absolute;top:50%;left:4px;transform:translateY(-50%);font-size:0.95rem;filter:drop-shadow(0 0 4px rgba(245,158,11,0.8));animation:comodinSpin 3s linear infinite;">🍀</span>
                         <template v-if="statFilter === 'exact'">
                           <div style="font-weight:700;font-size:0.75rem;white-space:nowrap;">
                             <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;">
