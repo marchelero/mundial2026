@@ -94,7 +94,10 @@ export default {
         if (type === 'result') return result;
         if (type === 'wrong') return !exact && !result;
         return false;
-      }).map(p => matches.find(m => m.id === p.match)).filter(Boolean);
+      }).map(p => {
+        const match = matches.find(m => m.id === p.match);
+        return match ? { match, pred: { home: p.home_score, away: p.away_score } } : null;
+      }).filter(Boolean);
     },
     toggleStat(type) {
       this.statFilter = this.statFilter === type ? null : type;
@@ -198,13 +201,25 @@ export default {
                       </div>
                     </div>
                     <div v-if="statFilter && getStatMatches(statFilter).length > 0" style="width:100%;display:flex;flex-wrap:wrap;gap:0.3rem;justify-content:flex-end;margin-top:0.4rem;padding-top:0.4rem;border-top:1px solid #e2e8f0;">
-                      <div v-for="match in getStatMatches(statFilter)" :key="match.id" style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;padding:0.3rem 0.4rem;text-align:center;width:120px;">
-                        <div style="font-weight:700;font-size:0.75rem;white-space:nowrap;">
-                          <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;">
-                          {{ match.home_score }}-{{ match.away_score }}
-                          <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;">
-                        </div>
-                        <div style="font-size:0.55rem;color:var(--color-gray);font-weight:600;">{{ match.home_team }} vs {{ match.away_team }}</div>
+                      <div v-for="({match, pred}) in getStatMatches(statFilter)" :key="match.id" style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;padding:0.3rem 0.4rem;text-align:center;width:120px;">
+                        <template v-if="statFilter === 'exact'">
+                          <div style="font-weight:700;font-size:0.75rem;white-space:nowrap;">
+                            <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;">
+                            {{ match.home_score }}-{{ match.away_score }}
+                            <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;">
+                          </div>
+                        </template>
+                        <template v-else>
+                          <div style="font-weight:600;font-size:0.65rem;white-space:nowrap;color:var(--color-gray);">
+                            👤 {{ pred.home }}-{{ pred.away }}
+                          </div>
+                          <div style="font-weight:700;font-size:0.75rem;white-space:nowrap;margin-top:1px;">
+                            <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;">
+                            {{ match.home_score }}-{{ match.away_score }}
+                            <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;">
+                          </div>
+                        </template>
+                        <div style="font-size:0.55rem;color:var(--color-gray);font-weight:600;margin-top:2px;">{{ match.home_team }} vs {{ match.away_team }}</div>
                       </div>
                     </div>
                     </template>
