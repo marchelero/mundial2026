@@ -48,6 +48,7 @@ app.use('/api/champion-picks', require('./backend/routes/champion'));
 app.use('/api/settings', require('./backend/routes/settings'));
 app.use('/api/users', require('./backend/routes/users'));
 app.use('/api/push', require('./backend/routes/push'));
+app.use('/api/backup', require('./backend/routes/backup'));
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

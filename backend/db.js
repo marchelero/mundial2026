@@ -9,7 +9,7 @@ if (!fs.existsSync(dataDir)) {
 }
 
 const dbPath = process.env.DB_PATH || path.join(dataDir, 'mundial2026.db');
-const db = new Database(dbPath);
+let db = new Database(dbPath);
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
@@ -125,4 +125,24 @@ try {
   process.exit(1);
 }
 
-module.exports = { db, generateId };
+function restoreFrom(backupPath) {
+  db.close();
+  const walPath = dbPath + '-wal';
+  const shmPath = dbPath + '-shm';
+  try { fs.unlinkSync(walPath); } catch (e) {}
+  try { fs.unlinkSync(shmPath); } catch (e) {}
+  fs.copyFileSync(backupPath, dbPath);
+  db = new Database(dbPath);
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
+  db.pragma('busy_timeout = 5000');
+}
+
+const dbProxy = new Proxy({}, {
+  get(_, prop) { return db[prop]; },
+  has(_, prop) { return prop in db; },
+  ownKeys() { return Reflect.ownKeys(db); },
+  getOwnPropertyDescriptor(_, prop) { return Reflect.getOwnPropertyDescriptor(db, prop); },
+});
+
+module.exports = { db: dbProxy, generateId, restoreFrom };

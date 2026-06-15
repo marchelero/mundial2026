@@ -45,7 +45,11 @@ export default {
       linkedSelected: {},
       linkedScores: {},
       showEditModal: false,
-      editUserData: null
+      editUserData: null,
+      backupLoading: false,
+      backupDone: false,
+      restoreLoading: false,
+      restoreDone: false
     };
   },
   async created() {
@@ -140,6 +144,68 @@ export default {
     cancelEdit() {
       this.showEditModal = false;
       this.editUserData = null;
+    },
+    async downloadBackup() {
+      this.backupLoading = true;
+      this.backupDone = false;
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/backup', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Error al descargar backup');
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'mundial2026-backup.db';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        this.backupDone = true;
+        setTimeout(() => this.backupDone = false, 3000);
+      } catch (e) {
+        alert(e.message || 'Error al descargar backup');
+      } finally {
+        this.backupLoading = false;
+      }
+    },
+    handleRestoreFile(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!confirm('¿Restaurar este backup? Se reemplazará toda la base de datos actual. Esta acción no se puede deshacer.')) {
+        e.target.value = '';
+        return;
+      }
+      this.restoreLoading = true;
+      this.restoreDone = false;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const bytes = new Uint8Array(reader.result);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        const base64 = btoa(binary);
+        api.post('/backup/restore', { data: base64 })
+          .then(() => {
+            this.restoreDone = true;
+            setTimeout(() => this.restoreDone = false, 4000);
+            return api.get('/users');
+          })
+          .then(users => { this.users = users; })
+          .catch(e => { alert(e.message || 'Error al restaurar backup'); })
+          .finally(() => { this.restoreLoading = false; e.target.value = ''; });
+      };
+      reader.onerror = () => {
+        alert('Error al leer el archivo');
+        this.restoreLoading = false;
+        e.target.value = '';
+      };
+      reader.readAsArrayBuffer(file);
     },
     openFinishModal(match) {
       this.finishMatchData = match;
@@ -452,6 +518,44 @@ export default {
       </div>
       </div>
       <div v-if="adminTab === 'config'" style="display:flex;flex-direction:column;gap:0.75rem;">
+        <div class="card">
+          <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.65rem;">
+            <span style="font-size: 1.5rem; line-height: 1;">💾</span>
+            <div style="flex: 1;">
+              <h3 style="font-family:var(--font-header);font-size:0.95rem;letter-spacing:0.04em;margin:0;">BACKUP DE BASE DE DATOS</h3>
+              <p style="font-size: 0.65rem; color: var(--color-gray); margin-top: 0.15rem; font-family:var(--font-main);">
+                Descargá una copia de seguridad o restaurá un backup previo.
+              </p>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <button class="btn btn-primary" :disabled="backupLoading" @click="downloadBackup" style="padding:0.5rem 0.8rem;font-size:0.75rem;flex:1;">
+              {{ backupLoading ? 'DESCARGANDO...' : '⬇ DESCARGAR BACKUP' }}
+            </button>
+            <label :style="{padding:'0.5rem 0.8rem',fontSize:'0.75rem',flex:1,textAlign:'center',cursor: restoreLoading ? 'not-allowed' : 'pointer', background:'var(--color-accent)',color:'var(--color-dark)',border:'none',borderRadius:'8px',fontWeight:'700', opacity: restoreLoading ? 0.6 : 1}">
+              {{ restoreLoading ? 'RESTAURANDO...' : '⬆ RESTAURAR BACKUP' }}
+              <input type="file" accept=".db,.sqlite,.sqlite3,.backup" @change="handleRestoreFile" :disabled="restoreLoading" style="display:none;">
+            </label>
+          </div>
+            <transition name="toast">
+              <div v-if="backupDone" class="toast-notification toast-success" style="margin-top:0.5rem;">
+                <span style="font-size:1.1rem;">✅</span>
+                <div>
+                  <div style="font-weight:700;font-size:0.8rem;">Backup descargado correctamente</div>
+                  <div style="font-size:0.65rem;opacity:0.85;margin-top:0.1rem;">Guardá el archivo en un lugar seguro</div>
+                </div>
+              </div>
+            </transition>
+            <transition name="toast">
+              <div v-if="restoreDone" class="toast-notification toast-success" style="margin-top:0.5rem;">
+                <span style="font-size:1.1rem;">✅</span>
+                <div>
+                  <div style="font-weight:700;font-size:0.8rem;">Base de datos restaurada correctamente</div>
+                  <div style="font-size:0.65rem;opacity:0.85;margin-top:0.1rem;">Los datos se cargaron desde el backup</div>
+                </div>
+              </div>
+            </transition>
+        </div>
         <div class="card">
           <div style="display: flex; align-items: flex-start; gap: 1rem;">
             <span style="font-size: 1.5rem; line-height: 1;">👑</span>
