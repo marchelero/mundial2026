@@ -2,7 +2,7 @@ import { roundLabel, formatDate, flagUrl, todayStr as todayStrLocal, addDaysStr 
 import { api } from '../services/api.js';
 
 export default {
-  props: ['matchGroups', 'predictions', 'user', 'saving', 'comodinUsado', 'countries', 'settings', 'championPick'],
+  props: ['matchGroups', 'predictions', 'user', 'saving', 'comodinUsado', 'countries', 'settings', 'championPick', 'userStreak', 'userRank', 'userRankDelta', 'pendingTodayCount'],
   emits: ['set-score', 'toggle-comodin', 'submit', 'save-champion-pick', 'saved', 'save-error'],
   data() {
     return {
@@ -389,6 +389,15 @@ export default {
           </template>
         </div>
         </Transition>
+      </div>
+
+      <!-- Resumen personal -->
+      <div v-if="user" style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; padding: 0.75rem 1rem; margin-bottom: 0.75rem; border-radius: 10px; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);">
+        <span style="font-size: 0.7rem; font-weight: 600; opacity: 0.9;">👋 {{ (user.name || user.email?.split('@')[0] || '').split(' ')[0] }}</span>
+        <span style="flex: 1;"></span>
+        <span v-if="pendingTodayCount > 0" style="background: #f59e0b; padding: 0.25rem 0.55rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.4);">📝 {{ pendingTodayCount }} pendiente{{ pendingTodayCount > 1 ? 's' : '' }}</span>
+        <span v-if="userStreak > 0" style="background: linear-gradient(135deg, #f97316, #ea580c); padding: 0.25rem 0.55rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.4);">🔥 {{ userStreak }} racha</span>
+        <span v-if="userRank" style="background: #3b82f6; padding: 0.25rem 0.55rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);">🏆 #{{ userRank }}<span v-if="userRankDelta > 0" style="color: #86efac; margin-left: 0.25rem;">↑{{ userRankDelta }}</span><span v-else-if="userRankDelta < 0" style="color: #fca5a5; margin-left: 0.25rem;">↓{{ Math.abs(userRankDelta) }}</span></span>
       </div>
 
       <!-- Tabs -->

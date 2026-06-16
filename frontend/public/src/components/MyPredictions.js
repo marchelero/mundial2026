@@ -2,7 +2,7 @@ import { roundLabel, formatDate } from '../utils/helpers.js';
 import { api } from '../services/api.js';
 
 export default {
-  props: ['matchGroups', 'predictions', 'allMatches', 'championPick'],
+  props: ['matchGroups', 'predictions', 'allMatches', 'championPick', 'userStreak', 'maxStreak'],
   data() { return { statsExpanded: true, statsObserver: null, expandedMatch: null, matchStats: null, expandedTopScore: null, selectedDate: '', showDatePicker: false, calendarYear: 0, calendarMonth: 0, months: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'] }; },
   mounted() {
     this.$nextTick(() => {
@@ -224,9 +224,17 @@ export default {
     <div class="view-container">
       <div class="section-banner">
         <span class="banner-icon">📋</span>
-        <div>
+        <div style="flex: 1;">
           <h2 class="banner-title">MIS PRONÓSTICOS</h2>
           <p class="banner-subtitle">Revisa el historial de tus pronósticos y los puntos obtenidos.</p>
+        </div>
+        <div v-if="userStreak > 0" style="display: flex; flex-direction: column; align-items: center; gap: 0.15rem; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; padding: 0.5rem 0.8rem; border-radius: 10px; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.4); min-width: 65px;">
+          <span style="font-size: 0.5rem; font-weight: 700; opacity: 0.9; letter-spacing: 0.08em;">RACHA</span>
+          <span style="font-size: 1.4rem; font-weight: 900; line-height: 1;">🔥 {{ userStreak }}</span>
+        </div>
+        <div v-if="maxStreak > userStreak && maxStreak > 0" style="display: flex; flex-direction: column; align-items: center; gap: 0.15rem; background: #f1f5f9; color: #475569; padding: 0.5rem 0.8rem; border-radius: 10px; min-width: 65px;">
+          <span style="font-size: 0.5rem; font-weight: 700; opacity: 0.7; letter-spacing: 0.08em;">RÉCORD</span>
+          <span style="font-size: 1.2rem; font-weight: 900; line-height: 1;">⭐ {{ maxStreak }}</span>
         </div>
       </div>
 

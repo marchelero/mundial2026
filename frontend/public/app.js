@@ -42,15 +42,19 @@ createApp({
       
       <Layout v-else :user="user" :current-view="view" :is-admin="isAdmin" :app-version="appVersion" :notification="notification" @change-view="view = $event" @logout="handleLogout" @clear-notification="notification.visible = false">
         <template v-if="view === 'votar'">
-          <Matchlist 
-            :match-groups="matchGroups" 
-            :predictions="predictions" 
-            :user="user" 
+          <Matchlist
+            :match-groups="matchGroups"
+            :predictions="predictions"
+            :user="user"
             :saving="saving"
             :comodin-usado="comodinUsado"
             :countries="countries"
             :settings="settings"
             :champion-pick="championPick"
+            :user-streak="userStreak"
+            :user-rank="userRank"
+            :user-rank-delta="userRankDelta"
+            :pending-today-count="pendingTodayCount"
             @set-score="setScore"
             @toggle-comodin="toggleComodin"
             @submit="submitPredictions"
@@ -62,7 +66,9 @@ createApp({
             :match-groups="historyGroups"
             :predictions="predictions"
             :all-matches="allMatches"
-            :champion-pick="championPick" />
+            :champion-pick="championPick"
+            :user-streak="userStreak"
+            :max-streak="maxStreak" />
         </template>
         <template v-else-if="view === 'posiciones'">
           <Ranking
@@ -124,6 +130,60 @@ createApp({
     },
     comodinUsado() {
       return Object.values(this.predictions).some(p => p.comodin);
+    },
+    userStreak() {
+      const finished = this.allMatches
+        .filter(m => m.status === 'finished' && this.predictions[m.id]?.id)
+        .sort((a, b) => (a.date + ' ' + (a.time || '00:00')).localeCompare(b.date + ' ' + (b.time || '00:00')));
+      let streak = 0;
+      for (let i = finished.length - 1; i >= 0; i--) {
+        const p = this.predictions[finished[i].id];
+        if (p && (p.points || 0) > 0) streak++;
+        else break;
+      }
+      return streak;
+    },
+    maxStreak() {
+      const finished = this.allMatches
+        .filter(m => m.status === 'finished' && this.predictions[m.id]?.id)
+        .sort((a, b) => (a.date + ' ' + (a.time || '00:00')).localeCompare(b.date + ' ' + (b.time || '00:00')));
+      let max = 0, current = 0;
+      for (const m of finished) {
+        const p = this.predictions[m.id];
+        if (p && (p.points || 0) > 0) { current++; max = Math.max(max, current); }
+        else current = 0;
+      }
+      return max;
+    },
+    userRank() {
+      if (!this.rankingsData.length || !this.user) return null;
+      const idx = this.rankingsData.findIndex(r => r.id === this.user.id);
+      return idx === -1 ? null : idx + 1;
+    },
+    userRankDelta() {
+      const current = this.userRank;
+      if (!current || !this.user) return 0;
+      try {
+        const prev = parseInt(localStorage.getItem(`mundial_rank_${this.user.id}`) || '0', 10);
+        if (!prev) return 0;
+        return prev - current;
+      } catch { return 0; }
+    },
+    pendingTodayCount() {
+      const now = new Date();
+      const todayStr = now.getFullYear() + '-' +
+        String(now.getMonth() + 1).padStart(2, '0') + '-' +
+        String(now.getDate()).padStart(2, '0');
+      const nowStr = todayStr + ' ' +
+        String(now.getHours()).padStart(2, '0') + ':' +
+        String(now.getMinutes()).padStart(2, '0');
+      return this.allMatches.filter(m => {
+        if (m.status !== 'open') return false;
+        if (m.date !== todayStr) return false;
+        const matchDt = m.date + ' ' + (m.time || '00:00');
+        if (matchDt < nowStr) return false;
+        return !this.predictions[m.id]?.id;
+      }).length;
     }
   },
   watch: {
@@ -175,6 +235,7 @@ createApp({
       });
       this.settings = await loadSettings();
       this.championPick = await loadChampionPick();
+      this.rankingsData = await api.get('/users/rankings').catch(() => []);
     },
     setScore(matchId, side, val) {
       if (!this.predictions[matchId]) this.predictions[matchId] = { home: null, away: null };
@@ -225,6 +286,12 @@ createApp({
     async loadRankings() {
       this.rankingsLoading = true;
       try {
+        if (this.user && this.rankingsData.length) {
+          const currentIdx = this.rankingsData.findIndex(r => r.id === this.user.id);
+          if (currentIdx !== -1) {
+            try { localStorage.setItem(`mundial_rank_${this.user.id}`, String(currentIdx + 1)); } catch (_) {}
+          }
+        }
         this.rankingsData = await api.get('/users/rankings');
       } catch (_) {
         this.rankingsData = [];
