@@ -522,12 +522,10 @@ export default {
                   <button class="btn" @click="openFinishModal(match)" :disabled="match.home_score == null || match.away_score == null" style="padding: 0.3rem 0.4rem; font-size: 0.65rem; background: var(--color-accent); color: white;" title="Finalizar partido">🏁</button>
                 </div>
             </div>
-             <div style="width: 100%; display: flex; justify-content: center; gap: 0.75rem; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed rgba(0,0,0,0.1);">
-              <div v-if="match.status === 'finished'">
-                <span style="font-size: 0.6rem; color: var(--color-green); cursor: pointer; font-weight: 600;" @click="$emit('export-match', match)">📥 Exportar predicciones</span>
-              </div>
-              <span style="font-size: 0.6rem; color: var(--color-blue); cursor: pointer; font-weight: 600;" @click="toggleManualScore(match.id)">📝 Subir Score Manual</span>
-            </div>
+             <div style="width: 100%; display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed rgba(0,0,0,0.1);">
+               <button @click="$emit('export-match', match)" style="display:inline-flex;align-items:center;gap:0.3rem;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:0.3rem 0.65rem;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;transition:all 0.2s;" @mouseover="$event.target.style.background='#dcfce7';$event.target.style.borderColor='#86efac'" @mouseout="$event.target.style.background='#f0fdf4';$event.target.style.borderColor='#bbf7d0'">📥 Exportar predicciones</button>
+               <button @click="toggleManualScore(match.id)" style="display:inline-flex;align-items:center;gap:0.3rem;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:0.3rem 0.65rem;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;transition:all 0.2s;" @mouseover="$event.target.style.background='#dbeafe';$event.target.style.borderColor='#93c5fd'" @mouseout="$event.target.style.background='#eff6ff';$event.target.style.borderColor='#bfdbfe'">📝 Subir Score Manual</button>
+             </div>
             <div v-if="manualScoreExpanded === match.id" style="width:100%;margin-top:0.5rem;padding:0.5rem;background:#f8fafc;border-radius:6px;border:1px solid rgba(0,0,0,0.06);">
               <div style="font-size:0.65rem;font-weight:700;margin-bottom:0.4rem;">Usuarios que no usan la app</div>
               <div v-if="unlinkedUsers.length === 0" style="font-size:0.6rem;color:var(--color-gray);text-align:center;padding:0.25rem;">No hay usuarios pendientes</div>
