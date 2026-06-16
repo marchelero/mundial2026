@@ -3,7 +3,7 @@ import { api } from '../services/api.js';
 
 export default {
   props: ['matchGroups', 'predictions', 'allMatches', 'championPick'],
-  data() { return { statsExpanded: true, statsObserver: null, expandedMatch: null, matchStats: null, selectedDate: '', showDatePicker: false, calendarYear: 0, calendarMonth: 0, months: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'] }; },
+  data() { return { statsExpanded: true, statsObserver: null, expandedMatch: null, matchStats: null, expandedTopScore: null, selectedDate: '', showDatePicker: false, calendarYear: 0, calendarMonth: 0, months: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'] }; },
   mounted() {
     this.$nextTick(() => {
       const el = this.$refs?.statsContainer;
@@ -201,15 +201,23 @@ export default {
       this.showDatePicker = false;
     },
     toggleMatchStats(matchId) {
-      if (this.expandedMatch === matchId) { this.expandedMatch = null; this.matchStats = null; return; }
+      if (this.expandedMatch === matchId) { this.expandedMatch = null; this.matchStats = null; this.expandedTopScore = null; return; }
       api.get(`/predictions/match/${encodeURIComponent(matchId)}`).then(r => {
         const home = r.filter(p => Number(p.home_score) > Number(p.away_score)).length;
         const draw = r.filter(p => Number(p.home_score) === Number(p.away_score)).length;
         const away = r.filter(p => Number(p.home_score) < Number(p.away_score)).length;
         const top = Object.entries(r.reduce((a, p) => { const k = p.home_score+'-'+p.away_score; a[k]=(a[k]||0)+1; return a; }, {})).sort((a,b)=>b[1]-a[1]);
-        this.matchStats = { total: r.length, homeWins: home, draws: draw, awayWins: away, topScores: top };
+        this.matchStats = { total: r.length, homeWins: home, draws: draw, awayWins: away, topScores: top, predictions: r };
+        this.expandedTopScore = null;
         this.expandedMatch = matchId;
-      }).catch(() => { this.matchStats = {total:0}; this.expandedMatch = matchId; });
+      }).catch(() => { this.matchStats = {total:0, predictions: []}; this.expandedMatch = matchId; });
+    },
+    getUsersForScore(score) {
+      if (!this.matchStats || !this.matchStats.predictions) return [];
+      return this.matchStats.predictions.filter(p => `${p.home_score}-${p.away_score}` === score);
+    },
+    toggleTopScore(score) {
+      this.expandedTopScore = this.expandedTopScore === score ? null : score;
     }
   },
   template: `
@@ -378,13 +386,18 @@ export default {
               <div v-if="matchStats?.topScores?.length" style="border-top:1px solid rgba(0,0,0,0.06);padding-top:0.5rem;">
                 <div style="font-size:0.6rem;font-weight:700;color:var(--color-gray);text-align:center;margin-bottom:0.35rem;">PRONÓSTICOS MÁS VOTADOS</div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:0.3rem;">
-                  <div v-for="([s, c]) in matchStats.topScores" :key="s" style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;padding:0.4rem 0.3rem;text-align:center;max-width:130px;">
-                    <div style="font-weight:700;font-size:0.8rem;white-space:nowrap;">
-                      <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:16px;height:11px;border-radius:2px;vertical-align:middle;">
-                      {{ s }}
-                      <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:16px;height:11px;border-radius:2px;vertical-align:middle;">
+                  <div v-for="([s, c]) in matchStats.topScores" :key="s" style="display:flex;flex-direction:column;align-items:stretch;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;cursor:pointer;transition:all 0.15s;max-width:130px;overflow:hidden;" :style="expandedTopScore === s ? 'border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,0.2);' : ''" @click="toggleTopScore(s)">
+                    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0.4rem 0.3rem;">
+                      <div style="font-weight:700;font-size:0.8rem;white-space:nowrap;">
+                        <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:16px;height:11px;border-radius:2px;vertical-align:middle;">
+                        {{ s }}
+                        <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:16px;height:11px;border-radius:2px;vertical-align:middle;">
+                      </div>
+                      <div style="font-size:0.6rem;color:var(--color-gray);font-weight:600;">{{ c }} voto{{ c !== 1 ? 's' : '' }}</div>
                     </div>
-                    <div style="font-size:0.6rem;color:var(--color-gray);font-weight:600;">{{ c }} voto(s)</div>
+                    <div v-if="expandedTopScore === s" style="background:#f1f5f9;border-top:1px solid rgba(0,0,0,0.07);padding:0.3rem 0.4rem;font-size:0.6rem;color:var(--color-dark);max-height:140px;overflow-y:auto;">
+                      <div v-for="p in getUsersForScore(s)" :key="p.id" style="padding:0.15rem 0;border-bottom:1px solid rgba(0,0,0,0.04);">{{ p.expand?.user?.name || p.expand?.user?.email || 'Anónimo' }}</div>
+                    </div>
                   </div>
                 </div>
               </div>
