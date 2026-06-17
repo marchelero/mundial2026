@@ -441,7 +441,7 @@ export default {
             <!-- Tabla del grupo seleccionado -->
             <div v-if="expandedGroup && selectedGroup" style="border:1px solid rgba(0,0,0,0.06);border-radius:8px;overflow:hidden;">
               <div style="padding:0.4rem 0.6rem;background:var(--color-dark);color:white;font-size:0.75rem;font-weight:700;">GRUPO {{ selectedGroup.group }}</div>
-              <div style="padding:0.4rem;">
+              <div style="padding:0.4rem;overflow-x:auto;">
                   <table style="width:100%;border-collapse:collapse;font-size:0.65rem;">
                     <thead>
                       <tr style="border-bottom:1px solid rgba(0,0,0,0.06);">
