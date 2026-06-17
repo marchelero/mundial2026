@@ -35,6 +35,7 @@ app.use('/api/matches', require('../backend/routes/matches'));
 app.use('/api/predictions', require('../backend/routes/predictions'));
 app.use('/api/champion-picks', require('../backend/routes/champion'));
 app.use('/api/settings', require('../backend/routes/settings'));
+app.use('/api/streams', require('../backend/routes/streams'));
 app.use('/api/users', require('../backend/routes/users'));
 app.use('/api/groups', require('../backend/routes/groups'));
 app.use('/api/push', require('../backend/routes/push'));

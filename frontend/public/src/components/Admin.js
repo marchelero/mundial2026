@@ -54,8 +54,16 @@ export default {
       reminderSaving: false,
       reminderSaved: false,
       recalcLoading: false,
-      recalcResult: null
+      recalcResult: null,
+      streamSources: [],
+      streamSaving: false,
+      streamEditSources: [{ label: '', url: '' }]
     };
+  },
+  watch: {
+    adminTab(tab) {
+      if (tab === 'config') this.loadStreamEdit();
+    }
   },
   async created() {
     try {
@@ -70,6 +78,9 @@ export default {
       const s = {};
       for (const item of r) s[item.key] = item.value;
       this.championWinner = s.champion_winner || '';
+      if (s.stream_urls) {
+        try { this.streamSources = JSON.parse(s.stream_urls); } catch (_) {}
+      }
     } catch (_) { }
 
     // Load registered users
@@ -223,29 +234,61 @@ export default {
       }
       this.restoreLoading = true;
       this.restoreDone = false;
-
       const reader = new FileReader();
       reader.onload = () => {
-        const bytes = new Uint8Array(reader.result);
-        let binary = '';
-        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-        const base64 = btoa(binary);
-        api.post('/backup/restore', { data: base64 })
+        api.post('/backup/restore', { data: reader.result.split(',')[1] })
           .then(() => {
             this.restoreDone = true;
-            setTimeout(() => this.restoreDone = false, 4000);
-            return api.get('/users');
+            this.restoreLoading = false;
+            setTimeout(() => { this.restoreDone = false; window.location.reload(); }, 2000);
           })
-          .then(users => { this.users = users; })
-          .catch(e => { alert(e.message || 'Error al restaurar backup'); })
-          .finally(() => { this.restoreLoading = false; e.target.value = ''; });
+          .catch(e => { alert('Error al restaurar: ' + e.message); this.restoreLoading = false; });
       };
-      reader.onerror = () => {
-        alert('Error al leer el archivo');
-        this.restoreLoading = false;
-        e.target.value = '';
-      };
-      reader.readAsArrayBuffer(file);
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    },
+    async loadStreamEdit() {
+      try {
+        const data = await api.get('/streams');
+        this.streamSources = Array.isArray(data) ? data.filter(x => x && x.url) : [];
+      } catch { this.streamSources = []; }
+      this.streamEditSources = this.streamSources.length
+        ? this.streamSources.map(x => ({ label: x.label || '', url: x.url || '' }))
+        : [{ label: '', url: '' }];
+    },
+    addStreamRow() {
+      this.streamEditSources.push({ label: '', url: '' });
+    },
+    removeStreamRow(i) {
+      this.streamEditSources.splice(i, 1);
+      if (!this.streamEditSources.length) this.streamEditSources.push({ label: '', url: '' });
+    },
+    async saveStreamSources() {
+      const cleaned = this.streamEditSources.map(s => ({ label: String(s.label || '').trim(), url: String(s.url || '').trim() })).filter(s => s.url);
+      this.streamSaving = true;
+      try {
+        const result = await api.post('/streams', { sources: cleaned });
+        this.streamSources = result.streams || [];
+        alert('✅ ' + cleaned.length + ' fuente(s) de transmisión activada(s)');
+      } catch (e) {
+        alert('Error: ' + e.message);
+      } finally {
+        this.streamSaving = false;
+      }
+    },
+    async clearStreams() {
+      if (!confirm('¿Vaciar todas las fuentes de transmisión?')) return;
+      this.streamSaving = true;
+      try {
+        const result = await api.post('/streams', { sources: [] });
+        this.streamSources = [];
+        this.streamEditSources = [{ label: '', url: '' }];
+        alert('✅ Fuentes eliminadas');
+      } catch (e) {
+        alert('Error: ' + e.message);
+      } finally {
+        this.streamSaving = false;
+      }
     },
     openFinishModal(match) {
       this.finishMatchData = match;
@@ -672,6 +715,34 @@ export default {
                 <span v-if="recalcResult" style="font-size:0.65rem;color:#16a34a;font-weight:600;">
                   ✅ {{ recalcResult.matchesProcessed }} partido(s), {{ recalcResult.predictionsUpdated }} pred., {{ recalcResult.usersRecalculated }} usuario(s)
                 </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display: flex; align-items: flex-start; gap: 1rem;">
+            <span style="font-size: 1.5rem; line-height: 1;">📺</span>
+            <div style="flex: 1;">
+              <h3 style="font-family:var(--font-header);font-size:0.95rem;letter-spacing:0.04em;margin:0;">TRANSMISIONES EN VIVO</h3>
+              <p style="font-size: 0.65rem; color: var(--color-gray); margin-top: 0.15rem; font-family:var(--font-main);">
+                Agregá fuentes de streaming. Cuando haya un partido en vivo, todos los usuarios verán estos enlaces.
+              </p>
+              <div style="margin-top:0.65rem;">
+                 <div v-for="(s, i) in streamEditSources" :key="i" style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.4rem;font-size:0.7rem;">
+                   <input type="text" :value="s.label" @input="streamEditSources[i].label = $event.target.value" placeholder="Nombre" style="width:70px;padding:0.3rem;border:1px solid #d1d5db;border-radius:4px;font-size:0.65rem;">
+                   <input type="text" :value="s.url" @input="streamEditSources[i].url = $event.target.value" placeholder="https://..." style="flex:1;padding:0.3rem;border:1px solid #d1d5db;border-radius:4px;font-size:0.65rem;">
+                  <span @click="removeStreamRow(i)" style="cursor:pointer;font-size:0.9rem;color:#ef4444;flex-shrink:0;">✕</span>
+                </div>
+                <button @click="addStreamRow" style="margin-top:0.25rem;padding:0.3rem 0.6rem;border:1px dashed #d1d5db;border-radius:6px;background:transparent;font-size:0.65rem;font-weight:600;cursor:pointer;color:var(--color-gray);">+ Agregar fuente</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.65rem;flex-wrap:wrap;">
+                <button @click="saveStreamSources()" :disabled="streamSaving" style="padding:0.4rem 0.8rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:700;cursor:pointer;font-size:0.7rem;">
+                  {{ streamSaving ? 'GUARDANDO...' : '💾 GUARDAR TODO' }}
+                </button>
+                <button @click="clearStreams" :disabled="streamSaving" style="padding:0.4rem 0.8rem;border:none;border-radius:8px;background:#ef4444;color:white;font-weight:700;cursor:pointer;font-size:0.7rem;">
+                  🗑 Vaciar lista
+                </button>
+                <span style="font-size:0.65rem;color:var(--color-gray);font-weight:600;">{{ streamSources.length }} fuente(s) activa(s)</span>
               </div>
             </div>
           </div>

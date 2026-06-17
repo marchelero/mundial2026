@@ -20,10 +20,14 @@ export default {
       expandedMatch: null,
       matchStats: null,
       expandedTopScore: null,
+      activeSource: null,
+      hlsInstance: null,
+      activeStreams: [],
     };
   },
   async mounted() {
     await this.loadGroups();
+    await this.fetchStreams();
     this.$nextTick(() => {
       const el = this.$refs?.groupsContainer;
       if (el && typeof IntersectionObserver !== 'undefined') {
@@ -38,6 +42,20 @@ export default {
   },
   unmounted() {
     if (this.groupsObserver) { this.groupsObserver.disconnect(); this.groupsObserver = null; }
+    if (this.hlsInstance) { this.hlsInstance.destroy(); this.hlsInstance = null; }
+  },
+  watch: {
+    liveMatch(n, o) {
+      if (n?.id !== o?.id) this.activeSource = null;
+    },
+    activeSource(n) {
+      if (this.hlsInstance) { this.hlsInstance.destroy(); this.hlsInstance = null; }
+      if (n === null) return;
+      this.$nextTick(() => {
+        const src = this.streamUrls[n];
+        if (src && this.isM3u8(src.url)) this.initHls(src.url);
+      });
+    }
   },
   computed: {
     championDeadlinePassed() {
@@ -93,7 +111,16 @@ export default {
       } else {
         return this.matchGroups.filter(g => g.date === dayAfter);
       }
-    }
+    },
+    liveMatch() {
+      return this.matchGroups.flatMap(g => g.matches).find(m =>
+        m.status === 'open' && this.isMatchPast(m)
+      ) || null;
+    },
+    streamUrls() {
+      if (!this.liveMatch || !this.activeStreams.length) return [];
+      return this.activeStreams;
+    },
   },
   methods: {
     formatDate,
@@ -106,6 +133,40 @@ export default {
     isMatchPast(match) {
       if (!match.date || !match.time) return false;
       return (match.date + ' ' + match.time) < nowStr();
+    },
+    isM3u8(url) {
+      return url && url.includes('.m3u8');
+    },
+    async fetchStreams() {
+      try {
+        const data = await api.get('/streams');
+        this.activeStreams = Array.isArray(data) ? data.filter(x => x && x.url) : [];
+        if (!this.activeStreams.length) this.activeSource = null;
+      } catch (e) {
+        console.warn('[Streams] Error:', e);
+        this.activeStreams = [];
+      }
+    },
+    initHls(url) {
+      if (this.hlsInstance) { this.hlsInstance.destroy(); this.hlsInstance = null; }
+      const video = this.$refs?.videoPlayer;
+      if (!video) return;
+      if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        this.hlsInstance = hls;
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = url;
+      }
+    },
+    toggleFullscreen(el) {
+      if (!el) return;
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        el.requestFullscreen();
+      }
     },
     matchState(match) {
       if (this.predictions[match.id]?.id) return 'submitted';
@@ -329,6 +390,33 @@ export default {
         </div>
       </div>
 
+      <!-- 🔴 EN VIVO -->
+      <div v-if="liveMatch && streamUrls.length" class="card" style="padding: 0; margin-bottom: 1rem; border: 2px solid #dc2626; overflow: hidden;">
+        <div style="display:flex;align-items:center;gap:0.5rem;padding:0.65rem 1rem;background:linear-gradient(135deg,#dc2626 0%,#b91c1c 100%);color:white;">
+          <span style="font-size:0.9rem;animation:pulse 1.5s infinite;">🔴</span>
+          <span style="font-weight:800;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;flex:1;">EN VIVO — {{ liveMatch.home_team }} vs {{ liveMatch.away_team }}</span>
+        </div>
+
+        <div style="padding:0.5rem;">
+          <div v-if="streamUrls.length" style="display:flex;gap:0.4rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+            <button v-for="(src, i) in streamUrls" :key="i" @click="activeSource = i" :style="{flex:'1',minWidth:'70px',padding:'0.3rem 0.4rem',border:activeSource === i ? '2px solid #dc2626' : '1px solid #d1d5db',borderRadius:'6px',background:activeSource === i ? '#fef2f2' : '#f9fafb',fontSize:'0.65rem',fontWeight:activeSource === i ? 800 : 600,cursor:'pointer',color: activeSource === i ? '#dc2626' : '#374151',transition:'all 0.15s'}">{{ src.label || 'Fuente ' + (i + 1) }}</button>
+          </div>
+
+          <div v-if="activeSource !== null && streamUrls[activeSource]">
+            <div style="position:relative;background:#000;border-radius:8px;overflow:hidden;">
+              <template v-if="isM3u8(streamUrls[activeSource]?.url)">
+                <video ref="videoPlayer" style="width:100%;aspect-ratio:16/9;display:block;background:#000;" controls autoplay playsinline></video>
+                <span @click="toggleFullscreen($refs?.videoPlayer)" style="position:absolute;bottom:8px;right:8px;cursor:pointer;font-size:1.1rem;color:white;opacity:0.7;transition:opacity 0.2s;background:rgba(0,0,0,0.5);border-radius:4px;padding:0.2rem 0.4rem;z-index:10;" @mouseover="$event.target.style.opacity='1'" @mouseout="$event.target.style.opacity='0.7'" title="Pantalla completa">⛶</span>
+              </template>
+              <iframe v-else :src="streamUrls[activeSource].url" style="width:100%;aspect-ratio:16/9;border:none;background:#000;" allow="autoplay;encrypted-media;picture-in-picture" allowfullscreen loading="lazy"></iframe>
+            </div>
+          </div>
+          <div v-else style="text-align:center;padding:1.5rem;font-size:0.85rem;color:var(--color-gray);background:#f9fafb;border-radius:8px;border:1px dashed #e2e8f0;">
+            Seleccioná una fuente de transmisión
+          </div>
+        </div>
+      </div>
+
       <!-- Group Standings (Siempre Arriba) -->
       <div ref="groupsContainer" class="card" style="padding: 0; margin-bottom: 1.25rem;">
         <div @click="showGroupsPanel = !showGroupsPanel; if(showGroupsPanel && groups.length && !expandedGroup) expandedGroup = groups[0].group" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding:0.75rem 1rem;border-radius:8px;background:#f1f5f9;transition:background 0.2s;" @mouseover="$event.currentTarget.style.background='#e2e8f0'" @mouseout="$event.currentTarget.style.background='#f1f5f9'">
@@ -501,11 +589,9 @@ export default {
             <span v-if="potentialPoints(match) !== null" class="pts-badge pts-potential" style="font-size:0.85rem;animation:pulse 1.5s infinite;">{{ potentialPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }} ⏳</span>
             <span v-else-if="predictions[match.id]?.id" style="font-size:0.7rem;color:var(--color-gray);font-style:italic;">Esperando resultado...</span>
           </div>
-
           <button @click="toggleMatchStats(match.id)" style="width:100%;margin-top:0.4rem;padding:0.25rem;border:none;border-radius:4px;background:rgba(0,0,0,0.03);color:var(--color-gray);font-size:0.6rem;cursor:pointer;font-weight:600;transition:background 0.2s;" @mouseover="$event.target.style.background='rgba(0,0,0,0.07)'" @mouseout="$event.target.style.background='rgba(0,0,0,0.03)'">
             👥 {{ expandedMatch === match.id ? 'OCULTAR' : 'VER PRONÓSTICOS' }}
           </button>
-
           <div v-if="expandedMatch === match.id && matchStats" style="margin-top:0.4rem;padding:0.5rem;background:#f8fafc;border-radius:6px;font-size:0.7rem;border:1px solid rgba(0,0,0,0.06);">
             <div style="display:flex;gap:0.75rem;margin-bottom:0.5rem;text-align:center;">
               <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;">{{ matchStats.total }}</div><div style="color:var(--color-gray);font-size:0.6rem;">VOTOS</div></div>
@@ -602,8 +688,9 @@ export default {
             <button @click="closeModal" style="flex:1;padding:0.75rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CANCELAR</button>
             <button @click="$emit('submit'); closeModal()" style="flex:1;padding:0.75rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">ACEPTAR</button>
           </div>
+          </div>
         </div>
+
       </div>
-    </div>
   `
 };
