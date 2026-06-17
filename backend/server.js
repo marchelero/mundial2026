@@ -25,7 +25,7 @@ app.use(express.json({ limit: '1mb' }));
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 1000, message: { error: 'Demasiadas solicitudes' } });
 app.use('/api/', limiter);
 
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Demasiados intentos de auth' } });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, message: { error: 'Demasiados intentos de auth' } });
 app.use('/api/auth/', authLimiter);
 
 require('../backend/db');
