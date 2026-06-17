@@ -53,6 +53,7 @@ export default {
         const userPreds = records.filter(r => r.user === userId);
         this.userPreds = userPreds;
         let exactos = 0, resultados = 0, errors = 0, comodines = 0;
+        let exactoPts = 0, resultadoPts = 0;
         const matches = this.allMatches.filter(m => m.status === 'finished');
         userPreds.forEach(p => {
           const match = matches.find(m => m.id === p.match);
@@ -60,18 +61,22 @@ export default {
           if (!match || match.home_score == null) return;
           const ph = Number(p.home_score), pa = Number(p.away_score);
           const mh = Number(match.home_score), ma = Number(match.away_score);
-          if (ph === mh && pa === ma) exactos++;
-          else {
+          if (ph === mh && pa === ma) {
+            exactos++;
+            exactoPts += p.comodin ? 6 : 3;
+          } else {
             const pd = ph - pa;
             const rd = mh - ma;
-            if ((pd === rd && rd === 0) || (pd > 0 && rd > 0) || (pd < 0 && rd < 0)) resultados++;
-            else errors++;
+            if ((pd === rd && rd === 0) || (pd > 0 && rd > 0) || (pd < 0 && rd < 0)) {
+              resultados++;
+              resultadoPts += p.comodin ? 2 : 1;
+            } else errors++;
           }
         });
         const champPicks = await api.get('/champion-picks/all').catch(() => []);
         const champPick = champPicks.find(cp => cp.user === userId);
         const champBonus = champPick ? 5 : 0;
-        this.userBreakdown = { exactos, resultados, errors, comodines, champBonus };
+        this.userBreakdown = { exactos, resultados, errors, comodines, champBonus, exactoPts, resultadoPts };
         this.statFilter = null;
         this.expandedUser = userId;
       } catch (_) {
@@ -189,12 +194,12 @@ export default {
                     <template v-if="userBreakdown">
                     <div style="width:100%;text-align:right;">
                       <div style="font-size:0.7rem;font-weight:700;color:var(--color-dark);margin-bottom:0.3rem;">
-                        Total: <span style="color:var(--color-green);">{{ userBreakdown.exactos * 3 + userBreakdown.resultados * 1 + userBreakdown.champBonus }} pts</span>
-                        ({{ userBreakdown.exactos * 3 }}{{ userBreakdown.resultados > 0 ? ' + ' + userBreakdown.resultados : '' }}{{ userBreakdown.champBonus > 0 ? ' + ' + userBreakdown.champBonus + ' (🏆)' : '' }})
+                        Total: <span style="color:var(--color-green);">{{ userBreakdown.exactoPts + userBreakdown.resultadoPts + userBreakdown.champBonus }} pts</span>
+                        ({{ userBreakdown.exactoPts }}{{ userBreakdown.resultadoPts > 0 ? ' + ' + userBreakdown.resultadoPts : '' }}{{ userBreakdown.champBonus > 0 ? ' + ' + userBreakdown.champBonus + ' (🏆)' : '' }})
                       </div>
                       <div style="display:flex;gap:0.35rem;flex-wrap:wrap;font-size:0.75rem;justify-content:flex-end;">
-                        <span v-if="userBreakdown.exactos > 0" @click="toggleStat('exact')" style="cursor:pointer;background:#f0fdf4;color:#16a34a;border:1px solid #dcfce7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'exact' ? 'box-shadow:0 0 0 2px #16a34a;' : ''">{{ userBreakdown.exactos }}× Exacto ({{ userBreakdown.exactos * 3 }}pts)</span>
-                        <span v-if="userBreakdown.resultados > 0" @click="toggleStat('result')" style="cursor:pointer;background:#fefce8;color:#ca8a04;border:1px solid #fef3c7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'result' ? 'box-shadow:0 0 0 2px #ca8a04;' : ''">{{ userBreakdown.resultados }}× Resultado ({{ userBreakdown.resultados * 1 }}pts)</span>
+                        <span v-if="userBreakdown.exactos > 0" @click="toggleStat('exact')" style="cursor:pointer;background:#f0fdf4;color:#16a34a;border:1px solid #dcfce7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'exact' ? 'box-shadow:0 0 0 2px #16a34a;' : ''">{{ userBreakdown.exactos }}× Exacto ({{ userBreakdown.exactoPts }}pts)</span>
+                        <span v-if="userBreakdown.resultados > 0" @click="toggleStat('result')" style="cursor:pointer;background:#fefce8;color:#ca8a04;border:1px solid #fef3c7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'result' ? 'box-shadow:0 0 0 2px #ca8a04;' : ''">{{ userBreakdown.resultados }}× Resultado ({{ userBreakdown.resultadoPts }}pts)</span>
                         <span v-if="userBreakdown.errors > 0" @click="toggleStat('wrong')" style="cursor:pointer;background:#fef2f2;color:#ef4444;border:1px solid #fee2e2;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'wrong' ? 'box-shadow:0 0 0 2px #ef4444;' : ''">{{ userBreakdown.errors }}× Error (0pts)</span>
                         <span v-if="userBreakdown.comodines > 0" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🍀 {{ userBreakdown.comodines }}× Comodín</span>
                         <span v-if="userBreakdown.champBonus > 0" style="background:#fff7ed;color:#d97706;border:1px solid #ffedd5;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🏆 Campeón (+{{ userBreakdown.champBonus }}pts)</span>
