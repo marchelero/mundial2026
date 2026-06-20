@@ -560,16 +560,16 @@ export default {
                  <span class="admin-team-name">{{ match.away_team }}</span>
               </div>
   
-               <div v-if="match.status !== 'finished'" class="admin-col-actions">
+                <div v-if="match.status !== 'finished'" class="admin-col-actions">
                   <button class="btn btn-primary" @click="$emit('save-score', match)" :disabled="match.home_score == null || match.away_score == null" style="padding: 0.3rem 0.4rem; font-size: 0.65rem;" title="Guardar score">💾</button>
-                  <button class="btn" @click="openFinishModal(match)" :disabled="match.home_score == null || match.away_score == null" style="padding: 0.3rem 0.4rem; font-size: 0.65rem; background: var(--color-accent); color: white;" title="Finalizar partido">🏁</button>
+                  <button class="btn btn-finish-match" @click="openFinishModal(match)" :disabled="match.home_score == null || match.away_score == null" style="padding: 0.3rem 0.4rem; font-size: 0.65rem; background: var(--color-accent); color: white;" title="Finalizar partido">🏁</button>
                 </div>
             </div>
              <div style="width: 100%; display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed rgba(0,0,0,0.1);">
-               <button @click="$emit('export-match', match)" style="display:inline-flex;align-items:center;gap:0.3rem;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:0.3rem 0.65rem;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;transition:all 0.2s;" @mouseover="$event.target.style.background='#dcfce7';$event.target.style.borderColor='#86efac'" @mouseout="$event.target.style.background='#f0fdf4';$event.target.style.borderColor='#bbf7d0'">📥 Exportar predicciones</button>
-               <button @click="toggleManualScore(match.id)" style="display:inline-flex;align-items:center;gap:0.3rem;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:0.3rem 0.65rem;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;transition:all 0.2s;" @mouseover="$event.target.style.background='#dbeafe';$event.target.style.borderColor='#93c5fd'" @mouseout="$event.target.style.background='#eff6ff';$event.target.style.borderColor='#bfdbfe'">📝 Subir Score Manual</button>
+               <button @click="$emit('export-match', match)" class="btn-export-predictions" style="display:inline-flex;align-items:center;gap:0.3rem;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:0.3rem 0.65rem;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;transition:all 0.2s;" @mouseover="$event.target.style.background='#dcfce7';$event.target.style.borderColor='#86efac'" @mouseout="$event.target.style.background='#f0fdf4';$event.target.style.borderColor='#bbf7d0'">📥 Exportar predicciones</button>
+               <button @click="toggleManualScore(match.id)" class="btn-manual-score" style="display:inline-flex;align-items:center;gap:0.3rem;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:0.3rem 0.65rem;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;transition:all 0.2s;" @mouseover="$event.target.style.background='#dbeafe';$event.target.style.borderColor='#93c5fd'" @mouseout="$event.target.style.background='#eff6ff';$event.target.style.borderColor='#bfdbfe'">📝 Subir Score Manual</button>
              </div>
-            <div v-if="manualScoreExpanded === match.id" style="width:100%;margin-top:0.5rem;padding:0.5rem;background:#f8fafc;border-radius:6px;border:1px solid rgba(0,0,0,0.06);">
+            <div v-if="manualScoreExpanded === match.id" class="modal-section" data-dark-bg="subtle" data-dark-border="border" style="width:100%;margin-top:0.5rem;padding:0.5rem;background:#f8fafc;border-radius:6px;border:1px solid rgba(0,0,0,0.06);">
               <div style="font-size:0.65rem;font-weight:700;margin-bottom:0.4rem;">Usuarios que no usan la app</div>
               <div v-if="unlinkedUsers.length === 0" style="font-size:0.6rem;color:var(--color-gray);text-align:center;padding:0.25rem;">No hay usuarios pendientes</div>
               <div v-for="u in unlinkedUsers" :key="u.id" style="display:flex;align-items:center;gap:0.35rem;padding:0.2rem 0;font-size:0.7rem;">
@@ -613,7 +613,7 @@ export default {
             <button class="btn btn-primary" :disabled="backupLoading" @click="downloadBackup" style="padding:0.5rem 0.8rem;font-size:0.75rem;flex:1;">
               {{ backupLoading ? 'DESCARGANDO...' : '⬇ DESCARGAR BACKUP' }}
             </button>
-            <label :style="{padding:'0.5rem 0.8rem',fontSize:'0.75rem',flex:1,textAlign:'center',cursor: restoreLoading ? 'not-allowed' : 'pointer', background:'var(--color-accent)',color:'var(--color-dark)',border:'none',borderRadius:'8px',fontWeight:'700', opacity: restoreLoading ? 0.6 : 1}">
+            <label class="btn-restore-backup" :style="{padding:'0.5rem 0.8rem',fontSize:'0.75rem',flex:1,textAlign:'center',cursor: restoreLoading ? 'not-allowed' : 'pointer', background:'var(--color-accent)',color:'var(--color-dark)',border:'none',borderRadius:'8px',fontWeight:'700', opacity: restoreLoading ? 0.6 : 1}">
               {{ restoreLoading ? 'RESTAURANDO...' : '⬆ RESTAURAR BACKUP' }}
               <input type="file" accept=".db,.sqlite,.sqlite3,.backup" @change="handleRestoreFile" :disabled="restoreLoading" style="display:none;">
             </label>
@@ -645,13 +645,13 @@ export default {
               <p style="font-size: 0.65rem; color: var(--color-gray); margin-top: 0.15rem; font-family:var(--font-main);">
                 Una vez finalizado el mundial, seleccioná al campeón y otorgá +5 pts a quienes acertaron.
               </p>
-              <div v-if="championWinner" style="margin-top: 0.75rem; padding: 0.75rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+              <div v-if="championWinner" class="champion-picked-card" style="margin-top: 0.75rem; padding: 0.75rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
                 <div style="font-family:var(--font-header);font-size:0.8rem;letter-spacing:0.04em;color:#166534;">✅ CAMPEÓN REGISTRADO</div>
                 <div style="font-size: 0.95rem; font-weight: 800; color: var(--color-dark); margin-top: 0.15rem;">{{ championWinner }}</div>
                 <div v-if="awardDone" style="font-size: 0.65rem; color: #15803d; margin-top: 0.15rem;">{{ awardCount }} usuario(s) recibieron +5 pts</div>
               </div>
               <div v-else style="display: flex; gap: 0.5rem; margin-top: 0.75rem; align-items: stretch;">
-                <select v-model="championAwardSelected" style="flex: 1; padding: 0.5rem; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: var(--font-main); font-size: 0.8rem; background: #f8fafc; cursor: pointer;">
+                <select v-model="championAwardSelected" class="form-input" style="flex: 1; padding: 0.5rem; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: var(--font-main); font-size: 0.8rem; background: #f8fafc; cursor: pointer;">
                   <option value="">Seleccionar campeón...</option>
                   <option v-for="c in countries" :key="c.name" :value="c.name">{{ c.name }}</option>
                 </select>
@@ -671,7 +671,7 @@ export default {
             </div>
             <div style="text-align: right;">
               <div :style="{fontSize:'0.55rem', fontWeight:700, textTransform:'uppercase', marginBottom:'0.15rem', color: settings.champion_pick_open === 'true' ? '#16a34a' : '#ef4444'}">{{ settings.champion_pick_open === 'true' ? 'HABILITADO' : 'DESHABILITADO' }}</div>
-              <button @click="$emit('save-setting', { key: 'champion_pick_open', value: settings.champion_pick_open === 'true' ? 'false' : 'true' })" :style="{padding:'0.25rem 0.5rem', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:600, fontSize:'0.65rem', background: settings.champion_pick_open === 'true' ? '#ef4444' : '#16a34a', color:'white'}">
+              <button @click="$emit('save-setting', { key: 'champion_pick_open', value: settings.champion_pick_open === 'true' ? 'false' : 'true' })" :style="{padding:'0.25rem 0.5rem', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:600, fontSize:'0.65rem', background: settings.champion_pick_open === 'true' ? '#ef4444' : '#16a34a', color:'white'}" :class="settings.champion_pick_open === 'true' ? 'btn-disable-toggle' : 'btn-enable-toggle'">
                 {{ settings.champion_pick_open === 'true' ? 'DESHABILITAR' : 'HABILITAR' }}
               </button>
             </div>
@@ -686,10 +686,10 @@ export default {
                 Minutos antes del kickoff se envía un push a todos los suscriptores y un aviso al grupo de WhatsApp.
               </p>
               <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.65rem;flex-wrap:wrap;">
-                <label style="font-size:0.7rem;font-weight:600;color:var(--color-dark);">Avisar</label>
-                <input type="number" min="1" max="120" v-model.number="reminderMinutesInput" style="width:70px;padding:0.4rem 0.5rem;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font-main);font-size:0.8rem;background:#f8fafc;text-align:center;">
-                <label style="font-size:0.7rem;font-weight:600;color:var(--color-dark);">minutos antes del partido</label>
-                <button @click="saveReminderMinutes" :disabled="reminderSaving" style="padding:0.4rem 0.8rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:700;cursor:pointer;font-size:0.7rem;">
+                <label class="reminder-label" style="font-size:0.7rem;font-weight:600;color:var(--color-dark);">Avisar</label>
+                <input type="number" min="1" max="120" v-model.number="reminderMinutesInput" class="reminder-input" style="width:70px;padding:0.4rem 0.5rem;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font-main);font-size:0.8rem;background:#f8fafc;text-align:center;">
+                <label class="reminder-label" style="font-size:0.7rem;font-weight:600;color:var(--color-dark);">minutos antes del partido</label>
+                <button @click="saveReminderMinutes" :disabled="reminderSaving" class="btn btn-primary" style="padding:0.4rem 0.8rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:700;cursor:pointer;font-size:0.7rem;">
                   {{ reminderSaving ? 'GUARDANDO...' : 'GUARDAR' }}
                 </button>
               </div>
@@ -709,7 +709,7 @@ export default {
                 Recalcula los puntos de todos los pronósticos finalizados y actualiza el ranking. Útil si algo quedó desfasado.
               </p>
               <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.65rem;flex-wrap:wrap;">
-                <button @click="recalcTotals" :disabled="recalcLoading" style="padding:0.4rem 0.8rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:700;cursor:pointer;font-size:0.7rem;">
+                <button @click="recalcTotals" :disabled="recalcLoading" class="btn btn-primary" style="padding:0.4rem 0.8rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:700;cursor:pointer;font-size:0.7rem;">
                   {{ recalcLoading ? 'RECALCULANDO...' : '🔄 RECALCULAR TOTALES' }}
                 </button>
                 <span v-if="recalcResult" style="font-size:0.65rem;color:#16a34a;font-weight:600;">
@@ -743,26 +743,26 @@ export default {
             <button v-if="!u.google_id" @click="deleteUser(u.id)" title="Eliminar usuario" style="background:none;border:none;color:var(--color-red);cursor:pointer;font-size:0.9rem;padding:0 0.2rem;">✕</button>
           </div>
 
-          <div style="display:flex;gap:0.5rem;margin-top:0.65rem;">
-            <input type="email" v-model="userInput" @keyup.enter="addUser" placeholder="correo@ejemplo.com" class="form-input" style="flex:1;padding:0.35rem 0.5rem;font-size:0.75rem;">
-            <button class="btn btn-primary" :disabled="!userInput || !userInput.includes('@')" @click="addUser" style="padding:0.35rem 0.7rem;font-size:0.7rem;">AGREGAR</button>
-          </div>
+              <div style="display:flex;gap:0.5rem;margin-top:0.65rem;">
+                <input type="email" v-model="userInput" @keyup.enter="addUser" placeholder="correo@ejemplo.com" class="form-input add-user-input" style="flex:1;padding:0.35rem 0.5rem;font-size:0.75rem;">
+                <button class="btn btn-primary" :disabled="!userInput || !userInput.includes('@')" @click="addUser" style="padding:0.35rem 0.7rem;font-size:0.7rem;">AGREGAR</button>
+              </div>
           <span v-if="userCreated" style="color:var(--color-green);font-size:0.7rem;margin-top:0.3rem;display:block;font-weight:600;">✅ Usuario creado</span>
         </div>
       </div>
 
       <!-- Finish Modal -->
       <div v-if="showFinishModal && finishMatchData" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;" @click.self="showFinishModal = false">
-        <div style="background:white;border-radius:16px;padding:1.5rem;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div class="modal-content" data-dark-bg="card" data-dark-border="border" style="background:white;border-radius:16px;padding:1.5rem;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
           <div style="text-align:center;margin-bottom:1.25rem;">
             <div style="font-size:2.5rem;margin-bottom:0.5rem;">🏁</div>
-            <h3 style="font-family:var(--font-header);font-size:1.25rem;margin:0 0 0.25rem;">FINALIZAR PARTIDO</h3>
+            <h3 data-dark-text="text" style="font-family:var(--font-header);font-size:1.25rem;margin:0 0 0.25rem;">FINALIZAR PARTIDO</h3>
             <p style="font-size:0.75rem;color:var(--color-gray);margin:0;">Se cerrará el marcador y se calcularán los puntos.</p>
           </div>
-          <div style="background:linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);border-radius:12px;padding:1rem;margin-bottom:1.25rem;border:1px solid #e2e8f0;">
+          <div class="modal-section" data-dark-bg="subtle" data-dark-border="border" style="background:linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);border-radius:12px;padding:1rem;margin-bottom:1.25rem;border:1px solid #e2e8f0;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.75rem;">
               <div style="display:flex;align-items:center;gap:0.5rem;flex:1;justify-content:flex-end;">
-                <span style="font-weight:700;font-size:0.9rem;text-align:right;">{{ finishMatchData.home_team }}</span>
+                <span data-dark-text="text" style="font-weight:700;font-size:0.9rem;text-align:right;">{{ finishMatchData.home_team }}</span>
                 <img v-if="finishMatchData.home_flag_url" :src="finishMatchData.home_flag_url" alt="" style="width:28px;height:20px;border-radius:3px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
                 <span v-else style="font-size:1.5rem;">{{ finishMatchData.home_flag }}</span>
               </div>
@@ -770,23 +770,23 @@ export default {
               <div style="display:flex;align-items:center;gap:0.5rem;flex:1;">
                 <img v-if="finishMatchData.away_flag_url" :src="finishMatchData.away_flag_url" alt="" style="width:28px;height:20px;border-radius:3px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
                 <span v-else style="font-size:1.5rem;">{{ finishMatchData.away_flag }}</span>
-                <span style="font-weight:700;font-size:0.9rem;">{{ finishMatchData.away_team }}</span>
+                <span data-dark-text="text" style="font-weight:700;font-size:0.9rem;">{{ finishMatchData.away_team }}</span>
               </div>
             </div>
             <div style="text-align:center;">
-              <div style="font-size:2.25rem;font-weight:800;color:var(--color-dark);background:white;display:inline-block;padding:0.6rem 1.75rem;border-radius:10px;border:2px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+              <div class="result-score-box" data-dark-bg="card" data-dark-border="border" style="font-size:2.25rem;font-weight:800;color:var(--color-dark);background:white;display:inline-block;padding:0.6rem 1.75rem;border-radius:10px;border:2px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
                 {{ finishMatchData.home_score ?? '?' }} - {{ finishMatchData.away_score ?? '?' }}
               </div>
             </div>
           </div>
           <div style="display:flex;gap:0.6rem;">
-            <button @click="showFinishModal = false" style="flex:1;padding:0.75rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CANCELAR</button>
+            <button @click="showFinishModal = false" class="modal-btn-cancel" data-dark-bg="card" data-dark-border="border" data-dark-text="text" style="flex:1;padding:0.75rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CANCELAR</button>
             <button @click="confirmFinish" style="flex:1;padding:0.75rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">FINALIZAR</button>
           </div>
         </div>
       </div>
 
-      <div class="card" style="background: #fffbeb; border: 1px solid #fcd34d;">
+      <div class="card admin-notice-card" style="background: #fffbeb; border: 1px solid #fcd34d;">
         <p style="font-size: 0.75rem; color: #92400e;">
           ⚠️ <strong>ADMIN:</strong> 💾 guarda el score sin cerrar el partido. 🏁 finaliza y activa el cálculo de puntos.
         </p>
@@ -794,20 +794,20 @@ export default {
 
       <!-- Manual Save Modal -->
       <div v-if="showManualModal && manualConfirmData" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;" @click.self="cancelManualSave">
-        <div style="background:white;border-radius:16px;padding:1.5rem;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div class="modal-content" data-dark-bg="card" data-dark-border="border" style="background:white;border-radius:16px;padding:1.5rem;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
           <div style="text-align:center;margin-bottom:1rem;">
             <div style="font-size:2rem;margin-bottom:0.3rem;">📋</div>
-            <h3 style="font-family:var(--font-header);font-size:1.1rem;margin:0 0 0.2rem;">CONFIRMAR PRONÓSTICOS</h3>
+            <h3 data-dark-text="text" style="font-family:var(--font-header);font-size:1.1rem;margin:0 0 0.2rem;">CONFIRMAR PRONÓSTICOS</h3>
             <p style="font-size:0.7rem;color:var(--color-gray);margin:0;">Se guardarán {{ manualConfirmData.predictions.length }} pronósticos</p>
           </div>
-          <div style="background:#f8fafc;border-radius:12px;padding:0.75rem;margin-bottom:1rem;max-height:260px;overflow-y:auto;border:1px solid #e2e8f0;">
-            <div v-for="(p, i) in manualConfirmData.predictions" :key="i" style="display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0;border-bottom:1px solid rgba(0,0,0,0.04);font-size:0.75rem;">
-              <span style="font-weight:600;">{{ p.name }}</span>
-              <span style="font-weight:800;background:white;padding:0.1rem 0.5rem;border-radius:4px;border:1px solid #e2e8f0;">{{ p.home_score }} - {{ p.away_score }}</span>
+          <div class="modal-section" data-dark-bg="subtle" data-dark-border="border" style="background:#f8fafc;border-radius:12px;padding:0.75rem;margin-bottom:1rem;max-height:260px;overflow-y:auto;border:1px solid #e2e8f0;">
+            <div v-for="(p, i) in manualConfirmData.predictions" :key="i" data-dark-border="border" style="display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0;border-bottom:1px solid rgba(0,0,0,0.04);font-size:0.75rem;">
+              <span data-dark-text="text" style="font-weight:600;">{{ p.name }}</span>
+              <span class="result-score-box" data-dark-bg="card" data-dark-border="border" style="font-weight:800;background:white;padding:0.1rem 0.5rem;border-radius:4px;border:1px solid #e2e8f0;">{{ p.home_score }} - {{ p.away_score }}</span>
             </div>
           </div>
           <div style="display:flex;gap:0.6rem;">
-            <button @click="cancelManualSave" style="flex:1;padding:0.65rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.8rem;">CANCELAR</button>
+            <button @click="cancelManualSave" class="modal-btn-cancel" data-dark-bg="card" data-dark-border="border" data-dark-text="text" style="flex:1;padding:0.65rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.8rem;">CANCELAR</button>
             <button @click="confirmManualSave" style="flex:1;padding:0.65rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:600;cursor:pointer;font-size:0.8rem;">CONFIRMAR</button>
           </div>
         </div>
@@ -815,10 +815,10 @@ export default {
 
       <!-- Edit User Modal -->
       <div v-if="showEditModal && editUserData" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;" @click.self="cancelEdit">
-        <div style="background:white;border-radius:16px;padding:1.5rem;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div class="modal-content" data-dark-bg="card" data-dark-border="border" style="background:white;border-radius:16px;padding:1.5rem;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
           <div style="text-align:center;margin-bottom:1.25rem;">
             <div style="font-size:2.5rem;margin-bottom:0.5rem;">✏️</div>
-            <h3 style="font-family:var(--font-header);font-size:1.25rem;margin:0 0 0.25rem;">EDITAR USUARIO</h3>
+            <h3 data-dark-text="text" style="font-family:var(--font-header);font-size:1.25rem;margin:0 0 0.25rem;">EDITAR USUARIO</h3>
             <p style="font-size:0.75rem;color:var(--color-gray);margin:0;">Modificá el email o el nombre del usuario.</p>
           </div>
           <div style="margin-bottom:1rem;">
@@ -832,7 +832,7 @@ export default {
             </div>
           </div>
           <div style="display:flex;gap:0.6rem;">
-            <button @click="cancelEdit" style="flex:1;padding:0.75rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CANCELAR</button>
+            <button @click="cancelEdit" class="modal-btn-cancel" data-dark-bg="card" data-dark-border="border" data-dark-text="text" style="flex:1;padding:0.75rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CANCELAR</button>
             <button @click="saveEdit" :disabled="!editUserData.email || !editUserData.email.includes('@')" style="flex:1;padding:0.75rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">GUARDAR</button>
           </div>
         </div>
@@ -840,13 +840,13 @@ export default {
 
       <!-- Award Champion Modal -->
       <div v-if="showAwardModal && awardConfirmWinner" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;" @click.self="cancelAward">
-        <div style="background:white;border-radius:16px;padding:1.5rem;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div class="modal-content" data-dark-bg="card" data-dark-border="border" style="background:white;border-radius:16px;padding:1.5rem;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
           <div style="text-align:center;margin-bottom:1.25rem;">
             <div style="font-size:2.5rem;margin-bottom:0.5rem;">👑</div>
-            <h3 style="font-family:var(--font-header);font-size:1.25rem;margin:0 0 0.25rem;">OTORGAR PUNTOS DE CAMPEÓN</h3>
+            <h3 data-dark-text="text" style="font-family:var(--font-header);font-size:1.25rem;margin:0 0 0.25rem;">OTORGAR PUNTOS DE CAMPEÓN</h3>
             <p style="font-size:0.75rem;color:var(--color-gray);margin:0;">Esta acción es irreversible. Se otorgarán +5 pts a quienes hayan elegido a este campeón.</p>
           </div>
-          <div style="background:linear-gradient(135deg, #fef3c7 0%, #f8fafc 100%);border-radius:12px;padding:1rem;margin-bottom:1.25rem;border:1px solid #fcd34d;text-align:center;">
+          <div class="award-champion-section" style="background:linear-gradient(135deg, #fef3c7 0%, #f8fafc 100%);border-radius:12px;padding:1rem;margin-bottom:1.25rem;border:1px solid #fcd34d;text-align:center;">
             <div style="font-size:0.7rem;color:#92400e;font-weight:600;text-transform:uppercase;margin-bottom:0.5rem;">CAMPEÓN MUNDIAL 2026</div>
             <div style="font-family:var(--font-header);font-size:1.75rem;color:var(--color-dark);">{{ awardConfirmWinner }}</div>
             <div style="margin-top:0.5rem;font-size:0.75rem;color:var(--color-gray);">+5 puntos para cada usuario que acertó</div>

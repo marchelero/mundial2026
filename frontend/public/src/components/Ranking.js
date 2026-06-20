@@ -137,6 +137,9 @@ export default {
       if (!window.echarts) return;
       if (this._chart) this._chart.dispose();
       this._chart = echarts.init(el);
+      const dark = document.body.classList.contains('dark-mode');
+      const axisColor = dark ? '#94a3b8' : '#64748b';
+      const splitColor = dark ? '#334155' : '#f1f5f9';
       const dates = this.compareChartData.map(p => p.label);
       const series = this.compareUsers.map((u, idx) => ({
         name: u.name,
@@ -150,11 +153,11 @@ export default {
         data: this.compareChartData.map(p => p[u.id])
       }));
       this._chart.setOption({
-        tooltip: { trigger: 'axis' },
-        legend: { data: this.compareUsers.map(u => u.name), bottom: 0, textStyle: { fontSize: 11 } },
+        tooltip: { trigger: 'axis', backgroundColor: dark ? '#1e293b' : '#ffffff', borderColor: dark ? '#334155' : '#e2e8f0', textStyle: { color: dark ? '#e2e8f0' : '#1a1a1a' } },
+        legend: { data: this.compareUsers.map(u => u.name), bottom: 0, textStyle: { fontSize: 11, color: axisColor } },
         grid: { left: 40, right: 15, top: 20, bottom: 35 },
-        xAxis: { type: 'category', data: dates, axisLabel: { fontSize: 10, fontWeight: 600, color: '#94a3b8' }, axisLine: { show: false }, axisTick: { show: false } },
-        yAxis: { type: 'value', minInterval: 1, splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { fontSize: 10, color: '#94a3b8' } },
+        xAxis: { type: 'category', data: dates, axisLabel: { fontSize: 10, fontWeight: 600, color: axisColor }, axisLine: { show: false }, axisTick: { show: false } },
+        yAxis: { type: 'value', minInterval: 1, splitLine: { lineStyle: { color: splitColor } }, axisLabel: { fontSize: 10, color: axisColor } },
         series
       });
     },
@@ -168,20 +171,24 @@ export default {
       const data = this.compareChartData;
       const users = this.compareUsers;
       const colors = this.compareColors;
+      const dark = document.body.classList.contains('dark-mode');
+      const axisColor = dark ? '#94a3b8' : '#64748b';
+      const labelColor = dark ? '#e2e8f0' : '#1a1a1a';
+      const bgFill = dark ? 'rgba(226,232,240,0.08)' : 'rgba(100,100,100,0.15)';
       
       function makeOption(yearData, yearLabel) {
         const items = yearData.map((v, i) => ({ name: users[i].name, value: v })).sort((a, b) => b.value - a.value);
         return {
           grid: { top: 10, bottom: 30, left: 100, right: 60 },
-          xAxis: { max: 'dataMax', axisLabel: { fontSize: 10, formatter: n => Math.round(n) + '' } },
-          yAxis: { type: 'category', data: items.map(d => d.name), inverse: true, axisLabel: { fontSize: 12, fontWeight: 700 }, animationDuration: 300, animationDurationUpdate: 300 },
+          xAxis: { max: 'dataMax', axisLabel: { fontSize: 10, color: axisColor, formatter: n => Math.round(n) + '' } },
+          yAxis: { type: 'category', data: items.map(d => d.name), inverse: true, axisLabel: { fontSize: 12, fontWeight: 700, color: labelColor }, animationDuration: 300, animationDurationUpdate: 300 },
           series: [{
             realtimeSort: true, type: 'bar', data: items,
             itemStyle: { color: p => colors[users.findIndex(u => u.name === p.name)] || '#5470c6' },
-            label: { show: true, position: 'right', valueAnimation: true, fontSize: 11, fontWeight: 700, formatter: p => p.value + ' pts' }
+            label: { show: true, position: 'right', valueAnimation: true, fontSize: 11, fontWeight: 700, color: labelColor, formatter: p => p.value + ' pts' }
           }],
           animationDuration: 500, animationDurationUpdate: 1000, animationEasing: 'linear', animationEasingUpdate: 'linear',
-          graphic: { elements: [{ type: 'text', right: 80, bottom: 50, style: { text: yearLabel, font: 'bolder 60px monospace', fill: 'rgba(100,100,100,0.15)' }, z: 100 }] }
+          graphic: { elements: [{ type: 'text', right: 80, bottom: 50, style: { text: yearLabel, font: 'bolder 60px monospace', fill: bgFill }, z: 100 }] }
         };
       }
       
@@ -216,6 +223,10 @@ export default {
       if (this.compareUsers.length === 0) this.showCompare = false;
       if (this.raceTimer) { clearTimeout(this.raceTimer); this.raceTimer = null; }
     },
+    _onDarkModeChange() {
+      if (this._chart) { this._chart.dispose(); this._chart = null; }
+      this.$nextTick(() => this.compareTab === 'race' ? this.renderRace() : this.renderChart());
+    },
   },
   watch: {
     compareChartData: {
@@ -230,9 +241,13 @@ export default {
       if (val === 'chart' || val === 'race') this.$nextTick(() => val === 'race' ? this.renderRace() : this.renderChart());
     }
   },
+  mounted() {
+    window.addEventListener('dark-mode-change', this._onDarkModeChange);
+  },
   unmounted() {
     if (this._chart) { this._chart.dispose(); this._chart = null; }
     if (this.raceTimer) { clearTimeout(this.raceTimer); this.raceTimer = null; }
+    window.removeEventListener('dark-mode-change', this._onDarkModeChange);
   },
   template: `
     <div class="view-container">
@@ -282,32 +297,32 @@ export default {
       <!-- 🔍 Comparación -->
       <div class="card" style="margin-bottom:0.75rem;padding:0.5rem 0.75rem;">
         <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-          <span style="font-weight:700;font-size:0.7rem;white-space:nowrap;">🔍 COMPARAR</span>
+          <span data-dark-text="text" style="font-weight:700;font-size:0.7rem;white-space:nowrap;">🔍 COMPARAR</span>
           <span v-for="(u, idx) in compareUsers" :key="u.id" :style="{background:compareColors[idx]+'22',border:'1px solid '+compareColors[idx],padding:'0.15rem 0.4rem',borderRadius:'4px',fontWeight:600,fontSize:'0.65rem',color:compareColors[idx]}">{{ u.name }} <span @click="removeCompareUser(idx)" style="cursor:pointer;margin-left:2px;font-weight:700;">✕</span></span>
-          <select v-if="compareUsers.length < 4" @change="e => { if(e.target.value) addCompareUser(e.target.value); if(e.target) e.target.value=''; }" style="flex:1;min-width:100px;padding:0.25rem;border:1px solid #d1d5db;border-radius:4px;font-size:0.7rem;">
+          <select v-if="compareUsers.length < 4" @change="e => { if(e.target.value) addCompareUser(e.target.value); if(e.target) e.target.value=''; }" data-dark-bg="card" data-dark-border="border" data-dark-text="text" style="flex:1;min-width:100px;padding:0.25rem;border:1px solid #d1d5db;border-radius:4px;font-size:0.7rem;">
             <option value="">+ Agregar</option>
             <option v-for="r in rankingsWithPrize" :key="r.id" :value="r.id" :disabled="compareUsers.find(u=>u.id===r.id)">{{ r.name }}</option>
           </select>
           <span v-if="compareUsers.length > 0" @click="showCompare=false;compareUsers=[];comparePredictions={}" style="cursor:pointer;font-size:0.8rem;color:#ef4444;font-weight:700;">✕ Limpiar</span>
         </div>
         <div v-if="compareReady" style="display:flex;gap:0.35rem;margin-top:0.5rem;">
-          <button @click="compareTab='table'" :style="{flex:1,padding:'0.25rem',border:'none',borderRadius:'4px',fontWeight:700,fontSize:'0.65rem',cursor:'pointer',background:compareTab==='table'?'var(--color-dark)':'#f1f5f9',color:compareTab==='table'?'white':'var(--color-dark)'}">📋 TABLA</button>
-          <button @click="compareTab='chart'" :style="{flex:1,padding:'0.25rem',border:'none',borderRadius:'4px',fontWeight:700,fontSize:'0.65rem',cursor:'pointer',background:compareTab==='chart'?'var(--color-dark)':'#f1f5f9',color:compareTab==='chart'?'white':'var(--color-dark)'}">📈 GRÁFICO</button>
-          <button @click="compareTab='race'" :style="{flex:1,padding:'0.25rem',border:'none',borderRadius:'4px',fontWeight:700,fontSize:'0.65rem',cursor:'pointer',background:compareTab==='race'?'var(--color-dark)':'#f1f5f9',color:compareTab==='race'?'white':'var(--color-dark)'}">🏁 BAR RACE</button>
+          <button @click="compareTab='table'" :class="compareTab==='table' ? 'compare-tab-active' : 'compare-tab'" data-dark-bg="subtle" :style="{flex:1,padding:'0.25rem',border:'none',borderRadius:'4px',fontWeight:700,fontSize:'0.65rem',cursor:'pointer',background:compareTab==='table'?'var(--color-dark)':'#f1f5f9',color:compareTab==='table'?'white':'var(--color-dark)'}">📋 TABLA</button>
+          <button @click="compareTab='chart'" :class="compareTab==='chart' ? 'compare-tab-active' : 'compare-tab'" data-dark-bg="subtle" :style="{flex:1,padding:'0.25rem',border:'none',borderRadius:'4px',fontWeight:700,fontSize:'0.65rem',cursor:'pointer',background:compareTab==='chart'?'var(--color-dark)':'#f1f5f9',color:compareTab==='chart'?'white':'var(--color-dark)'}">📈 GRÁFICO</button>
+          <button @click="compareTab='race'" :class="compareTab==='race' ? 'compare-tab-active' : 'compare-tab'" data-dark-bg="subtle" :style="{flex:1,padding:'0.25rem',border:'none',borderRadius:'4px',fontWeight:700,fontSize:'0.65rem',cursor:'pointer',background:compareTab==='race'?'var(--color-dark)':'#f1f5f9',color:compareTab==='race'?'white':'var(--color-dark)'}">🏁 BAR RACE</button>
         </div>
         <div v-if="compareTab==='table' && compareHistory.length" style="max-height:240px;overflow-y:auto;margin-top:0.35rem;">
           <table style="width:100%;border-collapse:collapse;font-size:0.6rem;">
-            <thead><tr style="border-bottom:1px solid #e2e8f0;position:sticky;top:0;background:white;">
-              <th style="padding:0.2rem;text-align:left;">Partido</th>
+            <thead><tr data-dark-bg="card" data-dark-border="border" style="border-bottom:1px solid #e2e8f0;position:sticky;top:0;background:white;">
+              <th data-dark-text="text" style="padding:0.2rem;text-align:left;">Partido</th>
               <th v-for="(u, idx) in compareUsers" :key="u.id" :style="{padding:'0.2rem',textAlign:'center',color:compareColors[idx]}">{{ u.name }}</th>
             </tr></thead>
             <tbody>
-              <tr v-for="row in compareHistory" :key="row.match.id" style="border-bottom:1px solid rgba(0,0,0,0.04);">
-                <td style="padding:0.15rem 0.2rem;white-space:nowrap;">{{ row.match.home_team }}-{{ row.match.away_team }}</td>
-                <td v-for="(u, idx) in compareUsers" :key="u.id" style="padding:0.15rem 0.2rem;text-align:center;font-weight:600;">{{ row.users[u.id] ? row.users[u.id].home+'-'+row.users[u.id].away+' ('+row.users[u.id].pts+'pts)' : '-' }}</td>
+              <tr v-for="row in compareHistory" :key="row.match.id" data-dark-border="border" style="border-bottom:1px solid rgba(0,0,0,0.04);">
+                <td data-dark-text="text" style="padding:0.15rem 0.2rem;white-space:nowrap;">{{ row.match.home_team }}-{{ row.match.away_team }}</td>
+                <td v-for="(u, idx) in compareUsers" :key="u.id" data-dark-text="text" style="padding:0.15rem 0.2rem;text-align:center;font-weight:600;">{{ row.users[u.id] ? row.users[u.id].home+'-'+row.users[u.id].away+' ('+row.users[u.id].pts+'pts)' : '-' }}</td>
               </tr>
               <tr style="font-weight:800;border-top:2px solid var(--color-dark);">
-                <td style="padding:0.15rem 0.2rem;">TOTAL</td>
+                <td data-dark-text="text" style="padding:0.15rem 0.2rem;">TOTAL</td>
                 <td v-for="(u, idx) in compareUsers" :key="u.id" :style="{padding:'0.15rem 0.2rem',textAlign:'center',color:compareColors[idx]}">{{ compareHistory.reduce((s,r) => s + (r.users[u.id]?.pts||0), 0) }} pts</td>
               </tr>
             </tbody>
@@ -321,52 +336,52 @@ export default {
         <div class="main-content-flow">
           <div class="card" style="padding: 0;">
             <table style="width: 100%; border-collapse: collapse;">
-              <thead style="background: rgba(0,0,0,0.05);">
+              <thead data-dark-bg="subtle" style="background: rgba(0,0,0,0.05);">
                 <tr>
-                  <th style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">#</th>
-                  <th style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">PARTICIPANTE</th>
-                  <th style="padding: 0.5rem; text-align: right; font-size: 0.65rem;">PREMIO</th>
-                  <th style="padding: 0.5rem; text-align: right; font-size: 0.65rem;">PTS</th>
+                  <th data-dark-text="gray" style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">#</th>
+                  <th data-dark-text="gray" style="padding: 0.5rem; text-align: left; font-size: 0.65rem;">PARTICIPANTE</th>
+                  <th data-dark-text="gray" style="padding: 0.5rem; text-align: right; font-size: 0.65rem;">PREMIO</th>
+                  <th data-dark-text="gray" style="padding: 0.5rem; text-align: right; font-size: 0.65rem;">PTS</th>
                 </tr>
               </thead>
               <tbody>
                 <template v-for="(r, i) in rankingsWithPrize" :key="r ? r.id : i">
-                <tr style="border-bottom: 1px solid rgba(0,0,0,0.05); cursor:pointer;" @click="r && toggleUser(r.id)">
-                  <td style="padding: 0.5rem; font-size: 0.8rem; color: var(--color-gray); font-weight: 700;">{{ i + 1 }}</td>
+                <tr data-dark-border="border" style="border-bottom: 1px solid rgba(0,0,0,0.05); cursor:pointer;" @click="r && toggleUser(r.id)">
+                  <td data-dark-text="gray" style="padding: 0.5rem; font-size: 0.8rem; color: var(--color-gray); font-weight: 700;">{{ i + 1 }}</td>
                   <td style="padding: 0.5rem; line-height: 1.3;">
-                    <div style="font-weight: 600; font-size: 0.85rem;">{{ r.name }} <span v-if="r.comodin_usado" style="font-size:0.75rem;">🍀</span></div>
-                    <div style="font-size: 0.55rem; color: var(--color-gray); opacity: 0.45;">{{ r.email }}</div>
+                    <div data-dark-text="text" style="font-weight: 600; font-size: 0.85rem;">{{ r.name }} <span v-if="r.comodin_usado" style="font-size:0.75rem;">🍀</span></div>
+                    <div data-dark-text="gray" style="font-size: 0.55rem; color: var(--color-gray); opacity: 0.45;">{{ r.email }}</div>
                   </td>
                   <td style="padding: 0.5rem; text-align: right; font-weight: 700; font-size: 0.7rem; white-space: nowrap;" v-if="r.prize"><span :style="{ color: r.prize.color }">{{ r.prize.label }}</span></td>
-                  <td style="padding: 0.5rem; text-align: right; font-size: 0.7rem; color: #ccc;" v-else>-</td>
-                  <td style="padding: 0.5rem; text-align: right; font-weight: bold; font-size: 1rem; white-space: nowrap;">{{ r.points }}<span v-if="r.potential_points > 0" class="pts-potential-rank">+{{ r.potential_points }}</span></td>
+                  <td data-dark-text="gray" style="padding: 0.5rem; text-align: right; font-size: 0.7rem; color: #ccc;" v-else>-</td>
+                  <td data-dark-text="text" style="padding: 0.5rem; text-align: right; font-weight: bold; font-size: 1rem; white-space: nowrap;">{{ r.points }}<span v-if="r.potential_points > 0" class="pts-potential-rank">+{{ r.potential_points }}</span></td>
                 </tr>
                 <tr v-if="r && expandedUser === r.id">
                   <td colspan="4" style="padding: 0.5rem 0.5rem 0.5rem;">
                     <template v-if="userBreakdown">
                     <div style="width:100%;text-align:right;">
-                      <div style="font-size:0.7rem;font-weight:700;color:var(--color-dark);margin-bottom:0.3rem;">Total: <span style="color:var(--color-green);">{{ userBreakdown.exactoPts + userBreakdown.resultadoPts + userBreakdown.champBonus }} pts</span>
+                      <div data-dark-text="text" style="font-size:0.7rem;font-weight:700;color:var(--color-dark);margin-bottom:0.3rem;">Total: <span style="color:var(--color-green);">{{ userBreakdown.exactoPts + userBreakdown.resultadoPts + userBreakdown.champBonus }} pts</span>
                         ({{ userBreakdown.exactoPts }}{{ userBreakdown.resultadoPts > 0 ? ' + ' + userBreakdown.resultadoPts : '' }}{{ userBreakdown.champBonus > 0 ? ' + ' + userBreakdown.champBonus + ' (🏆)' : '' }})
                       </div>
                       <div style="display:flex;gap:0.35rem;flex-wrap:wrap;font-size:0.75rem;justify-content:flex-end;">
-                        <span v-if="userBreakdown.exactos > 0" @click="toggleStat('exact')" style="cursor:pointer;background:#f0fdf4;color:#16a34a;border:1px solid #dcfce7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'exact' ? 'box-shadow:0 0 0 2px #16a34a;' : ''">{{ userBreakdown.exactos }}× Exacto ({{ userBreakdown.exactoPts }}pts)</span>
-                        <span v-if="userBreakdown.resultados > 0" @click="toggleStat('result')" style="cursor:pointer;background:#fefce8;color:#ca8a04;border:1px solid #fef3c7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'result' ? 'box-shadow:0 0 0 2px #ca8a04;' : ''">{{ userBreakdown.resultados }}× Resultado ({{ userBreakdown.resultadoPts }}pts)</span>
-                        <span v-if="userBreakdown.errors > 0" @click="toggleStat('wrong')" style="cursor:pointer;background:#fef2f2;color:#ef4444;border:1px solid #fee2e2;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'wrong' ? 'box-shadow:0 0 0 2px #ef4444;' : ''">{{ userBreakdown.errors }}× Error (0pts)</span>
-                        <span v-if="userBreakdown.comodines > 0" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🍀 {{ userBreakdown.comodines }}× Comodín</span>
-                        <span v-if="userBreakdown.champBonus > 0" style="background:#fff7ed;color:#d97706;border:1px solid #ffedd5;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🏆 Campeón (+{{ userBreakdown.champBonus }}pts)</span>
+                        <span v-if="userBreakdown.exactos > 0" @click="toggleStat('exact')" class="breakdown-pill breakdown-exact" style="cursor:pointer;background:#f0fdf4;color:#16a34a;border:1px solid #dcfce7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'exact' ? 'box-shadow:0 0 0 2px #16a34a;' : ''">{{ userBreakdown.exactos }}× Exacto ({{ userBreakdown.exactoPts }}pts)</span>
+                        <span v-if="userBreakdown.resultados > 0" @click="toggleStat('result')" class="breakdown-pill breakdown-result" style="cursor:pointer;background:#fefce8;color:#ca8a04;border:1px solid #fef3c7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'result' ? 'box-shadow:0 0 0 2px #ca8a04;' : ''">{{ userBreakdown.resultados }}× Resultado ({{ userBreakdown.resultadoPts }}pts)</span>
+                        <span v-if="userBreakdown.errors > 0" @click="toggleStat('wrong')" class="breakdown-pill breakdown-wrong" style="cursor:pointer;background:#fef2f2;color:#ef4444;border:1px solid #fee2e2;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'wrong' ? 'box-shadow:0 0 0 2px #ef4444;' : ''">{{ userBreakdown.errors }}× Error (0pts)</span>
+                        <span v-if="userBreakdown.comodines > 0" class="breakdown-pill breakdown-comodin" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🍀 {{ userBreakdown.comodines }}× Comodín</span>
+                        <span v-if="userBreakdown.champBonus > 0" class="breakdown-pill breakdown-champ" style="background:#fff7ed;color:#d97706;border:1px solid #ffedd5;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🏆 Campeón (+{{ userBreakdown.champBonus }}pts)</span>
                       </div>
                     </div>
-                    <div v-if="statFilter && getStatMatches(statFilter).length > 0" style="width:100%;display:flex;flex-wrap:wrap;gap:0.3rem;justify-content:flex-end;margin-top:0.4rem;padding-top:0.4rem;border-top:1px solid #e2e8f0;">
-                      <div v-for="({match, pred, comodin}) in getStatMatches(statFilter)" :key="match.id" :style="comodin ? 'position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);border:2px solid #f59e0b;border-radius:6px;padding:0.3rem 0.4rem 0.3rem 1.5rem;text-align:center;width:130px;box-shadow:0 0 12px rgba(245,158,11,0.5);animation:comodinPulse 1.8s ease-in-out infinite;' : 'display:flex;flex-direction:column;align-items:center;justify-content:center;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;padding:0.3rem 0.4rem;text-align:center;width:120px;'">
+                    <div v-if="statFilter && getStatMatches(statFilter).length > 0" data-dark-border="border" style="width:100%;display:flex;flex-wrap:wrap;gap:0.3rem;justify-content:flex-end;margin-top:0.4rem;padding-top:0.4rem;border-top:1px solid #e2e8f0;">
+                      <div v-for="({match, pred, comodin}) in getStatMatches(statFilter)" :key="match.id" class="breakdown-match-card" data-dark-bg="card" data-dark-border="border" :style="comodin ? 'position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);border:2px solid #f59e0b;border-radius:6px;padding:0.3rem 0.4rem 0.3rem 1.5rem;text-align:center;width:130px;box-shadow:0 0 12px rgba(245,158,11,0.5);animation:comodinPulse 1.8s ease-in-out infinite;' : 'display:flex;flex-direction:column;align-items:center;justify-content:center;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;padding:0.3rem 0.4rem;text-align:center;width:120px;'">
                         <span v-if="comodin" style="position:absolute;top:50%;left:4px;transform:translateY(-50%);font-size:0.95rem;filter:drop-shadow(0 0 4px rgba(245,158,11,0.8));animation:comodinSpin 3s linear infinite;">🍀</span>
                         <template v-if="statFilter === 'exact'">
-                          <div style="font-weight:700;font-size:0.75rem;white-space:nowrap;"><img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;"> {{ match.home_score }}-{{ match.away_score }} <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;"></div>
+                          <div data-dark-text="text" style="font-weight:700;font-size:0.75rem;white-space:nowrap;"><img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;"> {{ match.home_score }}-{{ match.away_score }} <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;"></div>
                         </template>
                         <template v-else>
                           <div style="font-weight:600;font-size:0.65rem;white-space:nowrap;color:var(--color-gray);">👤 {{ pred.home }}-{{ pred.away }}</div>
-                          <div style="font-weight:700;font-size:0.75rem;white-space:nowrap;margin-top:1px;"><img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;"> {{ match.home_score }}-{{ match.away_score }} <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;"></div>
+                          <div data-dark-text="text" style="font-weight:700;font-size:0.75rem;white-space:nowrap;margin-top:1px;"><img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;"> {{ match.home_score }}-{{ match.away_score }} <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;"></div>
                         </template>
-                        <div style="font-size:0.55rem;color:var(--color-gray);font-weight:600;margin-top:2px;">{{ match.home_team }} vs {{ match.away_team }}</div>
+                        <div data-dark-text="gray" style="font-size:0.55rem;color:var(--color-gray);font-weight:600;margin-top:2px;">{{ match.home_team }} vs {{ match.away_team }}</div>
                       </div>
                     </div>
                     </template>
@@ -377,7 +392,7 @@ export default {
           </div>
         </div>
         <div class="sticky-sidebar">
-          <div class="card" style="margin-top: 0; background: var(--color-dark); color: white; display: flex; gap: 1rem; align-items: center;">
+          <div class="card recuerda-card" style="margin-top: 0; background: var(--color-dark); color: white; display: flex; gap: 1rem; align-items: center;">
              <span style="font-size: 1.5rem;">⭐</span>
              <div style="font-size: 0.75rem; line-height: 1.4;">
                <strong>RECUERDA</strong><br>
@@ -385,7 +400,7 @@ export default {
                +1 PUNTO por acertar el Resultado (Gana, Pierde o Empate).
              </div>
           </div>
-          <div class="card" style="background: #fefce8; border: 1px solid #fde68a; color: #92400e; font-size: 0.75rem; line-height: 1.5;">
+          <div class="card premios-card" style="background: #fefce8; border: 1px solid #fde68a; color: #92400e; font-size: 0.75rem; line-height: 1.5;">
             <strong style="display:block;margin-bottom:0.35rem;">🏆 PREMIOS</strong>
             <div><span style="color:#f59e0b;font-weight:700;">●</span> 1ro — 45%</div>
             <div><span style="color:#6b7280;font-weight:700;">●</span> 2do — 25%</div>

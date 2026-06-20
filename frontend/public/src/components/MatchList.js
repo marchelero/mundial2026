@@ -343,14 +343,14 @@ export default {
 
       <!-- Champion Pick (Siempre Arriba) -->
       <div class="card" style="display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.25rem; padding: 1.25rem;">
-        <div class="stat-icon" style="width: 48px; height: 48px; background: #fffcf0; border: 1px solid #fee2e2; border-radius: 12px; font-size: 2rem; display:flex; align-items:center; justify-content:center;">🏆</div>
+        <div class="stat-icon champion-icon-bg" style="width: 48px; height: 48px; background: #fffcf0; border: 1px solid #fee2e2; border-radius: 12px; font-size: 2rem; display:flex; align-items:center; justify-content:center;">🏆</div>
         <div style="flex: 1;">
           <h3 class="stat-label" style="margin-bottom: 0.25rem; color: var(--color-dark); font-size:0.85rem; font-weight:700;">PRONÓSTICO DEL CAMPEÓN</h3>
           
           <!-- STATE 1: ALREADY PICKED -->
           <template v-if="hasChampionPick">
             <p style="font-size: 0.65rem; color: var(--color-gray); margin-bottom: 0.75rem; font-family: var(--font-main);">Tu pronóstico está registrado y asegurado.</p>
-            <div style="padding: 0.75rem; background: #f0fdf4; border: 1px solid #dcfce7; border-radius: 8px; display:flex; align-items:center; gap:0.75rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+            <div class="champion-picked-card" style="padding: 0.75rem; background: #f0fdf4; border: 1px solid #dcfce7; border-radius: 8px; display:flex; align-items:center; gap:0.75rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
               <img v-if="championPickFlagUrl" :src="championPickFlagUrl" alt="" style="width:28px; height:20px; border-radius:3px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
               <div style="flex: 1;">
                 <div style="font-size: 0.55rem; color: #15803d; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">MI CAMPEÓN</div>
@@ -364,7 +364,7 @@ export default {
           <template v-else-if="championPickOpen">
             <p style="font-size: 0.65rem; color: var(--color-gray); margin-bottom: 0.75rem; font-family: var(--font-main);">Selecciona el equipo que crees que ganará la copa.</p>
             <div style="display: flex; gap: 0.5rem; align-items: center; max-width: 480px;">
-              <select v-model="championSelected" style="flex: 1; padding: 0.65rem; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: var(--font-main); font-size: 0.9rem; background: #f8fafc; color: var(--color-dark); cursor: pointer;">
+              <select v-model="championSelected" class="save-champion-select" style="flex: 1; padding: 0.65rem; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: var(--font-main); font-size: 0.9rem; background: #f8fafc; color: var(--color-dark); cursor: pointer;">
                  <option value="">Seleccionar...</option>
                  <option v-for="c in countries" :key="c.name" :value="c.name">{{ c.name }}</option>
               </select>
@@ -375,7 +375,7 @@ export default {
           <!-- STATE 3: COMING SOON -->
           <template v-else-if="!championDeadlinePassed">
             <p style="font-size: 0.65rem; color: var(--color-gray); margin-bottom: 0.75rem; font-family: var(--font-main);">La selección del campeón se habilitará pronto según las reglas del admin.</p>
-            <div style="padding: 0.75rem; background: #f1f5f9; border-radius: 8px; text-align: center; color: #64748b; font-size: 0.85rem; font-family: var(--font-header); letter-spacing: 0.05em; opacity: 0.7; max-width: 300px;">
+            <div class="champion-soon-card" style="padding: 0.75rem; background: #f1f5f9; border-radius: 8px; text-align: center; color: #64748b; font-size: 0.85rem; font-family: var(--font-header); letter-spacing: 0.05em; opacity: 0.7; max-width: 300px;">
               ⏳ PRÓXIMAMENTE
             </div>
           </template>
@@ -383,7 +383,7 @@ export default {
           <!-- STATE 4: CLOSED BY RULES -->
           <template v-else>
             <p style="font-size: 0.65rem; color: #ef4444; margin-bottom: 0.75rem; font-family: var(--font-main); font-weight: 500;">La fecha límite para el pronóstico del campeón ya pasó.</p>
-            <div style="padding: 0.75rem; background: #fef2f2; border: 1px solid #fee2e2; border-radius: 8px; text-align: center; color: #991b1b; font-size: 0.85rem; font-family: var(--font-header); letter-spacing: 0.05em; max-width: 400px;">
+            <div class="champion-missed-card" style="padding: 0.75rem; background: #fef2f2; border: 1px solid #fee2e2; border-radius: 8px; text-align: center; color: #991b1b; font-size: 0.85rem; font-family: var(--font-header); letter-spacing: 0.05em; max-width: 400px;">
               🚫 TE PERDISTE EL PRONÓSTICO DEL CAMPEÓN
             </div>
           </template>
@@ -419,7 +419,7 @@ export default {
 
       <!-- Group Standings (Siempre Arriba) -->
       <div ref="groupsContainer" class="card" style="padding: 0; margin-bottom: 1.25rem;">
-        <div @click="showGroupsPanel = !showGroupsPanel; if(showGroupsPanel && groups.length && !expandedGroup) expandedGroup = groups[0].group" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding:0.75rem 1rem;border-radius:8px;background:#f1f5f9;transition:background 0.2s;" @mouseover="$event.currentTarget.style.background='#e2e8f0'" @mouseout="$event.currentTarget.style.background='#f1f5f9'">
+        <div @click="showGroupsPanel = !showGroupsPanel; if(showGroupsPanel && groups.length && !expandedGroup) expandedGroup = groups[0].group" data-dark-bg="subtle" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding:0.75rem 1rem;border-radius:8px;background:#f1f5f9;transition:background 0.2s;" @mouseover="$event.currentTarget.style.background='#e2e8f0'" @mouseout="$event.currentTarget.style.background='#f1f5f9'">
           <div style="display:flex;align-items:center;gap:0.5rem;">
             <span style="font-size:1.1rem;">#</span>
             <span style="font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.02em;">TABLA DE GRUPOS</span>
@@ -433,14 +433,14 @@ export default {
           <template v-else>
             <!-- Carousel de grupos -->
             <div style="display:flex;gap:0.4rem;overflow-x:auto;padding-bottom:0.5rem;margin-bottom:0.75rem;scrollbar-width:thin;-webkit-overflow-scrolling:touch;">
-              <button v-for="g in groups" :key="g.group" @click="expandedGroup = g.group"
+              <button v-for="g in groups" :key="g.group" @click="expandedGroup = g.group" class="group-button"
                 :style="{flex:'0 0 auto', padding:'0.35rem 0.7rem', border:'1.5px solid', borderRadius:'8px', cursor:'pointer', fontWeight: expandedGroup === g.group ? 800 : 600, fontSize:'0.75rem', background: expandedGroup === g.group ? 'var(--color-dark)' : 'white', color: expandedGroup === g.group ? 'white' : 'var(--color-dark)', borderColor: expandedGroup === g.group ? 'var(--color-dark)' : '#d1d5db', transition:'all 0.15s'}">
                 GRUPO {{ g.group }}
               </button>
             </div>
             <!-- Tabla del grupo seleccionado -->
-            <div v-if="expandedGroup && selectedGroup" style="border:1px solid rgba(0,0,0,0.06);border-radius:8px;overflow:hidden;">
-              <div style="padding:0.4rem 0.6rem;background:var(--color-dark);color:white;font-size:0.75rem;font-weight:700;">GRUPO {{ selectedGroup.group }}</div>
+            <div v-if="expandedGroup && selectedGroup" data-dark-border="border" style="border:1px solid rgba(0,0,0,0.06);border-radius:8px;overflow:hidden;">
+              <div class="group-table-header-cell" style="padding:0.4rem 0.6rem;background:var(--color-dark);color:white;font-size:0.75rem;font-weight:700;">GRUPO {{ selectedGroup.group }}</div>
               <div style="padding:0.4rem;overflow-x:auto;">
                   <table style="width:100%;border-collapse:collapse;font-size:0.65rem;">
                     <thead>
@@ -457,7 +457,7 @@ export default {
                       </tr>
                     </thead>
                     <tbody>
-                      <tr v-for="(t, i) in selectedGroup.teams" :key="t.name" :style="{background: i < 2 ? 'rgba(22,163,74,0.04)' : '', fontWeight: i < 2 ? 700 : 400, borderBottom: '1px solid rgba(0,0,0,0.03)'}">
+                      <tr v-for="(t, i) in selectedGroup.teams" :key="t.name" :style="{background: i < 2 ? 'rgba(22,163,74,0.04)' : '', fontWeight: i < 2 ? 700 : 400, borderBottom: '1px solid rgba(0,0,0,0.03)'}" :class="i < 2 ? 'group-row-qualified' : ''">
                         <td style="padding:0.3rem 0.3rem;text-align:left;">{{ i + 1 }}</td>
                         <td style="padding:0.3rem 0.3rem;text-align:left;white-space:nowrap;">
                           <img v-if="teamFlag(t.name)" :src="teamFlag(t.name)" alt="" style="width:20px;height:14px;border-radius:2px;vertical-align:middle;margin-right:0.25rem;">
@@ -480,7 +480,7 @@ export default {
       </div>
 
       <!-- Resumen personal -->
-      <div v-if="user" style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; padding: 0.75rem 1rem; margin-bottom: 0.75rem; border-radius: 10px; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);">
+      <div v-if="user" class="user-summary-bar" style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; padding: 0.75rem 1rem; margin-bottom: 0.75rem; border-radius: 10px; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);">
         <span style="font-size: 0.7rem; font-weight: 600; opacity: 0.9;">👋 {{ (user.name || user.email?.split('@')[0] || '').split(' ')[0] }}</span>
         <span style="flex: 1;"></span>
         <span v-if="pendingTodayCount > 0" style="background: #f59e0b; padding: 0.25rem 0.55rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.4);">📝 {{ pendingTodayCount }} pendiente{{ pendingTodayCount > 1 ? 's' : '' }}</span>
@@ -492,15 +492,15 @@ export default {
       <div class="tabs-container">
         <button class="tab-btn" :class="{active: activeTab === 'HOY'}" @click="activeTab = 'HOY'">
           <div>HOY</div>
-          <div style="font-size: 0.55rem; opacity: 0.7; margin-top: 2px;">{{ compactDate(todayStr) }}</div>
+          <div class="tab-date" style="font-size: 0.55rem; opacity: 0.7; margin-top: 2px;">{{ compactDate(todayStr) }}</div>
         </button>
         <button class="tab-btn" :class="{active: activeTab === 'MAÑANA'}" @click="activeTab = 'MAÑANA'">
           <div>MAÑANA</div>
-          <div style="font-size: 0.55rem; opacity: 0.7; margin-top: 2px;">{{ compactDate(tomorrowStr) }}</div>
+          <div class="tab-date" style="font-size: 0.55rem; opacity: 0.7; margin-top: 2px;">{{ compactDate(tomorrowStr) }}</div>
         </button>
         <button class="tab-btn" :class="{active: activeTab === 'PASADO'}" @click="activeTab = 'PASADO'">
           <div>PASADO MAÑANA</div>
-          <div style="font-size: 0.55rem; opacity: 0.7; margin-top: 2px;">{{ compactDate(dayAfterTomorrowStr) }}</div>
+          <div class="tab-date" style="font-size: 0.55rem; opacity: 0.7; margin-top: 2px;">{{ compactDate(dayAfterTomorrowStr) }}</div>
         </button>
       </div>
 
@@ -515,7 +515,7 @@ export default {
             <span style="background:var(--color-accent);color:var(--color-dark);padding:0.15rem 0.5rem;border-radius:4px;font-family:var(--font-main);font-size:0.7rem;font-weight:800;letter-spacing:0.03em;">{{ groupPoints(group) }} PTS</span>
           </span>
           <span v-else-if="group.matches.some(m => m.status === 'finished')" style="display:flex;align-items:center;gap:0.35rem;">
-            <span style="background:#e2e8f0;color:#64748b;padding:0.15rem 0.5rem;border-radius:4px;font-family:var(--font-main);font-size:0.7rem;font-weight:700;">0 PTS</span>
+            <span data-dark-bg="card" data-dark-text="gray" style="background:#e2e8f0;color:#64748b;padding:0.15rem 0.5rem;border-radius:4px;font-family:var(--font-main);font-size:0.7rem;font-weight:700;">0 PTS</span>
           </span>
         </div>
         
@@ -523,8 +523,8 @@ export default {
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
             <div style="display:flex;align-items:center;gap:0.35rem;">
               <span class="match-time-badge">🕒 {{ match.time }}</span>
-              <span v-if="match.status === 'finished'" style="font-size:0.55rem;font-weight:700;color:var(--color-dark);background:#e2e8f0;padding:0.1rem 0.3rem;border-radius:4px;">FINALIZADO</span>
-              <span v-else-if="isMatchPast(match)" style="font-size:0.55rem;font-weight:700;color:#dc2626;background:#fef2f2;padding:0.1rem 0.3rem;border-radius:4px;animation:pulse 1.5s infinite;">🔴 JUGANDO</span>
+              <span v-if="match.status === 'finished'" class="badge-finished" style="font-size:0.55rem;font-weight:700;color:var(--color-dark);background:#e2e8f0;padding:0.1rem 0.3rem;border-radius:4px;">FINALIZADO</span>
+              <span v-else-if="isMatchPast(match)" class="badge-jugando" style="font-size:0.55rem;font-weight:700;color:#dc2626;background:#fef2f2;padding:0.1rem 0.3rem;border-radius:4px;animation:pulse 1.5s infinite;">🔴 JUGANDO</span>
             </div>
             <span v-if="predictions[match.id]?.comodin && !predictions[match.id]?.id" style="display:flex;align-items:center;gap:0.25rem;font-size:0.7rem;font-weight:700;color:#d97706;background:#fef3c7;padding:0.1rem 0.4rem;border-radius:4px;">
               ⭐ COMODÍN
@@ -543,9 +543,9 @@ export default {
 
             <div class="score-box">
               <template v-if="predictions[match.id]?.id || !canPredict(match)">
-                <span class="input-score" style="line-height: 35px; background: #f1f5f9; cursor: default;">{{ predictions[match.id]?.home ?? '-' }}</span>
+                <span class="input-score" style="line-height: 35px; background: #f1f5f9; cursor: default;" data-dark-bg="subtle">{{ predictions[match.id]?.home ?? '-' }}</span>
                 <span>-</span>
-                <span class="input-score" style="line-height: 35px; background: #f1f5f9; cursor: default;">{{ predictions[match.id]?.away ?? '-' }}</span>
+                <span class="input-score" style="line-height: 35px; background: #f1f5f9; cursor: default;" data-dark-bg="subtle">{{ predictions[match.id]?.away ?? '-' }}</span>
               </template>
               <template v-else>
                 <input type="text" class="input-score"
@@ -577,10 +577,10 @@ export default {
             <span @click="$emit('toggle-comodin', match.id)" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem;font-size:0.7rem;font-weight:700;color:#92400e;background:#fef3c7;padding:0.2rem 0.6rem;border-radius:6px;border:1px solid #fcd34d;transition:all 0.2s;" @mouseover="$event.target.style.background='#fde68a'" @mouseout="$event.target.style.background='#fef3c7'">🍀 Usar Comodín</span>
           </div>
 
-          <div v-if="match.status === 'finished'" style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.02);border-radius:6px;padding-left:0.5rem;padding-right:0.5rem;">
+          <div v-if="match.status === 'finished'" class="result-row" data-dark-bg="subtle" style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.02);border-radius:6px;padding-left:0.5rem;padding-right:0.5rem;">
             <div style="display:flex;align-items:center;gap:0.5rem;flex:1;justify-content:center;">
               <span style="font-size:0.6rem;font-weight:700;color:var(--color-gray);letter-spacing:0.08em;">RESULTADO</span>
-              <span style="font-size:1.4rem;font-weight:900;color:var(--color-dark);background:white;padding:0.1rem 0.7rem;border-radius:6px;border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,0.06);">{{ match.home_score }} - {{ match.away_score }}</span>
+              <span class="result-score-box" data-dark-bg="card" data-dark-border="border" style="font-size:1.4rem;font-weight:900;color:var(--color-dark);background:white;padding:0.1rem 0.7rem;border-radius:6px;border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,0.06);">{{ match.home_score }} - {{ match.away_score }}</span>
             </div>
             <span v-if="predictions[match.id]?.id" class="pts-badge" :class="ptsClass(match)" style="font-size:0.85rem;">{{ getPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }}</span>
             <span v-else class="pts-badge wrong">0 PTS</span>
@@ -589,29 +589,29 @@ export default {
             <span v-if="potentialPoints(match) !== null" class="pts-badge pts-potential" style="font-size:0.85rem;animation:pulse 1.5s infinite;">{{ potentialPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }} ⏳</span>
             <span v-else-if="predictions[match.id]?.id" style="font-size:0.7rem;color:var(--color-gray);font-style:italic;">Esperando resultado...</span>
           </div>
-          <button @click="toggleMatchStats(match.id)" style="width:100%;margin-top:0.4rem;padding:0.25rem;border:none;border-radius:4px;background:rgba(0,0,0,0.03);color:var(--color-gray);font-size:0.6rem;cursor:pointer;font-weight:600;transition:background 0.2s;" @mouseover="$event.target.style.background='rgba(0,0,0,0.07)'" @mouseout="$event.target.style.background='rgba(0,0,0,0.03)'">
+          <button @click="toggleMatchStats(match.id)" class="btn-ver-pronosticos" data-dark-bg="subtle" style="width:100%;margin-top:0.4rem;padding:0.25rem;border:none;border-radius:4px;background:rgba(0,0,0,0.03);color:var(--color-gray);font-size:0.6rem;cursor:pointer;font-weight:600;transition:background 0.2s;" @mouseover="$event.target.style.background='rgba(0,0,0,0.07)'" @mouseout="$event.target.style.background='rgba(0,0,0,0.03)'">
             👥 {{ expandedMatch === match.id ? 'OCULTAR' : 'VER PRONÓSTICOS' }}
           </button>
-          <div v-if="expandedMatch === match.id && matchStats" style="margin-top:0.4rem;padding:0.5rem;background:#f8fafc;border-radius:6px;font-size:0.7rem;border:1px solid rgba(0,0,0,0.06);">
+          <div v-if="expandedMatch === match.id && matchStats" class="match-stats-panel" data-dark-bg="subtle" data-dark-border="border" style="margin-top:0.4rem;padding:0.5rem;background:#f8fafc;border-radius:6px;font-size:0.7rem;border:1px solid rgba(0,0,0,0.06);">
             <div style="display:flex;gap:0.75rem;margin-bottom:0.5rem;text-align:center;">
-              <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;">{{ matchStats.total }}</div><div style="color:var(--color-gray);font-size:0.6rem;">VOTOS</div></div>
+              <div style="flex:1;"><div data-dark-text="text" style="font-weight:700;font-size:0.85rem;">{{ matchStats.total }}</div><div style="color:var(--color-gray);font-size:0.6rem;">VOTOS</div></div>
               <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#16a34a;">{{ matchStats.homeWins }}</div><div style="color:var(--color-gray);font-size:0.6rem;"><img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> GANA</div></div>
               <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#d4af37;">{{ matchStats.draws }}</div><div style="color:var(--color-gray);font-size:0.6rem;">EMPATE</div></div>
               <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#2563eb;">{{ matchStats.awayWins }}</div><div style="color:var(--color-gray);font-size:0.6rem;"><img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> GANA</div></div>
             </div>
-            <div v-if="matchStats.topScores.length > 0" style="border-top:1px solid rgba(0,0,0,0.06);padding-top:0.5rem;">
+            <div v-if="matchStats.topScores.length > 0" data-dark-border="border" style="border-top:1px solid rgba(0,0,0,0.06);padding-top:0.5rem;">
               <div style="font-size:0.6rem;font-weight:700;color:var(--color-gray);text-align:center;margin-bottom:0.35rem;">PRONÓSTICOS MÁS VOTADOS</div>
               <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:0.3rem;">
-                <div v-for="([score, count], i) in matchStats.topScores" :key="i" style="display:flex;flex-direction:column;align-items:stretch;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;cursor:pointer;transition:all 0.15s;max-width:130px;overflow:hidden;" :style="expandedTopScore === score ? 'border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,0.2);' : ''" @click="toggleTopScore(score)">
+                <div v-for="([score, count], i) in matchStats.topScores" :key="i" class="top-score-card" data-dark-bg="card" data-dark-border="border" style="display:flex;flex-direction:column;align-items:stretch;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;cursor:pointer;transition:all 0.15s;max-width:130px;overflow:hidden;" :style="expandedTopScore === score ? 'border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,0.2);' : ''" @click="toggleTopScore(score)">
                   <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0.4rem 0.3rem;">
-                    <div style="font-weight:700;font-size:0.8rem;white-space:nowrap;">
+                    <div data-dark-text="text" style="font-weight:700;font-size:0.8rem;white-space:nowrap;">
                       <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:16px;height:11px;border-radius:2px;vertical-align:middle;">
                       {{ score }}
                       <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:16px;height:11px;border-radius:2px;vertical-align:middle;">
                     </div>
                     <div style="font-size:0.6rem;color:var(--color-gray);font-weight:600;">{{ count }} voto{{ count !== 1 ? 's' : '' }}</div>
                   </div>
-                  <div v-if="expandedTopScore === score" style="background:#f1f5f9;border-top:1px solid rgba(0,0,0,0.07);padding:0.3rem 0.4rem;font-size:0.6rem;color:var(--color-dark);max-height:140px;overflow-y:auto;">
+                  <div v-if="expandedTopScore === score" data-dark-bg="subtle" data-dark-border="border" style="background:#f1f5f9;border-top:1px solid rgba(0,0,0,0.07);padding:0.3rem 0.4rem;font-size:0.6rem;color:var(--color-dark);max-height:140px;overflow-y:auto;">
                     <div v-for="p in getUsersForScore(score)" :key="p.id" style="padding:0.15rem 0;border-bottom:1px solid rgba(0,0,0,0.04);">{{ p.expand?.user?.name || p.expand?.user?.email || 'Anónimo' }}</div>
                   </div>
                 </div>
@@ -631,10 +631,10 @@ export default {
 
       <!-- Champion Confirm Modal -->
       <div v-if="showChampionModal && championConfirmData" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;" @click.self="cancelChampionPick">
-        <div style="background:white;border-radius:16px;padding:1.5rem;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div class="modal-content" data-dark-bg="card" data-dark-border="border" style="background:white;border-radius:16px;padding:1.5rem;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
           <div style="text-align:center;margin-bottom:1.25rem;">
             <div style="font-size:2.5rem;margin-bottom:0.5rem;">🏆</div>
-            <h3 style="font-family:var(--font-header);font-size:1.25rem;margin:0 0 0.25rem;">CONFIRMAR CAMPEÓN</h3>
+            <h3 data-dark-text="text" style="font-family:var(--font-header);font-size:1.25rem;margin:0 0 0.25rem;">CONFIRMAR CAMPEÓN</h3>
             <p style="font-size:0.75rem;color:var(--color-gray);margin:0;">Solo podrás hacer esto UNA VEZ. No podrás cambiarlo después.</p>
           </div>
           <div style="background:linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%);border-radius:12px;padding:1rem;margin-bottom:1.25rem;border:1px solid #bbf7d0;text-align:center;">
@@ -647,7 +647,7 @@ export default {
             <div style="margin-top:0.5rem;font-size:0.75rem;color:#15803d;font-weight:600;">Será el campeón del Mundial 2026 🏆</div>
           </div>
           <div style="display:flex;gap:0.6rem;">
-            <button @click="cancelChampionPick" style="flex:1;padding:0.75rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CANCELAR</button>
+            <button @click="cancelChampionPick" class="modal-btn-cancel" data-dark-bg="card" data-dark-border="border" data-dark-text="text" style="flex:1;padding:0.75rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CANCELAR</button>
             <button @click="confirmChampionPick" style="flex:1;padding:0.75rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CONFIRMAR</button>
           </div>
         </div>
@@ -655,26 +655,26 @@ export default {
 
       <!-- Confirm Modal -->
       <div v-if="showConfirmModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;" @click.self="closeModal">
-        <div style="background:white;border-radius:16px;padding:1.5rem;max-width:460px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div class="modal-content" data-dark-bg="card" data-dark-border="border" style="background:white;border-radius:16px;padding:1.5rem;max-width:460px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
           <div style="text-align:center;margin-bottom:1.25rem;">
             <div style="font-size:2.5rem;margin-bottom:0.5rem;">📋</div>
-            <h3 style="font-family:var(--font-header);font-size:1.25rem;margin:0 0 0.25rem;">CONFIRMAR ENVÍO</h3>
+            <h3 data-dark-text="text" style="font-family:var(--font-header);font-size:1.25rem;margin:0 0 0.25rem;">CONFIRMAR ENVÍO</h3>
             <p style="font-size:0.75rem;color:var(--color-gray);margin:0;">Una vez enviados no podrás modificarlos.</p>
           </div>
-          <div style="background:#f8fafc;border-radius:12px;padding:0.85rem;margin-bottom:1.25rem;max-height:240px;overflow-y:auto;border:1px solid #e2e8f0;">
-            <div v-for="m in pendingMatches" :key="m.id" style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:0.6rem;padding:0.6rem 0;border-bottom:1px solid rgba(0,0,0,0.05);">
+          <div class="modal-section" data-dark-bg="subtle" data-dark-border="border" style="background:#f8fafc;border-radius:12px;padding:0.85rem;margin-bottom:1.25rem;max-height:240px;overflow-y:auto;border:1px solid #e2e8f0;">
+            <div v-for="m in pendingMatches" :key="m.id" data-dark-border="border" style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:0.6rem;padding:0.6rem 0;border-bottom:1px solid rgba(0,0,0,0.05);">
               <div style="display:flex;align-items:center;justify-content:flex-end;gap:0.5rem;min-width:0;">
-                <span style="font-weight:700;font-size:0.82rem;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ m.home_team }}</span>
+                <span data-dark-text="text" style="font-weight:700;font-size:0.82rem;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ m.home_team }}</span>
                 <img v-if="m.home_flag_url" :src="m.home_flag_url" alt="" style="width:26px;height:18px;border-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,0.1);flex-shrink:0;">
                 <span v-else style="font-size:1.3rem;flex-shrink:0;">{{ m.home_flag }}</span>
               </div>
-              <div style="font-size:1.4rem;font-weight:800;color:var(--color-dark);background:white;padding:0.5rem 1rem;border-radius:10px;border:2px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,0.08);text-align:center;white-space:nowrap;">
+              <div class="result-score-box" data-dark-bg="card" data-dark-border="border" style="font-size:1.4rem;font-weight:800;color:var(--color-dark);background:white;padding:0.5rem 1rem;border-radius:10px;border:2px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,0.08);text-align:center;white-space:nowrap;">
                 {{ predictions[m.id]?.home }} - {{ predictions[m.id]?.away }}
               </div>
               <div style="display:flex;align-items:center;justify-content:flex-start;gap:0.5rem;min-width:0;">
                 <img v-if="m.away_flag_url" :src="m.away_flag_url" alt="" style="width:26px;height:18px;border-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,0.1);flex-shrink:0;">
                 <span v-else style="font-size:1.3rem;flex-shrink:0;">{{ m.away_flag }}</span>
-                <span style="font-weight:700;font-size:0.82rem;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ m.away_team }}</span>
+                <span data-dark-text="text" style="font-weight:700;font-size:0.82rem;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ m.away_team }}</span>
               </div>
               <div v-if="predictions[m.id]?.comodin" style="grid-column:1/-1;text-align:center;font-size:0.7rem;font-weight:700;color:#d97706;background:#fef3c7;padding:0.15rem 0.4rem;border-radius:4px;">
                 ⭐ COMODÍN ACTIVO
@@ -685,7 +685,7 @@ export default {
             ⚠️ El comodín solo se podrá utilizar <strong>una vez</strong> en todo el torneo.
           </div>
           <div style="display:flex;gap:0.6rem;">
-            <button @click="closeModal" style="flex:1;padding:0.75rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CANCELAR</button>
+            <button @click="closeModal" class="modal-btn-cancel" data-dark-bg="card" data-dark-border="border" data-dark-text="text" style="flex:1;padding:0.75rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CANCELAR</button>
             <button @click="$emit('submit'); closeModal()" style="flex:1;padding:0.75rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">ACEPTAR</button>
           </div>
           </div>

@@ -240,7 +240,7 @@ export default {
 
       <!-- Estadísticas (Siempre Arriba) -->
       <div ref="statsContainer" class="card" style="margin-bottom: 1rem; padding: 0;">
-        <div @click="statsExpanded = !statsExpanded" style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;user-select:none;padding:0.75rem 1rem;border-radius:8px;background:#f1f5f9;transition:background 0.2s;" @mouseover="$event.currentTarget.style.background='#e2e8f0'" @mouseout="$event.currentTarget.style.background='#f1f5f9'">
+        <div @click="statsExpanded = !statsExpanded" data-dark-bg="subtle" style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;user-select:none;padding:0.75rem 1rem;border-radius:8px;background:#f1f5f9;transition:background 0.2s;" @mouseover="$event.currentTarget.style.background='#e2e8f0'" @mouseout="$event.currentTarget.style.background='#f1f5f9'">
           <span style="font-size:1rem;">📊</span>
           <span style="font-weight:700;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.03em;flex:1;">ESTADÍSTICAS</span>
           <span style="font-size:0.7rem;color:#64748b;font-weight:700;transition:transform 0.2s;" :style="{ transform: statsExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }">▼</span>
@@ -292,7 +292,7 @@ export default {
                       <span class="stat-card-pct none">{{ totalAvailable > 0 ? Math.round(noPredCount / totalAvailable * 100) : 0 }}%</span>
                     </div>
                   </div>
-                  <div v-if="championName" style="grid-column: 1 / -1; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:0.5rem 0.7rem; display:flex; align-items:center; justify-content:space-between;">
+                  <div v-if="championName" class="champion-picked-card" style="grid-column: 1 / -1; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:0.5rem 0.7rem; display:flex; align-items:center; justify-content:space-between;">
                     <div style="display:flex;align-items:center;gap:0.4rem;">
                       <span style="font-size:1rem;">🏆</span>
                       <span style="font-size:0.7rem;font-weight:600;color:#166534;">Campeón: <span style="font-weight:800;color:var(--color-green);">{{ championName }}</span></span>
@@ -309,26 +309,26 @@ export default {
       <div class="card" style="margin-bottom: 0.75rem; padding: 0.65rem 1rem;">
         <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
           <span style="font-size:0.75rem;font-weight:700;">📅</span>
-          <button @click="toggleDatePicker" style="flex:1;min-width:140px;padding:0.4rem 0.5rem;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font-main);font-size:0.8rem;background:#f8fafc;cursor:pointer;text-align:left;color:var(--color-dark);">
+          <button @click="toggleDatePicker" class="date-filter-btn" style="flex:1;min-width:140px;padding:0.4rem 0.5rem;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font-main);font-size:0.8rem;background:#f8fafc;cursor:pointer;text-align:left;color:var(--color-dark);">
             {{ selectedDate ? formatDate(selectedDate) : 'Todas las fechas' }}
           </button>
-          <button v-if="selectedDate" @click="selectedDate = ''" style="padding:0.4rem 0.6rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.7rem;white-space:nowrap;">✕</button>
+          <button v-if="selectedDate" @click="selectedDate = ''" class="date-filter-clear" style="padding:0.4rem 0.6rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.7rem;white-space:nowrap;">✕</button>
         </div>
 
         <!-- Calendario -->
-        <div v-if="showDatePicker" style="margin-top:0.65rem;border:1px solid #e2e8f0;border-radius:10px;padding:0.65rem;background:white;user-select:none;">
+        <div v-if="showDatePicker" class="calendar-container" data-dark-bg="card" data-dark-border="border" style="margin-top:0.65rem;border:1px solid #e2e8f0;border-radius:10px;padding:0.65rem;background:white;user-select:none;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
-            <button @click="prevMonth" style="background:none;border:none;font-size:1.1rem;cursor:pointer;padding:0.15rem 0.35rem;color:var(--color-dark);font-weight:700;">‹</button>
-            <span style="font-weight:800;font-size:0.85rem;">{{ months[calendarMonth] }} {{ calendarYear }}</span>
-            <button @click="nextMonth" style="background:none;border:none;font-size:1.1rem;cursor:pointer;padding:0.15rem 0.35rem;color:var(--color-dark);font-weight:700;">›</button>
+            <button @click="prevMonth" class="calendar-nav-btn" style="background:none;border:none;font-size:1.1rem;cursor:pointer;padding:0.15rem 0.35rem;color:var(--color-dark);font-weight:700;">‹</button>
+            <span data-dark-text="text" style="font-weight:800;font-size:0.85rem;">{{ months[calendarMonth] }} {{ calendarYear }}</span>
+            <button @click="nextMonth" class="calendar-nav-btn" style="background:none;border:none;font-size:1.1rem;cursor:pointer;padding:0.15rem 0.35rem;color:var(--color-dark);font-weight:700;">›</button>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:0.55rem;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:0.25rem;">
+          <div class="calendar-day-names" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:0.55rem;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:0.25rem;">
             <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span>
           </div>
           <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;">
             <template v-for="(day, i) in calendarDays" :key="i">
               <div v-if="!day" style="padding:0.3rem 0;"></div>
-              <div v-else @click="day.available ? pickDate(day.dateStr) : null" :style="{
+              <div v-else @click="day.available ? pickDate(day.dateStr) : null" :class="day.dateStr === selectedDate ? 'calendar-day-selected' : (day.available ? 'calendar-day-available' : 'calendar-day-disabled')" :style="{
                 padding:'0.3rem 0',
                 fontSize:'0.75rem',
                 fontWeight: day.available ? 700 : 400,
@@ -351,7 +351,7 @@ export default {
           <div class="date-header">
             <span>{{ formatDate(group.date) }}</span>
             <span v-if="groupPoints(group) > 0" style="background:var(--color-accent);color:var(--color-dark);padding:0.15rem 0.5rem;border-radius:4px;font-family:var(--font-main);font-size:0.7rem;font-weight:800;letter-spacing:0.03em;">{{ groupPoints(group) }} PTS</span>
-            <span v-else-if="group.matches.some(m => m.status === 'finished')" style="background:#e2e8f0;color:#64748b;padding:0.15rem 0.5rem;border-radius:4px;font-family:var(--font-main);font-size:0.7rem;font-weight:700;">0 PTS</span>
+            <span v-else-if="group.matches.some(m => m.status === 'finished')" data-dark-bg="card" data-dark-text="gray" style="background:#e2e8f0;color:#64748b;padding:0.15rem 0.5rem;border-radius:4px;font-family:var(--font-main);font-size:0.7rem;font-weight:700;">0 PTS</span>
           </div>
           <div v-for="match in group.matches" :key="match.id" class="card" style="margin-bottom: 0.5rem;">
             <div class="match-row" style="border: none;">
@@ -362,9 +362,9 @@ export default {
                </div>
 
                <div class="score-box">
-                  <span class="input-score" style="line-height: 35px; background: #f1f5f9; cursor: default;">{{ predictions[match.id]?.home ?? '-' }}</span>
+                  <span class="input-score" style="line-height: 35px; background: #f1f5f9; cursor: default;" data-dark-bg="subtle">{{ predictions[match.id]?.home ?? '-' }}</span>
                   <span>-</span>
-                  <span class="input-score" style="line-height: 35px; background: #f1f5f9; cursor: default;">{{ predictions[match.id]?.away ?? '-' }}</span>
+                  <span class="input-score" style="line-height: 35px; background: #f1f5f9; cursor: default;" data-dark-bg="subtle">{{ predictions[match.id]?.away ?? '-' }}</span>
                </div>
 
                <div class="team-info away">
@@ -373,37 +373,37 @@ export default {
                   <span class="team-name">{{ match.away_team }}</span>
                </div>
             </div>
-            <div v-if="match.status === 'finished'" style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.02);border-radius:6px;padding-left:0.5rem;padding-right:0.5rem;">
+            <div v-if="match.status === 'finished'" class="result-row" data-dark-bg="subtle" style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.02);border-radius:6px;padding-left:0.5rem;padding-right:0.5rem;">
               <div style="display:flex;align-items:center;gap:0.5rem;flex:1;justify-content:center;">
                 <span style="font-size:0.6rem;font-weight:700;color:var(--color-gray);letter-spacing:0.08em;">RESULTADO</span>
-                <span style="font-size:1.4rem;font-weight:900;color:var(--color-dark);background:white;padding:0.1rem 0.7rem;border-radius:6px;border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,0.06);">{{ match.home_score }} - {{ match.away_score }}</span>
+                <span class="result-score-box" data-dark-bg="card" data-dark-border="border" style="font-size:1.4rem;font-weight:900;color:var(--color-dark);background:white;padding:0.1rem 0.7rem;border-radius:6px;border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,0.06);">{{ match.home_score }} - {{ match.away_score }}</span>
               </div>
               <span v-if="predictions[match.id]?.id" class="pts-badge" :class="ptsClass(match)" style="font-size:0.85rem;">{{ getPoints(match) }} PTS {{ predictions[match.id]?.comodin ? '🍀' : '' }}</span>
               <span v-else class="pts-badge wrong">0 PTS</span>
             </div>
-            <button @click="toggleMatchStats(match.id)" style="width:100%;margin-top:0.4rem;padding:0.25rem;border:none;border-radius:4px;background:rgba(0,0,0,0.03);color:var(--color-gray);font-size:0.6rem;cursor:pointer;font-weight:600;transition:background 0.2s;" @mouseover="$event.target.style.background='rgba(0,0,0,0.07)'" @mouseout="$event.target.style.background='rgba(0,0,0,0.03)'">
+            <button @click="toggleMatchStats(match.id)" class="btn-ver-pronosticos" data-dark-bg="subtle" style="width:100%;margin-top:0.4rem;padding:0.25rem;border:none;border-radius:4px;background:rgba(0,0,0,0.03);color:var(--color-gray);font-size:0.6rem;cursor:pointer;font-weight:600;transition:background 0.2s;" @mouseover="$event.target.style.background='rgba(0,0,0,0.07)'" @mouseout="$event.target.style.background='rgba(0,0,0,0.03)'">
               👥 {{ expandedMatch === match.id ? 'OCULTAR' : 'VER PRONÓSTICOS' }}
             </button>
-            <div v-if="expandedMatch === match.id" style="margin-top:0.4rem;padding:0.5rem;background:#f8fafc;border-radius:6px;font-size:0.7rem;border:1px solid rgba(0,0,0,0.06);">
+            <div v-if="expandedMatch === match.id" class="match-stats-panel" data-dark-bg="subtle" data-dark-border="border" style="margin-top:0.4rem;padding:0.5rem;background:#f8fafc;border-radius:6px;font-size:0.7rem;border:1px solid rgba(0,0,0,0.06);">
               <div style="display:flex;gap:0.75rem;margin-bottom:0.5rem;text-align:center;">
-                <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;">{{ matchStats?.total ?? 0 }}</div><div style="color:var(--color-gray);font-size:0.6rem;">VOTOS</div></div>
+                <div style="flex:1;"><div data-dark-text="text" style="font-weight:700;font-size:0.85rem;">{{ matchStats?.total ?? 0 }}</div><div style="color:var(--color-gray);font-size:0.6rem;">VOTOS</div></div>
                 <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#16a34a;">{{ matchStats?.homeWins ?? 0 }}</div><div style="color:var(--color-gray);font-size:0.6rem;"><img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> GANA</div></div>
                 <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#d4af37;">{{ matchStats?.draws ?? 0 }}</div><div style="color:var(--color-gray);font-size:0.6rem;">EMPATE</div></div>
                 <div style="flex:1;"><div style="font-weight:700;font-size:0.85rem;color:#2563eb;">{{ matchStats?.awayWins ?? 0 }}</div><div style="color:var(--color-gray);font-size:0.6rem;"><img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:1px;vertical-align:middle;"> GANA</div></div>
               </div>
-              <div v-if="matchStats?.topScores?.length" style="border-top:1px solid rgba(0,0,0,0.06);padding-top:0.5rem;">
+              <div v-if="matchStats?.topScores?.length" data-dark-border="border" style="border-top:1px solid rgba(0,0,0,0.06);padding-top:0.5rem;">
                 <div style="font-size:0.6rem;font-weight:700;color:var(--color-gray);text-align:center;margin-bottom:0.35rem;">PRONÓSTICOS MÁS VOTADOS</div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:0.3rem;">
-                  <div v-for="([s, c]) in matchStats.topScores" :key="s" style="display:flex;flex-direction:column;align-items:stretch;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;cursor:pointer;transition:all 0.15s;max-width:130px;overflow:hidden;" :style="expandedTopScore === s ? 'border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,0.2);' : ''" @click="toggleTopScore(s)">
+                  <div v-for="([s, c]) in matchStats.topScores" :key="s" class="top-score-card" data-dark-bg="card" data-dark-border="border" style="display:flex;flex-direction:column;align-items:stretch;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;cursor:pointer;transition:all 0.15s;max-width:130px;overflow:hidden;" :style="expandedTopScore === s ? 'border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,0.2);' : ''" @click="toggleTopScore(s)">
                     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0.4rem 0.3rem;">
-                      <div style="font-weight:700;font-size:0.8rem;white-space:nowrap;">
+                      <div data-dark-text="text" style="font-weight:700;font-size:0.8rem;white-space:nowrap;">
                         <img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:16px;height:11px;border-radius:2px;vertical-align:middle;">
                         {{ s }}
                         <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:16px;height:11px;border-radius:2px;vertical-align:middle;">
                       </div>
                       <div style="font-size:0.6rem;color:var(--color-gray);font-weight:600;">{{ c }} voto{{ c !== 1 ? 's' : '' }}</div>
                     </div>
-                    <div v-if="expandedTopScore === s" style="background:#f1f5f9;border-top:1px solid rgba(0,0,0,0.07);padding:0.3rem 0.4rem;font-size:0.6rem;color:var(--color-dark);max-height:140px;overflow-y:auto;">
+                    <div v-if="expandedTopScore === s" data-dark-bg="subtle" data-dark-border="border" style="background:#f1f5f9;border-top:1px solid rgba(0,0,0,0.07);padding:0.3rem 0.4rem;font-size:0.6rem;color:var(--color-dark);max-height:140px;overflow-y:auto;">
                       <div v-for="p in getUsersForScore(s)" :key="p.id" style="padding:0.15rem 0;border-bottom:1px solid rgba(0,0,0,0.04);">{{ p.expand?.user?.name || p.expand?.user?.email || 'Anónimo' }}</div>
                     </div>
                   </div>
