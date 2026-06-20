@@ -52,8 +52,7 @@ router.get('/rankings', authRequired, (req, res) => {
   try {
     const predictions = db.prepare(`
       SELECT p.*, u.id as u_id, u.email as u_email, u.name as u_name
-      FROM predictions p JOIN users u ON p.user_id = u.id JOIN matches m ON p.match_id = m.id
-      WHERE m.status = 'finished'
+      FROM predictions p JOIN users u ON p.user_id = u.id
     `).all();
     res.json(predictions.map(p => ({ ...formatPrediction(p), expand: { user: { id: p.u_id, email: p.u_email, name: p.u_name } } })));
   } catch (e) {
@@ -101,6 +100,13 @@ router.post('/', authRequired, (req, res) => {
     }
     const existing = db.prepare('SELECT * FROM predictions WHERE user_id = ? AND match_id = ?').get(req.user.id, matchId);
     if (existing) return res.status(409).json({ error: 'Ya tienes pronóstico' });
+    if (comodin) {
+      const used = countComodinesUsed(req.user.id);
+      const max = getComodinMax();
+      if (used >= max) {
+        return res.status(400).json({ error: `Ya usaste todos tus comodines (${used}/${max})` });
+      }
+    }
     const id = generateId();
     db.prepare('INSERT INTO predictions (id, user_id, match_id, home_score, away_score, comodin) VALUES (?, ?, ?, ?, ?, ?)')
       .run(id, req.user.id, matchId, home_score, away_score, comodin ? 1 : 0);
@@ -118,6 +124,18 @@ router.post('/', authRequired, (req, res) => {
     res.status(500).json({ error: 'Error al crear pronóstico' });
   }
 });
+
+function getComodinMax() {
+  try {
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'comodin_max_per_user'").get();
+    const n = parseInt(row?.value, 10);
+    return Number.isFinite(n) && n >= 1 ? n : 1;
+  } catch (_) { return 1; }
+}
+
+function countComodinesUsed(userId) {
+  return db.prepare('SELECT COUNT(*) as c FROM predictions WHERE user_id = ? AND comodin = 1').get(userId).c;
+}
 
 function formatPrediction(p) {
   return { id: p.id, user: p.user_id, match: p.match_id, home_score: p.home_score, away_score: p.away_score, comodin: !!p.comodin, points: p.points ?? null };
@@ -188,6 +206,7 @@ router.post('/batch', authRequired, (req, res) => {
     `);
 
     const runBatch = db.transaction(() => {
+      let comodinesAvailable = getComodinMax() - countComodinesUsed(req.user.id);
       for (const item of items) {
         const { match: matchId, home_score, away_score, comodin } = item;
         if (!matchId || home_score == null || away_score == null) {
@@ -205,9 +224,17 @@ router.post('/batch', authRequired, (req, res) => {
         }
         const existing = db.prepare('SELECT * FROM predictions WHERE user_id = ? AND match_id = ?').get(req.user.id, matchId);
         if (existing) { errors.push({ match: matchId, error: 'Ya tienes un pronóstico para este partido' }); continue; }
+        let useComodin = 0;
+        if (comodin) {
+          if (comodinesAvailable <= 0) {
+            errors.push({ match: matchId, error: 'Ya usaste todos tus comodines' }); continue;
+          }
+          useComodin = 1;
+          comodinesAvailable--;
+        }
         const id = generateId();
-        insertOne.run(id, req.user.id, matchId, home_score, away_score, comodin ? 1 : 0);
-        results.push({ id, match: matchId, home_score, away_score, comodin: !!comodin });
+        insertOne.run(id, req.user.id, matchId, home_score, away_score, useComodin);
+        results.push({ id, match: matchId, home_score, away_score, comodin: !!useComodin });
       }
     });
 

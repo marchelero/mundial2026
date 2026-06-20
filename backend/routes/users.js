@@ -106,7 +106,9 @@ router.get('/rankings', authRequired, (req, res) => {
     // Base rankings: all users with their total_points
     const users = db.prepare(`
       SELECT id, email, name, COALESCE(total_points, 0) as points,
-        (SELECT 1 FROM predictions WHERE user_id = u.id AND comodin = 1 LIMIT 1) as comodin_usado
+        (SELECT COUNT(*) FROM predictions WHERE user_id = u.id AND comodin = 1) as comodines_usados,
+        (SELECT COUNT(*) FROM predictions p JOIN matches m ON m.id = p.match_id
+         WHERE p.user_id = u.id AND p.comodin = 1 AND m.status != 'finished') as comodines_pendientes
       FROM users u
       ORDER BY points DESC, email ASC
     `).all();
@@ -142,7 +144,9 @@ router.get('/rankings', authRequired, (req, res) => {
       name: u.name,
       points: u.points,
       potential_points: potMap[u.id] || 0,
-      comodin_usado: !!u.comodin_usado
+      comodin_usado: (u.comodines_usados || 0) > 0,
+      comodines_usados: u.comodines_usados || 0,
+      comodines_pendientes: u.comodines_pendientes || 0
     })).sort((a, b) => {
       const diff = (b.points + b.potential_points) - (a.points + a.potential_points);
       return diff !== 0 ? diff : a.email.localeCompare(b.email);

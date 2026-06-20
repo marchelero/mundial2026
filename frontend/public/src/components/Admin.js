@@ -53,6 +53,9 @@ export default {
       reminderMinutesInput: 15,
       reminderSaving: false,
       reminderSaved: false,
+      comodinMaxInput: 1,
+      comodinMaxSaving: false,
+      comodinMaxSaved: false,
       recalcLoading: false,
       recalcResult: null,
       streamSources: [],
@@ -63,6 +66,10 @@ export default {
   watch: {
     adminTab(tab) {
       if (tab === 'config') this.loadStreamEdit();
+    },
+    'settings.comodin_max_per_user'(v) {
+      const n = parseInt(v, 10);
+      if (Number.isFinite(n) && n >= 1 && n <= 5) this.comodinMaxInput = n;
     }
   },
   async created() {
@@ -208,6 +215,26 @@ export default {
         alert(e.message || 'Error al guardar');
       } finally {
         this.reminderSaving = false;
+      }
+    },
+    async saveComodinMax() {
+      const v = parseInt(this.comodinMaxInput, 10);
+      if (!Number.isFinite(v) || v < 1 || v > 5) {
+        alert('Ingresá un valor entre 1 y 5 comodines');
+        return;
+      }
+      this.comodinMaxSaving = true;
+      this.comodinMaxSaved = false;
+      try {
+        await api.post('/settings', { key: 'comodin_max_per_user', value: String(v) });
+        this.comodinMaxInput = v;
+        this.comodinMaxSaved = true;
+        setTimeout(() => { this.comodinMaxSaved = false; }, 2500);
+        try { this.settings = await api.get('/settings'); } catch (_) {}
+      } catch (e) {
+        alert(e.message || 'Error al guardar');
+      } finally {
+        this.comodinMaxSaving = false;
       }
     },
     async recalcTotals() {
@@ -696,6 +723,29 @@ export default {
               <div v-if="reminderSaved" style="color:#16a34a;font-size:0.65rem;margin-top:0.4rem;font-weight:600;">✅ Configuración guardada</div>
               <div style="font-size:0.6rem;color:var(--color-gray);margin-top:0.4rem;font-family:var(--font-main);">
                 Valor actual: <strong>{{ settings.match_reminder_minutes || 15 }} minutos</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <span style="font-size: 1.5rem; line-height: 1;">🍀</span>
+            <div style="flex: 1;">
+              <h3 style="font-family:var(--font-header);font-size:0.95rem;letter-spacing:0.04em;margin:0;">COMODINES POR USUARIO</h3>
+              <p style="font-size: 0.65rem; color: var(--color-gray); margin-top: 0.15rem; font-family:var(--font-main);">
+                Cuántos comodines puede usar cada participante en todo el torneo (1-5). Default: 1.
+              </p>
+              <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.65rem;flex-wrap:wrap;">
+                <label class="reminder-label" style="font-size:0.7rem;font-weight:600;color:var(--color-dark);">Máximo por usuario</label>
+                <input type="number" min="1" max="5" v-model.number="comodinMaxInput" class="reminder-input" style="width:70px;padding:0.4rem 0.5rem;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font-main);font-size:0.8rem;background:#f8fafc;text-align:center;">
+                <label class="reminder-label" style="font-size:0.7rem;font-weight:600;color:var(--color-dark);">comodines</label>
+                <button @click="saveComodinMax" :disabled="comodinMaxSaving" class="btn btn-primary" style="padding:0.4rem 0.8rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:700;cursor:pointer;font-size:0.7rem;">
+                  {{ comodinMaxSaving ? 'GUARDANDO...' : 'GUARDAR' }}
+                </button>
+              </div>
+              <div v-if="comodinMaxSaved" style="color:#16a34a;font-size:0.65rem;margin-top:0.4rem;font-weight:600;">✅ Configuración guardada</div>
+              <div style="font-size:0.6rem;color:var(--color-gray);margin-top:0.4rem;font-family:var(--font-main);">
+                Valor actual: <strong>{{ settings.comodin_max_per_user || 1 }} comodin(es)</strong>
               </div>
             </div>
           </div>

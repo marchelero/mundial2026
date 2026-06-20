@@ -2,7 +2,7 @@ import { roundLabel, formatDate, flagUrl, todayStr as todayStrLocal, addDaysStr 
 import { api } from '../services/api.js';
 
 export default {
-  props: ['matchGroups', 'predictions', 'user', 'saving', 'comodinUsado', 'countries', 'settings', 'championPick', 'userStreak', 'userRank', 'userRankDelta', 'pendingTodayCount'],
+  props: ['matchGroups', 'predictions', 'user', 'saving', 'comodinUsado', 'comodinMax', 'countries', 'settings', 'championPick', 'userStreak', 'userRank', 'userRankDelta', 'pendingTodayCount'],
   emits: ['set-score', 'toggle-comodin', 'submit', 'save-champion-pick', 'saved', 'save-error'],
   data() {
     return {
@@ -526,12 +526,26 @@ export default {
               <span v-if="match.status === 'finished'" class="badge-finished" style="font-size:0.55rem;font-weight:700;color:var(--color-dark);background:#e2e8f0;padding:0.1rem 0.3rem;border-radius:4px;">FINALIZADO</span>
               <span v-else-if="isMatchPast(match)" class="badge-jugando" style="font-size:0.55rem;font-weight:700;color:#dc2626;background:#fef2f2;padding:0.1rem 0.3rem;border-radius:4px;animation:pulse 1.5s infinite;">🔴 JUGANDO</span>
             </div>
-            <span v-if="predictions[match.id]?.comodin && !predictions[match.id]?.id" style="display:flex;align-items:center;gap:0.25rem;font-size:0.7rem;font-weight:700;color:#d97706;background:#fef3c7;padding:0.1rem 0.4rem;border-radius:4px;">
-              ⭐ COMODÍN
-              <span @click="$emit('toggle-comodin', match.id)" style="cursor:pointer;font-size:0.8rem;color:#92400e;margin-left:2px;" title="Quitar comodín">✕</span>
-            </span>
-            <span v-else-if="predictions[match.id]?.comodin" style="font-size:0.7rem;font-weight:700;color:#166534;background:#dcfce7;padding:0.1rem 0.4rem;border-radius:4px;">⭐ COMODÍN</span>
             <span class="round-badge" :class="'round-' + (match.round || 'group')">{{ roundLabel(match.round) }}</span>
+          </div>
+
+          <!-- Comodín control (above scores, always visible when relevant) -->
+          <div v-if="canPredict(match) || predictions[match.id]?.id" style="display:flex;justify-content:center;margin-bottom:0.6rem;">
+            <div v-if="!predictions[match.id]?.comodin && canPredict(match) && !predictions[match.id]?.id && comodinUsado < comodinMax"
+                 class="comodin-toggle comodin-inactive"
+                 @click="$emit('toggle-comodin', match.id)">
+              <span class="comodin-icon">🍀</span>
+              <span>USAR COMODÍN</span>
+              <span v-if="comodinMax > 1" class="comodin-counter">({{ comodinUsado }}/{{ comodinMax }})</span>
+            </div>
+            <div v-if="predictions[match.id]?.comodin" class="comodin-toggle comodin-active">
+              <span class="comodin-icon">🍀</span>
+              <span>COMODÍN ACTIVO</span>
+              <span v-if="canPredict(match) && !predictions[match.id]?.id"
+                    @click="$emit('toggle-comodin', match.id)"
+                    class="comodin-remove"
+                    title="Quitar comodín">✕</span>
+            </div>
           </div>
 
           <div class="match-row" style="border: none;">
@@ -571,10 +585,6 @@ export default {
               <span v-else class="team-flag">{{ match.away_flag }}</span>
               <span class="team-name">{{ match.away_team }}</span>
             </div>
-          </div>
-
-          <div v-if="!predictions[match.id]?.id && canPredict(match) && !predictions[match.id]?.comodin && !comodinUsado" style="margin-top:0.5rem;text-align:center;">
-            <span @click="$emit('toggle-comodin', match.id)" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem;font-size:0.7rem;font-weight:700;color:#92400e;background:#fef3c7;padding:0.2rem 0.6rem;border-radius:6px;border:1px solid #fcd34d;transition:all 0.2s;" @mouseover="$event.target.style.background='#fde68a'" @mouseout="$event.target.style.background='#fef3c7'">🍀 Usar Comodín</span>
           </div>
 
           <div v-if="match.status === 'finished'" class="result-row" data-dark-bg="subtle" style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.02);border-radius:6px;padding-left:0.5rem;padding-right:0.5rem;">
@@ -682,7 +692,7 @@ export default {
             </div>
           </div>
           <div v-if="pendingMatches.some(m => predictions[m.id]?.comodin)" style="text-align:center;font-size:0.75rem;color:#92400e;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:0.5rem;margin-bottom:0.75rem;">
-            ⚠️ El comodín solo se podrá utilizar <strong>una vez</strong> en todo el torneo.
+            ⚠️ El comodín solo se podrá utilizar <strong>{{ comodinMax === 1 ? 'una vez' : comodinMax + ' veces' }}</strong> en todo el torneo.
           </div>
           <div style="display:flex;gap:0.6rem;">
             <button @click="closeModal" class="modal-btn-cancel" data-dark-bg="card" data-dark-border="border" data-dark-text="text" style="flex:1;padding:0.75rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CANCELAR</button>

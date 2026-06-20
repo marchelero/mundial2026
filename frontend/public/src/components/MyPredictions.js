@@ -2,7 +2,7 @@ import { roundLabel, formatDate } from '../utils/helpers.js';
 import { api } from '../services/api.js';
 
 export default {
-  props: ['matchGroups', 'predictions', 'allMatches', 'championPick', 'userStreak', 'maxStreak'],
+  props: ['matchGroups', 'predictions', 'allMatches', 'championPick', 'userStreak', 'maxStreak', 'comodinMax'],
   data() { return { statsExpanded: true, statsObserver: null, expandedMatch: null, matchStats: null, expandedTopScore: null, selectedDate: '', showDatePicker: false, calendarYear: 0, calendarMonth: 0, months: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'] }; },
   mounted() {
     this.$nextTick(() => {
@@ -112,6 +112,9 @@ export default {
     },
     noPredCount() {
       return Math.max(0, this.totalAvailable - this.totalPredicted);
+    },
+    comodinesUsados() {
+      return this.allMatches.filter(m => this.predictions[m.id]?.comodin).length;
     },
     finishedPreds() {
       return this.allMatches
@@ -290,6 +293,12 @@ export default {
                     <div class="stat-card-footer">
                       <span class="stat-card-label">Sin pred.</span>
                       <span class="stat-card-pct none">{{ totalAvailable > 0 ? Math.round(noPredCount / totalAvailable * 100) : 0 }}%</span>
+                    </div>
+                  </div>
+                  <div class="stat-card comodin" style="--accent:#f59e0b;">
+                    <div class="stat-card-value">🍀 {{ comodinesUsados }}/{{ comodinMax || 1 }}</div>
+                    <div class="stat-card-footer">
+                      <span class="stat-card-label">Comodines</span>
                     </div>
                   </div>
                   <div v-if="championName" class="champion-picked-card" style="grid-column: 1 / -1; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:0.5rem 0.7rem; display:flex; align-items:center; justify-content:space-between;">

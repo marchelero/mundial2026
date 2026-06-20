@@ -87,12 +87,17 @@ export default {
         const records = await api.get('/predictions/rankings');
         const userPreds = records.filter(r => r.user === userId);
         this.userPreds = userPreds;
-        let exactos = 0, resultados = 0, errors = 0, comodines = 0, exactoPts = 0, resultadoPts = 0;
-        const matches = this.allMatches.filter(m => m.status === 'finished');
+        let exactos = 0, resultados = 0, errors = 0, comodines = 0, pendientes = 0, exactoPts = 0, resultadoPts = 0;
+        const finishedMatches = this.allMatches.filter(m => m.status === 'finished');
+        const allMatchMap = new Map(this.allMatches.map(m => [m.id, m]));
         userPreds.forEach(p => {
-          const match = matches.find(m => m.id === p.match);
+          const match = finishedMatches.find(m => m.id === p.match);
           if (p.comodin) comodines++;
-          if (!match || match.home_score == null) return;
+          if (!match || match.home_score == null) {
+            const m = allMatchMap.get(p.match);
+            if (m) pendientes++;
+            return;
+          }
           const ph = Number(p.home_score), pa = Number(p.away_score);
           const mh = Number(match.home_score), ma = Number(match.away_score);
           if (ph === mh && pa === ma) { exactos++; exactoPts += p.comodin ? 6 : 3; }
@@ -105,14 +110,26 @@ export default {
         const champPicks = await api.get('/champion-picks/all').catch(() => []);
         const champPick = champPicks.find(cp => cp.user === userId);
         const champBonus = champPick ? 5 : 0;
-        this.userBreakdown = { exactos, resultados, errors, comodines, champBonus, exactoPts, resultadoPts };
+        this.userBreakdown = { exactos, resultados, errors, comodines, pendientes, champBonus, exactoPts, resultadoPts };
         this.statFilter = null;
         this.expandedUser = userId;
       } catch (_) { this.userBreakdown = null; this.statFilter = null; this.expandedUser = userId; }
     },
     getStatMatches(type) {
       if (!this.userPreds.length) return [];
-      const matches = this.allMatches.filter(m => m.status === 'finished');
+      const finishedMatches = this.allMatches.filter(m => m.status === 'finished');
+      const allMatchMap = new Map(this.allMatches.map(m => [m.id, m]));
+      if (type === 'pendientes') {
+        return this.userPreds
+          .map(p => allMatchMap.get(p.match))
+          .filter(m => m && m.status !== 'finished')
+          .map(m => {
+            const p = this.userPreds.find(pp => pp.match === m.id);
+            return p ? { match: m, pred: { home: p.home_score, away: p.away_score }, comodin: !!p.comodin } : null;
+          })
+          .filter(Boolean);
+      }
+      const matches = finishedMatches;
       return this.userPreds.filter(p => {
         const match = matches.find(m => m.id === p.match);
         if (!match || match.home_score == null) return false;
@@ -349,7 +366,10 @@ export default {
                 <tr data-dark-border="border" style="border-bottom: 1px solid rgba(0,0,0,0.05); cursor:pointer;" @click="r && toggleUser(r.id)">
                   <td data-dark-text="gray" style="padding: 0.5rem; font-size: 0.8rem; color: var(--color-gray); font-weight: 700;">{{ i + 1 }}</td>
                   <td style="padding: 0.5rem; line-height: 1.3;">
-                    <div data-dark-text="text" style="font-weight: 600; font-size: 0.85rem;">{{ r.name }} <span v-if="r.comodin_usado" style="font-size:0.75rem;">🍀</span></div>
+                    <div data-dark-text="text" style="font-weight: 600; font-size: 0.85rem; display:flex; align-items:center; gap:0.25rem; flex-wrap:wrap;">
+                      <span>{{ r.name }}</span>
+                      <span v-for="i in (r.comodines_usados || 0)" :key="'c'+i" style="font-size:0.75rem;" title="Comodín usado">🍀</span>
+                    </div>
                     <div data-dark-text="gray" style="font-size: 0.55rem; color: var(--color-gray); opacity: 0.45;">{{ r.email }}</div>
                   </td>
                   <td style="padding: 0.5rem; text-align: right; font-weight: 700; font-size: 0.7rem; white-space: nowrap;" v-if="r.prize"><span :style="{ color: r.prize.color }">{{ r.prize.label }}</span></td>
@@ -367,7 +387,7 @@ export default {
                         <span v-if="userBreakdown.exactos > 0" @click="toggleStat('exact')" class="breakdown-pill breakdown-exact" style="cursor:pointer;background:#f0fdf4;color:#16a34a;border:1px solid #dcfce7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'exact' ? 'box-shadow:0 0 0 2px #16a34a;' : ''">{{ userBreakdown.exactos }}× Exacto ({{ userBreakdown.exactoPts }}pts)</span>
                         <span v-if="userBreakdown.resultados > 0" @click="toggleStat('result')" class="breakdown-pill breakdown-result" style="cursor:pointer;background:#fefce8;color:#ca8a04;border:1px solid #fef3c7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'result' ? 'box-shadow:0 0 0 2px #ca8a04;' : ''">{{ userBreakdown.resultados }}× Resultado ({{ userBreakdown.resultadoPts }}pts)</span>
                         <span v-if="userBreakdown.errors > 0" @click="toggleStat('wrong')" class="breakdown-pill breakdown-wrong" style="cursor:pointer;background:#fef2f2;color:#ef4444;border:1px solid #fee2e2;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'wrong' ? 'box-shadow:0 0 0 2px #ef4444;' : ''">{{ userBreakdown.errors }}× Error (0pts)</span>
-                        <span v-if="userBreakdown.comodines > 0" class="breakdown-pill breakdown-comodin" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🍀 {{ userBreakdown.comodines }}× Comodín</span>
+                        <span v-if="userBreakdown.pendientes > 0" @click="toggleStat('pendientes')" class="breakdown-pill breakdown-pendiente" style="cursor:pointer;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'pendientes' ? 'box-shadow:0 0 0 2px #475569;' : ''">⏳ {{ userBreakdown.pendientes }} Pendiente<span v-if="userBreakdown.pendientes > 1">s</span></span>
                         <span v-if="userBreakdown.champBonus > 0" class="breakdown-pill breakdown-champ" style="background:#fff7ed;color:#d97706;border:1px solid #ffedd5;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🏆 Campeón (+{{ userBreakdown.champBonus }}pts)</span>
                       </div>
                     </div>
@@ -376,6 +396,10 @@ export default {
                         <span v-if="comodin" style="position:absolute;top:50%;left:4px;transform:translateY(-50%);font-size:0.95rem;filter:drop-shadow(0 0 4px rgba(245,158,11,0.8));animation:comodinSpin 3s linear infinite;">🍀</span>
                         <template v-if="statFilter === 'exact'">
                           <div data-dark-text="text" style="font-weight:700;font-size:0.75rem;white-space:nowrap;"><img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;"> {{ match.home_score }}-{{ match.away_score }} <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;"></div>
+                        </template>
+                        <template v-else-if="statFilter === 'pendientes'">
+                          <div data-dark-text="text" style="font-weight:800;font-size:0.85rem;white-space:nowrap;">{{ pred.home }}-{{ pred.away }}</div>
+                          <div data-dark-text="gray" style="font-size:0.55rem;font-weight:600;margin-top:1px;">⏳ {{ match.date }} {{ match.time }}</div>
                         </template>
                         <template v-else>
                           <div style="font-weight:600;font-size:0.65rem;white-space:nowrap;color:var(--color-gray);">👤 {{ pred.home }}-{{ pred.away }}</div>

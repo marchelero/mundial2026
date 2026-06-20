@@ -889,6 +889,142 @@ img.team-flag {
   border-color: var(--color-green);
 }
 
+/* Comodín toggle (above match scores) */
+.comodin-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.2s;
+  user-select: none;
+  position: relative;
+  max-width: 100%;
+}
+
+.comodin-inactive {
+  background: #f8fafc;
+  color: #92400e;
+  border: 1.5px dashed #fcd34d;
+  cursor: pointer;
+}
+
+.comodin-inactive:hover {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  border-style: solid;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+}
+
+.comodin-active {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #422006;
+  border: 2px solid #f59e0b;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+  animation: comodinPulse 1.8s ease-in-out infinite;
+}
+
+.comodin-icon {
+  font-size: 1.05em;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.comodin-active .comodin-icon {
+  animation: comodinSpinIcon 3s linear infinite;
+  transform-origin: center center;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.8));
+}
+
+.comodin-counter {
+  opacity: 0.75;
+  font-size: 0.65rem;
+  font-weight: 700;
+  margin-left: 0.15rem;
+}
+
+.comodin-remove {
+  cursor: pointer;
+  font-size: 0.85rem;
+  opacity: 0.65;
+  margin-left: 0.4rem;
+  transition: opacity 0.2s, transform 0.2s;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(146, 64, 14, 0.15);
+}
+
+.comodin-remove:hover {
+  opacity: 1;
+  background: rgba(146, 64, 14, 0.3);
+  transform: scale(1.1);
+}
+
+body.dark-mode .comodin-inactive {
+  background: #1e293b;
+  color: #fde047;
+  border-color: #451a03;
+}
+
+body.dark-mode .comodin-inactive:hover {
+  background: #422006;
+  border-color: #fde047;
+}
+
+body.dark-mode .comodin-active {
+  background: linear-gradient(135deg, #422006 0%, #78350f 100%);
+  color: #fde047;
+  border-color: #fde047;
+  box-shadow: 0 0 16px rgba(253, 224, 71, 0.3);
+}
+
+body.dark-mode .comodin-remove {
+  background: rgba(253, 224, 71, 0.15);
+  color: #fde047;
+}
+
+body.dark-mode .comodin-remove:hover {
+  background: rgba(253, 224, 71, 0.3);
+}
+
+/* Comodín pendiente badge (in ranking) */
+.comodin-pendiente-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 10px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #422006;
+  border: 1px solid #f59e0b;
+  white-space: nowrap;
+  line-height: 1.2;
+  animation: comodinPulse 2.4s ease-in-out infinite;
+}
+
+body.dark-mode .comodin-pendiente-badge {
+  background: linear-gradient(135deg, #422006 0%, #78350f 100%);
+  color: #fde047;
+  border-color: #fde047;
+}
+
 /* Admin table-like match rows */
 .admin-match-row {
   display: flex;
@@ -1522,6 +1658,7 @@ img.admin-team-flag {
 .stat-card.result::before { background: #ca8a04; }
 .stat-card.wrong::before { background: #ef4444; }
 .stat-card.none::before { background: #94a3b8; }
+.stat-card.comodin::before { background: #f59e0b; }
 
 .stat-card-value {
   font-family: var(--font-header);
@@ -1613,6 +1750,11 @@ img.admin-team-flag {
   100% { transform: translateY(-50%) rotate(360deg); }
 }
 
+@keyframes comodinSpinIcon {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 body.dark-mode {
   background: var(--color-bg);
 }
@@ -1644,6 +1786,7 @@ body.dark-mode .breakdown-result { color: #fde047 !important; border-color: #854
 body.dark-mode .breakdown-wrong { color: #fca5a5 !important; border-color: #991b1b !important; }
 body.dark-mode .breakdown-comodin { color: #86efac !important; border-color: #166534 !important; }
 body.dark-mode .breakdown-champ { color: #fdba74 !important; border-color: #9a3412 !important; }
+body.dark-mode .breakdown-pendiente { background: #334155 !important; color: #cbd5e1 !important; border-color: #475569 !important; }
 body.dark-mode .breakdown-match-card { background: #1e293b !important; border-color: #334155 !important; }
 body.dark-mode .breakdown-match-card[data-dark-bg="card"][style*="linear-gradient"] { background: linear-gradient(135deg, #422006 0%, #78350f 100%) !important; border-color: #fde047 !important; }
 body.dark-mode .toast { background: #1e293b; color: var(--color-text); border-color: var(--color-border); }

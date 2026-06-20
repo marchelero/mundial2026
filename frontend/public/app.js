@@ -48,6 +48,7 @@ createApp({
             :user="user"
             :saving="saving"
             :comodin-usado="comodinUsado"
+            :comodin-max="comodinMax"
             :countries="countries"
             :settings="settings"
             :champion-pick="championPick"
@@ -68,7 +69,8 @@ createApp({
             :all-matches="allMatches"
             :champion-pick="championPick"
             :user-streak="userStreak"
-            :max-streak="maxStreak" />
+            :max-streak="maxStreak"
+            :comodin-max="comodinMax" />
         </template>
         <template v-else-if="view === 'posiciones'">
           <Ranking
@@ -102,6 +104,7 @@ createApp({
       countries: typeof PAISES_MUNDIAL2026 !== 'undefined' ? PAISES_MUNDIAL2026 : [],
       notification: { message: '', type: 'success', visible: false },
       notificationTimer: null,
+      comodinMax: 1,
     };
   },
   computed: {
@@ -129,7 +132,13 @@ createApp({
       return groups.sort((a, b) => b.date.localeCompare(a.date));
     },
     comodinUsado() {
-      return Object.values(this.predictions).some(p => p.comodin);
+      return Object.values(this.predictions).filter(p => p.comodin).length;
+    },
+    comodinesUsados() {
+      return this.comodinUsado;
+    },
+    comodinesDisponibles() {
+      return Math.max(0, this.comodinMax - this.comodinUsado);
     },
     userStreak() {
       const finished = this.allMatches
@@ -235,6 +244,7 @@ createApp({
       });
       this.settings = await loadSettings();
       this.championPick = await loadChampionPick();
+      this.comodinMax = parseInt(this.settings.comodin_max_per_user, 10) || 1;
       this.rankingsData = await api.get('/users/rankings').catch(() => []);
     },
     setScore(matchId, side, val) {
@@ -246,7 +256,7 @@ createApp({
     },
     toggleComodin(matchId) {
       const p = this.predictions[matchId] || { home: null, away: null };
-      if (this.comodinUsado && !p.comodin) return;
+      if (!p.comodin && this.comodinUsado >= this.comodinMax) return;
       this.predictions[matchId] = { ...p, comodin: !p.comodin };
     },
     async submitPredictions() {
