@@ -390,8 +390,8 @@ export default {
         </div>
       </div>
 
-      <!-- 🔴 EN VIVO -->
-      <div v-if="liveMatch && streamUrls.length" class="card" style="padding: 0; margin-bottom: 1rem; border: 2px solid #dc2626; overflow: hidden;">
+      <!-- 🔴 EN VIVO (oculto) -->
+      <div v-if="false" style="display:none;">
         <div style="display:flex;align-items:center;gap:0.5rem;padding:0.65rem 1rem;background:linear-gradient(135deg,#dc2626 0%,#b91c1c 100%);color:white;">
           <span style="font-size:0.9rem;animation:pulse 1.5s infinite;">🔴</span>
           <span style="font-weight:800;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;flex:1;">EN VIVO</span>

@@ -720,34 +720,6 @@ export default {
           </div>
         </div>
         <div class="card">
-          <div style="display: flex; align-items: flex-start; gap: 1rem;">
-            <span style="font-size: 1.5rem; line-height: 1;">📺</span>
-            <div style="flex: 1;">
-              <h3 style="font-family:var(--font-header);font-size:0.95rem;letter-spacing:0.04em;margin:0;">TRANSMISIONES EN VIVO</h3>
-              <p style="font-size: 0.65rem; color: var(--color-gray); margin-top: 0.15rem; font-family:var(--font-main);">
-                Agregá fuentes de streaming. Cuando haya un partido en vivo, todos los usuarios verán estos enlaces.
-              </p>
-              <div style="margin-top:0.65rem;">
-                 <div v-for="(s, i) in streamEditSources" :key="i" style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.4rem;font-size:0.7rem;">
-                   <input type="text" :value="s.label" @input="streamEditSources[i].label = $event.target.value" placeholder="Nombre" style="width:70px;padding:0.3rem;border:1px solid #d1d5db;border-radius:4px;font-size:0.65rem;">
-                   <input type="text" :value="s.url" @input="streamEditSources[i].url = $event.target.value" placeholder="https://..." style="flex:1;padding:0.3rem;border:1px solid #d1d5db;border-radius:4px;font-size:0.65rem;">
-                  <span @click="removeStreamRow(i)" style="cursor:pointer;font-size:0.9rem;color:#ef4444;flex-shrink:0;">✕</span>
-                </div>
-                <button @click="addStreamRow" style="margin-top:0.25rem;padding:0.3rem 0.6rem;border:1px dashed #d1d5db;border-radius:6px;background:transparent;font-size:0.65rem;font-weight:600;cursor:pointer;color:var(--color-gray);">+ Agregar fuente</button>
-              </div>
-              <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.65rem;flex-wrap:wrap;">
-                <button @click="saveStreamSources()" :disabled="streamSaving" style="padding:0.4rem 0.8rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:700;cursor:pointer;font-size:0.7rem;">
-                  {{ streamSaving ? 'GUARDANDO...' : '💾 GUARDAR TODO' }}
-                </button>
-                <button @click="clearStreams" :disabled="streamSaving" style="padding:0.4rem 0.8rem;border:none;border-radius:8px;background:#ef4444;color:white;font-weight:700;cursor:pointer;font-size:0.7rem;">
-                  🗑 Vaciar lista
-                </button>
-                <span style="font-size:0.65rem;color:var(--color-gray);font-weight:600;">{{ streamSources.length }} fuente(s) activa(s)</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="card">
           <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.65rem;">
             <span style="font-size: 1.5rem; line-height: 1;">👥</span>
             <div style="flex: 1;">
