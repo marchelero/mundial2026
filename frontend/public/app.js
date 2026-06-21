@@ -56,11 +56,13 @@ createApp({
             :user-rank="userRank"
             :user-rank-delta="userRankDelta"
             :pending-today-count="pendingTodayCount"
+            :is-admin="isAdmin"
             @set-score="setScore"
             @toggle-comodin="toggleComodin"
             @submit="submitPredictions"
             @saved="handleChampionSaved"
-            @save-error="handleChampionError" />
+            @save-error="handleChampionError"
+            @bracket-notify="handleBracketNotify" />
         </template>
         <template v-else-if="view === 'historial'">
           <Mypredictions
@@ -363,6 +365,9 @@ createApp({
         await this.loadAllData();
       } catch (_) {}
       this.notify(msg, 'error');
+    },
+    handleBracketNotify({ message, type }) {
+      this.notify(message, type || 'success');
     },
     async handleSaveSetting({ key, value }) {
       try {

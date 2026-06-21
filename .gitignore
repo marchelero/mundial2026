@@ -25,3 +25,8 @@ sync_config.jsonc
 data/*.db
 data/*.db-shm
 data/*.db-wal
+
+# Archivos temporales
+*.tmp
+*.head.tmp
+*.tail.tmp

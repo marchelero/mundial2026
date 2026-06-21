@@ -1,8 +1,8 @@
 const { db } = require('../db');
 const { nowStr, APP_TZ } = require('../utils/datetime');
 const { flagEmoji, flagUrl } = require('../data/countries');
-const { sendNotification } = require('../services/push');
-const { sendRaw } = require('../services/whatsapp');
+const { sendNotification, isPushEnabled } = require('../services/push');
+const { sendRaw, isWhatsAppEnabled } = require('../services/whatsapp');
 
 function getSettingInt(key, defaultValue) {
   try {
@@ -61,6 +61,10 @@ function sendMatchReminderPush(match, minutesBefore) {
     },
   };
 
+  if (!isPushEnabled()) {
+    console.log(`[Reminder] (Push DESHABILITADO) match=${match.id} → no se envía recordatorio push`);
+    return 0;
+  }
   const subscriptions = db.prepare('SELECT * FROM push_subscriptions').all();
   for (const sub of subscriptions) {
     sendNotification({
@@ -84,10 +88,14 @@ function sendMatchReminderWhatsApp(match, minutesBefore) {
 
 function sendMatchReminder(match, minutesBefore) {
   const pushCount = sendMatchReminderPush(match, minutesBefore);
-  try {
-    sendMatchReminderWhatsApp(match, minutesBefore);
-  } catch (e) {
-    console.error('[Reminder] WhatsApp error:', e.message);
+  if (isWhatsAppEnabled()) {
+    try {
+      sendMatchReminderWhatsApp(match, minutesBefore);
+    } catch (e) {
+      console.error('[Reminder] WhatsApp error:', e.message);
+    }
+  } else {
+    console.log(`[Reminder] (WhatsApp DESHABILITADO) match=${match.id} → no se envía al grupo`);
   }
   console.log(`[Reminder] Match ${match.id} (${match.home_team} vs ${match.away_team}) — push:${pushCount}, whatsapp:group, minutes_before:${minutesBefore}`);
   return { pushCount };

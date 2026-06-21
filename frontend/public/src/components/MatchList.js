@@ -1,9 +1,11 @@
 import { roundLabel, formatDate, flagUrl, todayStr as todayStrLocal, addDaysStr as addDaysStrLocal, nowStr } from '../utils/helpers.js';
 import { api } from '../services/api.js';
+import Bracket from './Bracket.js';
 
 export default {
-  props: ['matchGroups', 'predictions', 'user', 'saving', 'comodinUsado', 'comodinMax', 'countries', 'settings', 'championPick', 'userStreak', 'userRank', 'userRankDelta', 'pendingTodayCount'],
-  emits: ['set-score', 'toggle-comodin', 'submit', 'save-champion-pick', 'saved', 'save-error'],
+  components: { Bracket },
+  props: ['matchGroups', 'predictions', 'user', 'saving', 'comodinUsado', 'comodinMax', 'countries', 'settings', 'championPick', 'userStreak', 'userRank', 'userRankDelta', 'pendingTodayCount', 'isAdmin'],
+  emits: ['set-score', 'toggle-comodin', 'submit', 'save-champion-pick', 'saved', 'save-error', 'bracket-notify'],
   data() {
     return {
       activeTab: 'HOY',
@@ -15,6 +17,7 @@ export default {
       groups: [],
       groupsLoading: true,
       showGroupsPanel: true,
+      groupsSubTab: 'grupos',
       groupsObserver: null,
       expandedGroup: null,
       expandedMatch: null,
@@ -125,6 +128,9 @@ export default {
   methods: {
     formatDate,
     roundLabel,
+    handleBracketNotify(payload) {
+      this.$emit('bracket-notify', payload);
+    },
     compactDate(dateStr) {
       if (!dateStr) return '';
       const parts = dateStr.split('-');
@@ -417,64 +423,84 @@ export default {
         </div>
       </div>
 
-      <!-- Group Standings (Siempre Arriba) -->
+      <!-- Group Standings + Bracket (Siempre Arriba) -->
       <div ref="groupsContainer" class="card" style="padding: 0; margin-bottom: 1.25rem;">
-        <div @click="showGroupsPanel = !showGroupsPanel; if(showGroupsPanel && groups.length && !expandedGroup) expandedGroup = groups[0].group" data-dark-bg="subtle" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding:0.75rem 1rem;border-radius:8px;background:#f1f5f9;transition:background 0.2s;" @mouseover="$event.currentTarget.style.background='#e2e8f0'" @mouseout="$event.currentTarget.style.background='#f1f5f9'">
+        <div @click="showGroupsPanel = !showGroupsPanel; if(showGroupsPanel && groups.length && !expandedGroup && groupsSubTab === 'grupos') expandedGroup = groups[0].group" data-dark-bg="subtle" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding:0.75rem 1rem;border-radius:8px;background:#f1f5f9;transition:background 0.2s;" @mouseover="$event.currentTarget.style.background='#e2e8f0'" @mouseout="$event.currentTarget.style.background='#f1f5f9'">
           <div style="display:flex;align-items:center;gap:0.5rem;">
-            <span style="font-size:1.1rem;">#</span>
-            <span style="font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.02em;">TABLA DE GRUPOS</span>
+            <span style="font-size:1.1rem;">🏟️</span>
+            <span style="font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.02em;">TABLA DE GRUPOS &nbsp;/&nbsp; BRACKET</span>
           </div>
           <span style="font-size:0.85rem;color:#64748b;font-weight:700;transition:transform 0.2s;" :style="{transform: showGroupsPanel ? 'rotate(180deg)' : ''}">▼</span>
         </div>
         <Transition name="fade">
-        <div v-show="showGroupsPanel" style="padding:0.75rem 1rem 1rem;">
-          <div v-if="groupsLoading" style="text-align:center;padding:0.5rem;font-size:0.75rem;color:var(--color-gray);">Cargando grupos...</div>
-          <div v-else-if="groups.length === 0" style="text-align:center;padding:0.5rem;font-size:0.75rem;color:var(--color-gray);">No hay datos de grupos</div>
-          <template v-else>
-            <!-- Carousel de grupos -->
-            <div style="display:flex;gap:0.4rem;overflow-x:auto;padding-bottom:0.5rem;margin-bottom:0.75rem;scrollbar-width:thin;-webkit-overflow-scrolling:touch;">
-              <button v-for="g in groups" :key="g.group" @click="expandedGroup = g.group" class="group-button"
-                :style="{flex:'0 0 auto', padding:'0.35rem 0.7rem', border:'1.5px solid', borderRadius:'8px', cursor:'pointer', fontWeight: expandedGroup === g.group ? 800 : 600, fontSize:'0.75rem', background: expandedGroup === g.group ? 'var(--color-dark)' : 'white', color: expandedGroup === g.group ? 'white' : 'var(--color-dark)', borderColor: expandedGroup === g.group ? 'var(--color-dark)' : '#d1d5db', transition:'all 0.15s'}">
-                GRUPO {{ g.group }}
-              </button>
-            </div>
-            <!-- Tabla del grupo seleccionado -->
-            <div v-if="expandedGroup && selectedGroup" data-dark-border="border" style="border:1px solid rgba(0,0,0,0.06);border-radius:8px;overflow:hidden;">
-              <div class="group-table-header-cell" style="padding:0.4rem 0.6rem;background:var(--color-dark);color:white;font-size:0.75rem;font-weight:700;">GRUPO {{ selectedGroup.group }}</div>
-              <div style="padding:0.4rem;overflow-x:auto;">
-                  <table style="width:100%;border-collapse:collapse;font-size:0.65rem;">
-                    <thead>
-                      <tr style="border-bottom:1px solid rgba(0,0,0,0.06);">
-                        <th style="padding:0.25rem 0.3rem;text-align:left;color:var(--color-gray);width:24px;">#</th>
-                        <th style="padding:0.25rem 0.3rem;text-align:left;color:var(--color-gray);">EQUIPO</th>
-                        <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PJ</th>
-                        <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PG</th>
-                        <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PE</th>
-                        <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PP</th>
-                        <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">GF</th>
-                        <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">GC</th>
-                        <th style="padding:0.25rem 0.3rem;text-align:center;font-weight:800;color:var(--color-gray);">Pts</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="(t, i) in selectedGroup.teams" :key="t.name" :style="{background: i < 2 ? 'rgba(22,163,74,0.04)' : '', fontWeight: i < 2 ? 700 : 400, borderBottom: '1px solid rgba(0,0,0,0.03)'}" :class="i < 2 ? 'group-row-qualified' : ''">
-                        <td style="padding:0.3rem 0.3rem;text-align:left;">{{ i + 1 }}</td>
-                        <td style="padding:0.3rem 0.3rem;text-align:left;white-space:nowrap;">
-                          <img v-if="teamFlag(t.name)" :src="teamFlag(t.name)" alt="" style="width:20px;height:14px;border-radius:2px;vertical-align:middle;margin-right:0.25rem;">
-                          {{ t.name }}</td>
-                        <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pj }}</td>
-                        <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pg }}</td>
-                        <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pe }}</td>
-                        <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pp }}</td>
-                        <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.gf }}</td>
-                        <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.gc }}</td>
-                        <td style="padding:0.3rem 0.3rem;text-align:center;font-weight:800;color:var(--color-dark);">{{ t.pts }}</td>
-                      </tr>
-                  </tbody>
-                </table>
+        <div v-show="showGroupsPanel">
+          <!-- Sub-tabs: GRUPOS / BRACKET -->
+          <div class="bracket-subtabs" data-dark-bg="subtle" data-dark-border="border" style="display:flex;gap:0.35rem;padding:0.65rem 1rem 0;border-bottom:1px solid rgba(0,0,0,0.06);">
+            <button class="bracket-subtab" :class="{active: groupsSubTab === 'grupos'}" @click="groupsSubTab = 'grupos'">
+              <span class="bracket-subtab-icon">📊</span>
+              <span>TABLA DE GRUPOS</span>
+            </button>
+            <button class="bracket-subtab" :class="{active: groupsSubTab === 'bracket'}" @click="groupsSubTab = 'bracket'">
+              <span class="bracket-subtab-icon">🏆</span>
+              <span>BRACKET</span>
+            </button>
+          </div>
+
+          <!-- Sub-tab: GRUPOS -->
+          <div v-show="groupsSubTab === 'grupos'" style="padding:0.75rem 1rem 1rem;">
+            <div v-if="groupsLoading" style="text-align:center;padding:0.5rem;font-size:0.75rem;color:var(--color-gray);">Cargando grupos...</div>
+            <div v-else-if="groups.length === 0" style="text-align:center;padding:0.5rem;font-size:0.75rem;color:var(--color-gray);">No hay datos de grupos</div>
+            <template v-else>
+              <!-- Carousel de grupos -->
+              <div style="display:flex;gap:0.4rem;overflow-x:auto;padding-bottom:0.5rem;margin-bottom:0.75rem;scrollbar-width:thin;-webkit-overflow-scrolling:touch;">
+                <button v-for="g in groups" :key="g.group" @click="expandedGroup = g.group" class="group-button"
+                  :style="{flex:'0 0 auto', padding:'0.35rem 0.7rem', border:'1.5px solid', borderRadius:'8px', cursor:'pointer', fontWeight: expandedGroup === g.group ? 800 : 600, fontSize:'0.75rem', background: expandedGroup === g.group ? 'var(--color-dark)' : 'white', color: expandedGroup === g.group ? 'white' : 'var(--color-dark)', borderColor: expandedGroup === g.group ? 'var(--color-dark)' : '#d1d5db', transition:'all 0.15s'}">
+                  GRUPO {{ g.group }}
+                </button>
               </div>
-            </div>
-          </template>
+              <!-- Tabla del grupo seleccionado -->
+              <div v-if="expandedGroup && selectedGroup" data-dark-border="border" style="border:1px solid rgba(0,0,0,0.06);border-radius:8px;overflow:hidden;">
+                <div class="group-table-header-cell" style="padding:0.4rem 0.6rem;background:var(--color-dark);color:white;font-size:0.75rem;font-weight:700;">GRUPO {{ selectedGroup.group }}</div>
+                <div style="padding:0.4rem;overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.65rem;">
+                      <thead>
+                        <tr style="border-bottom:1px solid rgba(0,0,0,0.06);">
+                          <th style="padding:0.25rem 0.3rem;text-align:left;color:var(--color-gray);width:24px;">#</th>
+                          <th style="padding:0.25rem 0.3rem;text-align:left;color:var(--color-gray);">EQUIPO</th>
+                          <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PJ</th>
+                          <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PG</th>
+                          <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PE</th>
+                          <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">PP</th>
+                          <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">GF</th>
+                          <th style="padding:0.25rem 0.3rem;text-align:center;color:var(--color-gray);">GC</th>
+                          <th style="padding:0.25rem 0.3rem;text-align:center;font-weight:800;color:var(--color-gray);">Pts</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="(t, i) in selectedGroup.teams" :key="t.name" :style="{background: i < 2 ? 'rgba(22,163,74,0.04)' : '', fontWeight: i < 2 ? 700 : 400, borderBottom: '1px solid rgba(0,0,0,0.03)'}" :class="i < 2 ? 'group-row-qualified' : ''">
+                          <td style="padding:0.3rem 0.3rem;text-align:left;">{{ i + 1 }}</td>
+                          <td style="padding:0.3rem 0.3rem;text-align:left;white-space:nowrap;">
+                            <img v-if="teamFlag(t.name)" :src="teamFlag(t.name)" alt="" style="width:20px;height:14px;border-radius:2px;vertical-align:middle;margin-right:0.25rem;">
+                            {{ t.name }}</td>
+                          <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pj }}</td>
+                          <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pg }}</td>
+                          <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pe }}</td>
+                          <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.pp }}</td>
+                          <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.gf }}</td>
+                          <td style="padding:0.3rem 0.3rem;text-align:center;">{{ t.gc }}</td>
+                          <td style="padding:0.3rem 0.3rem;text-align:center;font-weight:800;color:var(--color-dark);">{{ t.pts }}</td>
+                        </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Sub-tab: BRACKET -->
+          <div v-show="groupsSubTab === 'bracket'" style="padding:0 0 0.5rem;">
+            <Bracket :countries="countries" :is-admin="isAdmin" @notify="handleBracketNotify" />
+          </div>
         </div>
         </Transition>
       </div>

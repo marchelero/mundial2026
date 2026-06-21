@@ -5,6 +5,7 @@ const { sendMatchResult } = require('../services/whatsapp');
 const { flagEmoji } = require('../data/countries');
 const { sendMatchResultPush } = require('../services/push');
 const { recalcAndSavePointsForMatch } = require('../services/scoring');
+const { setBracketWinner } = require('../lib/bracket-flow');
 
 const router = express.Router();
 
@@ -69,6 +70,23 @@ router.patch('/:id', authRequired, adminRequired, (req, res) => {
         const awayFlag = flagEmoji(updatedMatch.away_team);
         sendMatchResult(updatedMatch, homeFlag, awayFlag, summary);
         sendMatchResultPush(updatedMatch, homeFlag, awayFlag, summary);
+
+        // Auto-advance en bracket: si este match está en el bracket Y el score
+        // es decisivo (no empate), marcamos el ganador en el bracket y propagamos.
+        // Si hay empate, dejamos que el admin lo resuelva manualmente desde el
+        // modal de finalización (con los botones → Gana Local / → Gana Visitante).
+        const bracketRow = db.prepare('SELECT id, round, position, home_team, away_team, winner FROM bracket WHERE id = ?').get(updatedMatch.id);
+        if (bracketRow) {
+          if (updatedMatch.home_score > updatedMatch.away_score) {
+            setBracketWinner(bracketRow.id, 'home');
+            console.log(`[matches] auto-advance ${bracketRow.id} → home`);
+          } else if (updatedMatch.away_score > updatedMatch.home_score) {
+            setBracketWinner(bracketRow.id, 'away');
+            console.log(`[matches] auto-advance ${bracketRow.id} → away`);
+          } else {
+            console.log(`[matches] empate en ${bracketRow.id} — esperando decisión manual del admin`);
+          }
+        }
       }
     }
 

@@ -28,6 +28,7 @@ export default {
       totalUsers: 0,
       showFinishModal: false,
       finishMatchData: null,
+      finishAdvancing: null,
       showAwardModal: false,
       awardConfirmWinner: '',
       championWinner: '',
@@ -60,12 +61,20 @@ export default {
       recalcResult: null,
       streamSources: [],
       streamSaving: false,
-      streamEditSources: [{ label: '', url: '' }]
+      streamEditSources: [{ label: '', url: '' }],
+      bracketStatus: null,
+      bracketLoading: false,
+      bracketInitLoading: false,
+      bracketResetLoading: false,
+      bracketRefreshLoading: false,
     };
   },
   watch: {
     adminTab(tab) {
-      if (tab === 'config') this.loadStreamEdit();
+      if (tab === 'config') {
+        this.loadStreamEdit();
+        this.loadBracketStatus();
+      }
     },
     'settings.comodin_max_per_user'(v) {
       const n = parseInt(v, 10);
@@ -95,6 +104,9 @@ export default {
       this.users = await api.get('/users');
     } catch (_) { }
     this.userLoaded = true;
+
+    // Load bracket status
+    this.loadBracketStatus();
   },
   computed: {
     flagMap() {
@@ -252,6 +264,60 @@ export default {
         this.recalcLoading = false;
       }
     },
+    async loadBracketStatus() {
+      this.bracketLoading = true;
+      try {
+        const data = await api.get('/bracket');
+        const r32 = (data && data.r32) || [];
+        const sf = (data && data.sf) || [];
+        const fin = (data && data.final) || [];
+        this.bracketStatus = {
+          initialized: r32.length > 0,
+          total: r32.length + ((data.r16||[]).length) + ((data.qf||[]).length) + sf.length + ((data.third||[]).length) + fin.length,
+          r32: r32.length,
+          r32Filled: r32.filter(m => m.home_team && m.away_team).length,
+          winners: r32.filter(m => m.winner).length + ((data.r16||[]).filter(m => m.winner).length) + ((data.qf||[]).filter(m => m.winner).length) + sf.filter(m => m.winner).length + ((data.third||[]).filter(m => m.winner).length) + fin.filter(m => m.winner).length,
+        };
+      } catch (e) {
+        this.bracketStatus = { initialized: false, total: 0, r32: 0, r32Filled: 0, winners: 0 };
+      }
+      this.bracketLoading = false;
+    },
+    async initBracket() {
+      if (!confirm('¿Inicializar el bracket? Se generarán los 16 partidos de dieciseisavos con los equipos clasificados de la fase de grupos.')) return;
+      this.bracketInitLoading = true;
+      try {
+        const r = await api.post('/bracket/init', {});
+        alert(r.message || 'Bracket inicializado');
+        await this.loadBracketStatus();
+      } catch (e) {
+        alert(e.message || 'Error al inicializar');
+      }
+      this.bracketInitLoading = false;
+    },
+    async resetBracket() {
+      if (!confirm('¿Reiniciar TODO el bracket? Se perderán los 32 partidos, ganadores cargados y fechas. Esta acción no se puede deshacer.')) return;
+      this.bracketResetLoading = true;
+      try {
+        const r = await api.post('/bracket/reset', {});
+        alert(r.message || 'Bracket reiniciado');
+        await this.loadBracketStatus();
+      } catch (e) {
+        alert(e.message || 'Error al reiniciar');
+      }
+      this.bracketResetLoading = false;
+    },
+    async refreshBracketR32() {
+      this.bracketRefreshLoading = true;
+      try {
+        const r = await api.post('/bracket/refresh-r32', {});
+        alert(r.message || 'Equipos de R32 actualizados desde la tabla de grupos');
+        await this.loadBracketStatus();
+      } catch (e) {
+        alert(e.message || 'Error al actualizar');
+      }
+      this.bracketRefreshLoading = false;
+    },
     handleRestoreFile(e) {
       const file = e.target.files?.[0];
       if (!file) return;
@@ -327,6 +393,43 @@ export default {
       }
       this.showFinishModal = false;
       this.finishMatchData = null;
+    },
+    isTied() {
+      const m = this.finishMatchData;
+      if (!m) return false;
+      const h = Number(m.home_score), a = Number(m.away_score);
+      if (!Number.isFinite(h) || !Number.isFinite(a)) return false;
+      return h === a;
+    },
+    decisiveWinner() {
+      const m = this.finishMatchData;
+      if (!m) return null;
+      const h = Number(m.home_score), a = Number(m.away_score);
+      if (!Number.isFinite(h) || !Number.isFinite(a)) return null;
+      if (h > a) return 'home';
+      if (a > h) return 'away';
+      return null;
+    },
+    async finishWithManualWinner(side) {
+      const m = this.finishMatchData;
+      if (!m) return;
+      this.finishAdvancing = side;
+      try {
+        // 1) finalizar el match (PATCH) — esto en el backend no auto-avanza
+        //    porque el score es empate.
+        await api.patch(`/matches/${m.id}`, { status: 'finished' });
+        // 2) forzar el ganador en el bracket (manual)
+        await api.post(`/bracket/match/${encodeURIComponent(m.id)}/winner`, { winner: side });
+        const winnerName = side === 'home' ? m.home_team : m.away_team;
+        alert(`✅ Partido finalizado y ${winnerName} avanza al bracket`);
+        this.showFinishModal = false;
+        this.finishMatchData = null;
+        this.$emit('refresh-matches');
+      } catch (e) {
+        alert('Error al finalizar y avanzar: ' + (e.message || e));
+      } finally {
+        this.finishAdvancing = null;
+      }
     },
     compactDate(dateStr) {
       const parts = dateStr.split('-');
@@ -769,6 +872,48 @@ export default {
             </div>
           </div>
         </div>
+        <div class="card bracket-admin-card" style="background: linear-gradient(135deg, #fef3c7 0%, #f8fafc 100%); border: 1.5px solid #f59e0b;">
+          <div style="display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 0.65rem;">
+            <span style="font-size: 1.5rem; line-height: 1;">🏆</span>
+            <div style="flex: 1;">
+              <h3 style="font-family:var(--font-header);font-size:0.95rem;letter-spacing:0.04em;margin:0;color:#92400e;">BRACKET DE ELIMINACIÓN DIRECTA</h3>
+              <p style="font-size: 0.65rem; color: #78350f; margin-top: 0.15rem; font-family:var(--font-main);">
+                Inicializá el bracket con los 32 equipos clasificados de la fase de grupos. Una vez inicializado, podés ir marcando los ganadores desde el tab "Brackets" en PARTIDOS.
+              </p>
+            </div>
+          </div>
+          <div v-if="bracketLoading" style="text-align:center;padding:0.5rem;font-size:0.7rem;color:#92400e;">Cargando estado del bracket...</div>
+          <div v-else>
+            <div v-if="!bracketStatus || !bracketStatus.initialized" style="background: rgba(255,255,255,0.6); border-radius: 8px; padding: 0.85rem; margin-bottom: 0.65rem;">
+              <div style="font-size: 0.75rem; color: #92400e; font-weight: 700; margin-bottom: 0.25rem;">⚠️ BRACKET NO INICIALIZADO</div>
+              <div style="font-size: 0.68rem; color: #78350f; margin-bottom: 0.65rem;">Inicializá el bracket con los 32 equipos clasificados de la fase de grupos.</div>
+              <button @click="initBracket" :disabled="bracketInitLoading" style="padding: 0.55rem 1rem; border: none; border-radius: 8px; background: #b45309; color: white; font-family: var(--font-main); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.03em; cursor: pointer; text-transform: uppercase; transition: all 0.2s;">
+                {{ bracketInitLoading ? 'INICIALIZANDO…' : '🚀 INICIALIZAR BRACKET' }}
+              </button>
+            </div>
+            <div v-else style="background: rgba(255,255,255,0.6); border-radius: 8px; padding: 0.85rem; margin-bottom: 0.65rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.65rem;">
+                <span style="background: #16a34a; color: white; padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.04em;">✅ ACTIVO</span>
+                <span style="font-size: 0.7rem; color: #92400e;"><strong>{{ bracketStatus.total }}</strong> partidos generados</span>
+                <span style="font-size: 0.7rem; color: #92400e;">·</span>
+                <span style="font-size: 0.7rem; color: #92400e;"><strong>{{ bracketStatus.r32Filled }}/{{ bracketStatus.r32 }}</strong> R32 con equipos</span>
+                <span style="font-size: 0.7rem; color: #92400e;">·</span>
+                <span style="font-size: 0.7rem; color: #92400e;"><strong>{{ bracketStatus.winners }}</strong> ganadores cargados</span>
+              </div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button @click="refreshBracketR32" :disabled="bracketRefreshLoading" style="padding: 0.45rem 0.8rem; border: 1.5px solid #d97706; border-radius: 6px; background: white; color: #92400e; font-family: var(--font-main); font-size: 0.7rem; font-weight: 700; cursor: pointer;">
+                  {{ bracketRefreshLoading ? 'REFRESCANDO…' : '↻ REFRESCAR R32' }}
+                </button>
+                <button @click="resetBracket" :disabled="bracketResetLoading" style="padding: 0.45rem 0.8rem; border: 1.5px solid #dc2626; border-radius: 6px; background: white; color: #dc2626; font-family: var(--font-main); font-size: 0.7rem; font-weight: 700; cursor: pointer;">
+                  {{ bracketResetLoading ? 'BORRANDO…' : '✕ RESETEAR TODO' }}
+                </button>
+              </div>
+              <div style="font-size: 0.6rem; color: #78350f; margin-top: 0.5rem; font-style: italic;">
+                💡 Andá a la pestaña <strong>PARTIDOS → BRACKET</strong> para marcar los ganadores y avanzar de ronda.
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="card">
           <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.65rem;">
             <span style="font-size: 1.5rem; line-height: 1;">👥</span>
@@ -803,11 +948,12 @@ export default {
 
       <!-- Finish Modal -->
       <div v-if="showFinishModal && finishMatchData" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;" @click.self="showFinishModal = false">
-        <div class="modal-content" data-dark-bg="card" data-dark-border="border" style="background:white;border-radius:16px;padding:1.5rem;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div class="modal-content" data-dark-bg="card" data-dark-border="border" style="background:white;border-radius:16px;padding:1.5rem;max-width:460px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
           <div style="text-align:center;margin-bottom:1.25rem;">
-            <div style="font-size:2.5rem;margin-bottom:0.5rem;">🏁</div>
-            <h3 data-dark-text="text" style="font-family:var(--font-header);font-size:1.25rem;margin:0 0 0.25rem;">FINALIZAR PARTIDO</h3>
-            <p style="font-size:0.75rem;color:var(--color-gray);margin:0;">Se cerrará el marcador y se calcularán los puntos.</p>
+            <div style="font-size:2.5rem;margin-bottom:0.5rem;">{{ isTied() ? '🤝' : '🏁' }}</div>
+            <h3 data-dark-text="text" style="font-family:var(--font-header);font-size:1.25rem;margin:0 0 0.25rem;">{{ isTied() ? 'EMPATE — ¿QUIÉN CLASIFICA?' : 'FINALIZAR PARTIDO' }}</h3>
+            <p v-if="!isTied()" style="font-size:0.75rem;color:var(--color-gray);margin:0;">Se cerrará el marcador y se calcularán los puntos.</p>
+            <p v-else style="font-size:0.75rem;color:var(--color-gray);margin:0;">Elegí qué equipo avanza al bracket. El otro queda eliminado.</p>
           </div>
           <div class="modal-section" data-dark-bg="subtle" data-dark-border="border" style="background:linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);border-radius:12px;padding:1rem;margin-bottom:1.25rem;border:1px solid #e2e8f0;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.75rem;">
@@ -828,8 +974,26 @@ export default {
                 {{ finishMatchData.home_score ?? '?' }} - {{ finishMatchData.away_score ?? '?' }}
               </div>
             </div>
+            <div v-if="!isTied() && decisiveWinner()" style="text-align:center;margin-top:0.75rem;font-size:0.7rem;color:#15803d;font-weight:700;">
+              ✓ {{ decisiveWinner() === 'home' ? finishMatchData.home_team : finishMatchData.away_team }} ganará y avanzará automáticamente al bracket
+            </div>
           </div>
-          <div style="display:flex;gap:0.6rem;">
+          <!-- Empate: 2 botones para elegir ganador -->
+          <div v-if="isTied()" style="display:flex;gap:0.6rem;flex-direction:column;">
+            <button @click="finishWithManualWinner('home')" :disabled="finishAdvancing" style="padding:0.85rem;border:2px solid #15803d;border-radius:8px;background:white;color:#15803d;font-weight:700;cursor:pointer;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+              <span>→ Gana</span>
+              <img v-if="finishMatchData.home_flag_url" :src="finishMatchData.home_flag_url" alt="" style="width:22px;height:16px;border-radius:2px;">
+              <span style="font-size:1rem;">{{ finishMatchData.home_team }}</span>
+            </button>
+            <button @click="finishWithManualWinner('away')" :disabled="finishAdvancing" style="padding:0.85rem;border:2px solid #15803d;border-radius:8px;background:white;color:#15803d;font-weight:700;cursor:pointer;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+              <span>→ Gana</span>
+              <img v-if="finishMatchData.away_flag_url" :src="finishMatchData.away_flag_url" alt="" style="width:22px;height:16px;border-radius:2px;">
+              <span style="font-size:1rem;">{{ finishMatchData.away_team }}</span>
+            </button>
+            <button @click="showFinishModal = false" class="modal-btn-cancel" data-dark-bg="card" data-dark-border="border" data-dark-text="text" style="padding:0.65rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.8rem;">CANCELAR</button>
+          </div>
+          <!-- Score decisivo: flujo normal -->
+          <div v-else style="display:flex;gap:0.6rem;">
             <button @click="showFinishModal = false" class="modal-btn-cancel" data-dark-bg="card" data-dark-border="border" data-dark-text="text" style="flex:1;padding:0.75rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CANCELAR</button>
             <button @click="confirmFinish" style="flex:1;padding:0.75rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">FINALIZAR</button>
           </div>

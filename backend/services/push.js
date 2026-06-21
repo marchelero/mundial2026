@@ -1,3 +1,7 @@
+// Servicio de Push Notifications.
+// IMPORTANTE: las funciones de envío verifican isPushEnabled() antes de mandar.
+// En desarrollo/localhost las notificaciones se LOGUEAN pero NO se envían, así
+// no se disparan pushes accidentales a usuarios de producción.
 const webpush = require('web-push');
 const { flagUrl } = require('../data/countries');
 
@@ -7,6 +11,17 @@ const subject = process.env.VAPID_SUBJECT || 'mailto:admin@mundial2026.app';
 
 if (publicKey && privateKey) {
   webpush.setVapidDetails(subject, publicKey, privateKey);
+}
+
+// Gate principal: solo manda en producción, salvo override explícito.
+// - PUSH_ENABLED=false  → desactiva en cualquier entorno
+// - PUSH_ENABLED=true   → fuerza activación incluso en dev (útil para tests)
+// - sin la var          → solo activo si NODE_ENV=production
+function isPushEnabled() {
+  const flag = (process.env.PUSH_ENABLED || '').toLowerCase();
+  if (flag === 'false') return false;
+  if (flag === 'true') return true;
+  return process.env.NODE_ENV === 'production';
 }
 
 function sendNotification(subscription, payload) {
@@ -21,6 +36,18 @@ function sendNotification(subscription, payload) {
   } catch (e) {
     console.error('[Push] Error:', e.message);
   }
+}
+
+function pushToAll(payload) {
+  const { db } = require('../db');
+  const subscriptions = db.prepare('SELECT * FROM push_subscriptions').all();
+  for (const sub of subscriptions) {
+    sendNotification({
+      endpoint: sub.endpoint,
+      keys: { p256dh: sub.p256dh, auth: sub.auth },
+    }, payload);
+  }
+  return subscriptions.length;
 }
 
 function sendMatchResultPush(match, homeFlag, awayFlag, pointsSummary) {
@@ -47,18 +74,13 @@ function sendMatchResultPush(match, homeFlag, awayFlag, pointsSummary) {
     },
   };
 
-  const { db } = require('../db');
-  const subscriptions = db.prepare('SELECT * FROM push_subscriptions').all();
-  for (const sub of subscriptions) {
-    sendNotification({
-      endpoint: sub.endpoint,
-      keys: {
-        p256dh: sub.p256dh,
-        auth: sub.auth,
-      },
-    }, payload);
+  if (!isPushEnabled()) {
+    console.log(`[Push] (DESHABILITADO) match=${match.id} title="${title}" → no se envía`);
+    return 0;
   }
-  console.log(`[Push] Sent to ${subscriptions.length} subscription(s)`);
+  const sent = pushToAll(payload);
+  console.log(`[Push] Sent match result to ${sent} subscription(s) — ${title}`);
+  return sent;
 }
 
 function sendChampionPickPush(user, champion, flag) {
@@ -75,15 +97,13 @@ function sendChampionPickPush(user, champion, flag) {
     data: { url: '/', flagUrl: flagUrl(flag), champion, body },
   };
 
-  const { db } = require('../db');
-  const subscriptions = db.prepare('SELECT * FROM push_subscriptions').all();
-  for (const sub of subscriptions) {
-    sendNotification({
-      endpoint: sub.endpoint,
-      keys: { p256dh: sub.p256dh, auth: sub.auth },
-    }, payload);
+  if (!isPushEnabled()) {
+    console.log(`[Push] (DESHABILITADO) champion-pick user=${user.id} → no se envía`);
+    return 0;
   }
-  console.log(`[Push] Champion pick sent to ${subscriptions.length} subscription(s)`);
+  const sent = pushToAll(payload);
+  console.log(`[Push] Champion pick sent to ${sent} subscription(s) — ${champion}`);
+  return sent;
 }
 
 function sendChampionAwardPush(winner, flag) {
@@ -99,15 +119,13 @@ function sendChampionAwardPush(winner, flag) {
     data: { url: '/', flagUrl: flagUrl(flag), champion: winner, body },
   };
 
-  const { db } = require('../db');
-  const subscriptions = db.prepare('SELECT * FROM push_subscriptions').all();
-  for (const sub of subscriptions) {
-    sendNotification({
-      endpoint: sub.endpoint,
-      keys: { p256dh: sub.p256dh, auth: sub.auth },
-    }, payload);
+  if (!isPushEnabled()) {
+    console.log(`[Push] (DESHABILITADO) champion-award → no se envía`);
+    return 0;
   }
-  console.log(`[Push] Champion award sent to ${subscriptions.length} subscription(s)`);
+  const sent = pushToAll(payload);
+  console.log(`[Push] Champion award sent to ${sent} subscription(s) — ${winner}`);
+  return sent;
 }
 
 function sendTestPush() {
@@ -120,16 +138,20 @@ function sendTestPush() {
     data: { url: '/' },
   };
 
-  const { db } = require('../db');
-  const subscriptions = db.prepare('SELECT * FROM push_subscriptions').all();
-  for (const sub of subscriptions) {
-    sendNotification({
-      endpoint: sub.endpoint,
-      keys: { p256dh: sub.p256dh, auth: sub.auth },
-    }, payload);
+  if (!isPushEnabled()) {
+    console.log(`[Push] (DESHABILITADO) test → no se envía. Set PUSH_ENABLED=true para forzar el envío en dev.`);
+    return 0;
   }
-  console.log(`[Push] Test sent to ${subscriptions.length} subscription(s)`);
-  return subscriptions.length;
+  const sent = pushToAll(payload);
+  console.log(`[Push] Test sent to ${sent} subscription(s)`);
+  return sent;
 }
 
-module.exports = { sendNotification, sendMatchResultPush, sendTestPush, sendChampionPickPush, sendChampionAwardPush };
+module.exports = {
+  sendNotification,
+  sendMatchResultPush,
+  sendTestPush,
+  sendChampionPickPush,
+  sendChampionAwardPush,
+  isPushEnabled,
+};

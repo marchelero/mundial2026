@@ -7,6 +7,17 @@ const API_PATH = process.env.WHATSAPP_PATH || '/message/sendText/teste';
 const API_KEY = process.env.WHATSAPP_API_KEY || '75458825-888B-4536-B2F2-5B054D5F4C82';
 const GROUP_NUMBER = process.env.WHATSAPP_GROUP || '120363409786684123@g.us';
 
+// Gate para no mandar WhatsApp desde localhost/dev y evitar spamear al grupo real.
+// WHATSAPP_ENABLED=false → off en cualquier env
+// WHATSAPP_ENABLED=true  → on incluso en dev
+// sin la var             → solo si NODE_ENV=production
+function isWhatsAppEnabled() {
+  const flag = (process.env.WHATSAPP_ENABLED || '').toLowerCase();
+  if (flag === 'false') return false;
+  if (flag === 'true') return true;
+  return process.env.NODE_ENV === 'production';
+}
+
 function formatPredictions(predictions) {
   const lines = predictions.map(p => {
     const homeFlag = flagEmoji(p.home_team);
@@ -18,6 +29,10 @@ function formatPredictions(predictions) {
 }
 
 function sendRaw(text) {
+  if (!isWhatsAppEnabled()) {
+    console.log(`[WhatsApp] (DESHABILITADO) → no se envía. Set WHATSAPP_ENABLED=true para forzar el envío en dev.`);
+    return;
+  }
   try {
     const body = JSON.stringify({
       number: GROUP_NUMBER,
@@ -108,4 +123,4 @@ function sendChampionAward(winner, flag) {
   sendRaw(text);
 }
 
-module.exports = { sendWhatsAppPredictions, sendChampionPick, sendMatchResult, sendChampionAward, sendRaw, flagEmoji };
+module.exports = { sendWhatsAppPredictions, sendChampionPick, sendMatchResult, sendChampionAward, sendRaw, flagEmoji, isWhatsAppEnabled };

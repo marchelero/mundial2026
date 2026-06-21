@@ -83,6 +83,23 @@ try {
       sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       minutes_before INTEGER
     );
+    CREATE TABLE IF NOT EXISTS bracket (
+      id TEXT PRIMARY KEY,
+      round TEXT NOT NULL,
+      position INTEGER NOT NULL,
+      home_team TEXT,
+      away_team TEXT,
+      home_label TEXT,
+      away_label TEXT,
+      winner TEXT,
+      match_date TEXT,
+      match_time TEXT,
+      home_from TEXT,
+      away_from TEXT,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(round, position)
+    );
+    CREATE INDEX IF NOT EXISTS idx_bracket_round ON bracket(round, position);
   `);
 
   // Migration: make google_id nullable (pre-2026-06-12 schema)
@@ -151,3 +168,14 @@ const dbProxy = new Proxy({}, {
 });
 
 module.exports = { db: dbProxy, generateId, restoreFrom };
+
+// Auto-init bracket: corre una vez por proceso, solo si la tabla está vacía.
+// Idempotente y no-fatal: si falla, el server igual arranca.
+// Se ejecuta DESPUÉS de module.exports para evitar problemas de circular import
+// (lib/bracket-init.js requiere este módulo).
+try {
+  const { autoInitBracket } = require('./lib/bracket-init');
+  autoInitBracket();
+} catch (e) {
+  console.error('[bracket] auto-init failed:', e.message);
+}

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mundial2026-v34';
+const CACHE_NAME = 'mundial2026-v41';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -12,12 +12,14 @@ const STATIC_ASSETS = [
   '/src/components/Login.js',
   '/src/components/Layout.js',
   '/src/components/MatchList.js',
+  '/src/components/Bracket.js',
   '/src/components/Admin.js',
   '/src/components/Ranking.js',
   '/src/components/MyPredictions.js',
   '/src/services/api.js',
   '/src/services/auth.js',
   '/src/services/game.js',
+  '/src/services/push.js',
   '/src/utils/helpers.js'
 ];
 
