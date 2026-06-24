@@ -1755,6 +1755,11 @@ img.admin-team-flag {
   100% { transform: rotate(360deg); }
 }
 
+@keyframes compareSpin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 body.dark-mode {
   background: var(--color-bg);
 }

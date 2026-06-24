@@ -7,7 +7,7 @@ export default {
       expandedUser: null, userBreakdown: null, statFilter: null, userPreds: [],
       showCompare: false, compareUsers: [], comparePredictions: {}, compareTab: 'table',
       compareColors: ['#3b82f6', '#f59e0b', '#10b981', '#ef4444'],
-      raceTimer: null
+      compareLoading: {}, compareError: {}, raceTimer: null
     };
   },
   computed: {
@@ -35,13 +35,20 @@ export default {
       return result;
     },
     compareReady() { return this.compareUsers.length >= 2; },
+    compareAllLoaded() {
+      if (!this.compareUsers.length) return true;
+      return this.compareUsers.every(u => !this.compareLoading[u.id] && this.comparePredictions[u.id] !== undefined);
+    },
+    compareLoadingCount() { return this.compareUsers.filter(u => this.compareLoading[u.id]).length; },
+    compareErrorUsers() { return this.compareUsers.filter(u => this.compareError[u.id]); },
     compareHistory() {
       if (!this.compareReady) return [];
       const finished = this.allMatches.filter(m => m.status === 'finished').sort((a,b) => (a.date+' '+a.time).localeCompare(b.date+' '+b.time));
       return finished.map(m => {
         const row = { match: m, users: {} };
         for (const u of this.compareUsers) {
-          const preds = this.comparePredictions[u.id] || [];
+          const preds = this.comparePredictions[u.id];
+          if (!preds) { row.users[u.id] = null; continue; }
           const p = preds.find(p => p.match === m.id);
           if (!p) { row.users[u.id] = null; continue; }
           const pts = p.points ?? 0;
@@ -148,7 +155,7 @@ export default {
     },
     toggleStat(type) { this.statFilter = this.statFilter === type ? null : type; },
     renderChart() {
-      if (this.compareTab !== 'chart' || !this.compareChartData.length) return;
+      if (this.compareTab !== 'chart' || !this.compareChartData.length || !this.compareAllLoaded) return;
       const el = this.$refs?.chartContainer;
       if (!el) return;
       if (!window.echarts) return;
@@ -179,7 +186,7 @@ export default {
       });
     },
     renderRace() {
-      if (this.compareTab !== 'race' || !this.compareChartData.length) return;
+      if (this.compareTab !== 'race' || !this.compareChartData.length || !this.compareAllLoaded) return;
       const el = this.$refs?.chartContainer;
       if (!el || !window.echarts) return;
       if (this._chart) this._chart.dispose();
@@ -226,10 +233,25 @@ export default {
       if (!user) return;
       this.compareUsers.push({ id: userId, name: user.name });
       if (!this.showCompare) this.showCompare = true;
-      api.get(`/predictions?user=${userId}`).then(preds => {
-        this.comparePredictions = { ...this.comparePredictions, [userId]: preds };
-      }).catch(() => {});
+      this._fetchComparePredictions(userId);
     },
+    async _fetchComparePredictions(userId) {
+      this.compareLoading = { ...this.compareLoading, [userId]: true };
+      const errMap = { ...this.compareError };
+      delete errMap[userId];
+      this.compareError = errMap;
+      try {
+        const preds = await api.get(`/predictions/compare/${userId}`);
+        this.comparePredictions = { ...this.comparePredictions, [userId]: preds };
+      } catch (e) {
+        const errMap2 = { ...this.compareError };
+        errMap2[userId] = e?.message || 'Error al cargar';
+        this.compareError = errMap2;
+      } finally {
+        this.compareLoading = { ...this.compareLoading, [userId]: false };
+      }
+    },
+    retryCompareUser(userId) { this._fetchComparePredictions(userId); },
     removeCompareUser(idx) {
       const u = this.compareUsers[idx];
       if (!u) return;
@@ -237,7 +259,21 @@ export default {
       const newPreds = { ...this.comparePredictions };
       delete newPreds[u.id];
       this.comparePredictions = newPreds;
+      const newLoading = { ...this.compareLoading };
+      delete newLoading[u.id];
+      this.compareLoading = newLoading;
+      const newErr = { ...this.compareError };
+      delete newErr[u.id];
+      this.compareError = newErr;
       if (this.compareUsers.length === 0) this.showCompare = false;
+      if (this.raceTimer) { clearTimeout(this.raceTimer); this.raceTimer = null; }
+    },
+    clearCompare() {
+      this.showCompare = false;
+      this.compareUsers = [];
+      this.comparePredictions = {};
+      this.compareLoading = {};
+      this.compareError = {};
       if (this.raceTimer) { clearTimeout(this.raceTimer); this.raceTimer = null; }
     },
     _onDarkModeChange() {
@@ -315,19 +351,34 @@ export default {
       <div class="card" style="margin-bottom:0.75rem;padding:0.5rem 0.75rem;">
         <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
           <span data-dark-text="text" style="font-weight:700;font-size:0.7rem;white-space:nowrap;">🔍 COMPARAR</span>
-          <span v-for="(u, idx) in compareUsers" :key="u.id" :style="{background:compareColors[idx]+'22',border:'1px solid '+compareColors[idx],padding:'0.15rem 0.4rem',borderRadius:'4px',fontWeight:600,fontSize:'0.65rem',color:compareColors[idx]}">{{ u.name }} <span @click="removeCompareUser(idx)" style="cursor:pointer;margin-left:2px;font-weight:700;">✕</span></span>
+          <span v-for="(u, idx) in compareUsers" :key="u.id" :style="{background:compareColors[idx]+'22',border:'1px solid '+compareColors[idx],padding:'0.15rem 0.4rem',borderRadius:'4px',fontWeight:600,fontSize:'0.65rem',color:compareColors[idx],display:'inline-flex',alignItems:'center',gap:'4px'}">
+            <span v-if="compareLoading[u.id]" class="compare-spinner" :style="{display:'inline-block',width:'8px',height:'8px',border:'2px solid '+compareColors[idx],borderTopColor:'transparent',borderRadius:'50%',animation:'compareSpin 0.7s linear infinite'}"></span>
+            <span v-else-if="compareError[u.id]" title="Error al cargar" style="cursor:pointer;color:#ef4444;font-weight:700;" @click.stop="retryCompareUser(u.id)">⚠</span>
+            <span v-else>✓</span>
+            {{ u.name }}
+            <span @click="removeCompareUser(idx)" style="cursor:pointer;margin-left:2px;font-weight:700;">✕</span>
+          </span>
           <select v-if="compareUsers.length < 4" @change="e => { if(e.target.value) addCompareUser(e.target.value); if(e.target) e.target.value=''; }" data-dark-bg="card" data-dark-border="border" data-dark-text="text" style="flex:1;min-width:100px;padding:0.25rem;border:1px solid #d1d5db;border-radius:4px;font-size:0.7rem;">
             <option value="">+ Agregar</option>
             <option v-for="r in rankingsWithPrize" :key="r.id" :value="r.id" :disabled="compareUsers.find(u=>u.id===r.id)">{{ r.name }}</option>
           </select>
-          <span v-if="compareUsers.length > 0" @click="showCompare=false;compareUsers=[];comparePredictions={}" style="cursor:pointer;font-size:0.8rem;color:#ef4444;font-weight:700;">✕ Limpiar</span>
+          <span v-if="compareUsers.length > 0" @click="clearCompare" style="cursor:pointer;font-size:0.8rem;color:#ef4444;font-weight:700;">✕ Limpiar</span>
         </div>
-        <div v-if="compareReady" style="display:flex;gap:0.35rem;margin-top:0.5rem;">
+        <div v-if="compareLoadingCount > 0" data-dark-text="text" style="margin-top:0.4rem;padding:0.35rem 0.5rem;background:#f1f5f9;border-radius:4px;font-size:0.65rem;display:flex;align-items:center;gap:0.4rem;color:var(--color-dark);">
+          <span class="compare-spinner" style="display:inline-block;width:10px;height:10px;border:2px solid var(--color-dark);border-top-color:transparent;border-radius:50%;animation:compareSpin 0.7s linear infinite;"></span>
+          <span>Cargando datos de {{ compareLoadingCount }} participante{{ compareLoadingCount > 1 ? 's' : '' }}…</span>
+        </div>
+        <div v-if="compareErrorUsers.length > 0" data-dark-text="text" style="margin-top:0.4rem;padding:0.35rem 0.5rem;background:#fef2f2;border:1px solid #fecaca;border-radius:4px;font-size:0.65rem;color:#991b1b;display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
+          <span style="font-weight:700;">⚠</span>
+          <span>No se pudieron cargar datos de {{ compareErrorUsers.map(u => u.name).join(', ') }}.</span>
+          <button v-for="u in compareErrorUsers" :key="'retry-'+u.id" @click="retryCompareUser(u.id)" style="padding:0.15rem 0.4rem;background:white;border:1px solid #fca5a5;border-radius:3px;font-size:0.6rem;font-weight:700;cursor:pointer;color:#991b1b;">Reintentar {{ u.name }}</button>
+        </div>
+        <div v-if="compareReady && compareAllLoaded" style="display:flex;gap:0.35rem;margin-top:0.5rem;">
           <button @click="compareTab='table'" :class="compareTab==='table' ? 'compare-tab-active' : 'compare-tab'" data-dark-bg="subtle" :style="{flex:1,padding:'0.25rem',border:'none',borderRadius:'4px',fontWeight:700,fontSize:'0.65rem',cursor:'pointer',background:compareTab==='table'?'var(--color-dark)':'#f1f5f9',color:compareTab==='table'?'white':'var(--color-dark)'}">📋 TABLA</button>
           <button @click="compareTab='chart'" :class="compareTab==='chart' ? 'compare-tab-active' : 'compare-tab'" data-dark-bg="subtle" :style="{flex:1,padding:'0.25rem',border:'none',borderRadius:'4px',fontWeight:700,fontSize:'0.65rem',cursor:'pointer',background:compareTab==='chart'?'var(--color-dark)':'#f1f5f9',color:compareTab==='chart'?'white':'var(--color-dark)'}">📈 GRÁFICO</button>
           <button @click="compareTab='race'" :class="compareTab==='race' ? 'compare-tab-active' : 'compare-tab'" data-dark-bg="subtle" :style="{flex:1,padding:'0.25rem',border:'none',borderRadius:'4px',fontWeight:700,fontSize:'0.65rem',cursor:'pointer',background:compareTab==='race'?'var(--color-dark)':'#f1f5f9',color:compareTab==='race'?'white':'var(--color-dark)'}">🏁 BAR RACE</button>
         </div>
-        <div v-if="compareTab==='table' && compareHistory.length" style="max-height:240px;overflow-y:auto;margin-top:0.35rem;">
+        <div v-if="compareTab==='table' && compareHistory.length && compareAllLoaded" style="max-height:240px;overflow-y:auto;margin-top:0.35rem;">
           <table style="width:100%;border-collapse:collapse;font-size:0.6rem;">
             <thead><tr data-dark-bg="card" data-dark-border="border" style="border-bottom:1px solid #e2e8f0;position:sticky;top:0;background:white;">
               <th data-dark-text="text" style="padding:0.2rem;text-align:left;">Partido</th>
@@ -345,7 +396,7 @@ export default {
             </tbody>
           </table>
         </div>
-        <div v-if="(compareTab==='chart' || compareTab==='race') && compareChartData.length" style="width:100%;overflow-x:auto;margin-top:0.35rem;"><div ref="chartContainer" style="min-width:300px;height:220px;"></div></div>
+        <div v-if="(compareTab==='chart' || compareTab==='race') && compareChartData.length && compareAllLoaded" style="width:100%;overflow-x:auto;margin-top:0.35rem;"><div ref="chartContainer" style="min-width:300px;height:220px;"></div></div>
         <div v-if="compareUsers.length > 0 && !compareReady" style="margin-top:0.35rem;font-size:0.65rem;color:var(--color-gray);text-align:center;">Seleccioná al menos 2 participantes</div>
       </div>
 

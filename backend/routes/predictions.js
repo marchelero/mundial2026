@@ -35,6 +35,31 @@ router.get('/', authRequired, (req, res) => {
   }
 });
 
+router.get('/compare/:userId', authRequired, (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    const predictions = db.prepare(`
+      SELECT p.id, p.user_id, p.match_id, p.home_score, p.away_score, p.comodin, p.points
+      FROM predictions p
+      WHERE p.user_id = ?
+    `).all(userId);
+    res.json(predictions.map(p => ({
+      id: p.id,
+      user: p.user_id,
+      match: p.match_id,
+      home_score: p.home_score,
+      away_score: p.away_score,
+      comodin: !!p.comodin,
+      points: p.points ?? null
+    })));
+  } catch (e) {
+    console.error('Compare predictions error:', e);
+    res.status(500).json({ error: 'Error al obtener pronósticos para comparar' });
+  }
+});
+
 router.get('/match/:matchId', authRequired, (req, res) => {
   try {
     const predictions = db.prepare(`
