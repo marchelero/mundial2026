@@ -74,6 +74,14 @@ export function roundLabel(r) {
     }[r] || r;
 }
 
+export function groupLabel(match) {
+    if (!match) return '';
+    if (match.group_name) {
+        return match.round === 'group' ? 'Grupo ' + match.group_name : match.group_name;
+    }
+    return '';
+}
+
 export function flagUrl(emojiFlag) {
     if (!emojiFlag || emojiFlag.length < 2) return '';
     try {

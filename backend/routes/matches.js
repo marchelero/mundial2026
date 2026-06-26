@@ -19,7 +19,7 @@ router.get('/', (req, res) => {
 
 router.post('/', authRequired, adminRequired, (req, res) => {
   try {
-    const { date, time, home_team, away_team, round, home_score, away_score, status } = req.body;
+    const { date, time, home_team, away_team, round, group_name, home_score, away_score, status } = req.body;
     if (!date || !time || !home_team || !away_team) {
       return res.status(400).json({ error: 'Campos requeridos: date, time, home_team, away_team' });
     }
@@ -28,8 +28,8 @@ router.post('/', authRequired, adminRequired, (req, res) => {
     }
     const id = generateId();
     db.prepare(
-      'INSERT INTO matches (id, date, time, home_team, away_team, home_score, away_score, status, round) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(id, date, time, home_team, away_team, home_score ?? null, away_score ?? null, status || 'open', round || 'group');
+      'INSERT INTO matches (id, date, time, home_team, away_team, home_score, away_score, status, round, group_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(id, date, time, home_team, away_team, home_score ?? null, away_score ?? null, status || 'open', round || 'group', group_name || null);
     const match = db.prepare('SELECT * FROM matches WHERE id = ?').get(id);
     res.status(201).json(match);
   } catch (e) {
@@ -41,7 +41,7 @@ router.patch('/:id', authRequired, adminRequired, (req, res) => {
   try {
     const match = db.prepare('SELECT * FROM matches WHERE id = ?').get(req.params.id);
     if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
-    const allowedFields = ['date', 'time', 'home_team', 'away_team', 'home_score', 'away_score', 'status', 'round'];
+    const allowedFields = ['date', 'time', 'home_team', 'away_team', 'home_score', 'away_score', 'status', 'round', 'group_name'];
     const updates = [];
     const values = [];
     let transitioningToFinished = false;

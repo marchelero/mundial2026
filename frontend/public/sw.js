@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mundial2026-v42-swfix';
+const CACHE_NAME = 'mundial2026-v44-cancelbtn';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

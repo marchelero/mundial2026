@@ -124,6 +124,11 @@ try {
     db.exec("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0");
   }
 
+  const hasMatchGroup = db.prepare("SELECT name FROM pragma_table_info('matches') WHERE name = 'group_name'").get();
+  if (!hasMatchGroup) {
+    db.exec('ALTER TABLE matches ADD COLUMN group_name TEXT');
+  }
+
   const hasChampPoints = db.prepare("SELECT name FROM pragma_table_info('champion_picks') WHERE name = 'points'").get();
   if (!hasChampPoints) {
     db.exec("ALTER TABLE champion_picks ADD COLUMN points INTEGER DEFAULT NULL");

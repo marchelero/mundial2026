@@ -1,4 +1,4 @@
-import { flagUrl, roundLabel } from '../utils/helpers.js';
+import { flagUrl, roundLabel, groupLabel } from '../utils/helpers.js';
 import { api } from '../services/api.js';
 
 export default {
@@ -14,6 +14,7 @@ export default {
         timeHour: '',
         timeMinute: '',
         round: 'group',
+        group_name: '',
         home_score: null,
         away_score: null,
         status: 'open'
@@ -121,7 +122,7 @@ export default {
     }
   },
   methods: {
-    roundLabel,
+    roundLabel, groupLabel,
     async addUser() {
       const email = this.userInput.trim().toLowerCase();
       if (!email || !email.includes('@')) return;
@@ -360,8 +361,20 @@ export default {
       const h = String(this.newMatch.timeHour || 0).padStart(2, '0');
       const m = String(this.newMatch.timeMinute || 0).padStart(2, '0');
       this.newMatch.time = h + ':' + m;
-      this.$emit('add-match', { ...this.newMatch });
+      const payload = { ...this.newMatch };
+      if (payload.group_name) payload.group_name = String(payload.group_name).trim().toUpperCase();
+      else delete payload.group_name;
+      this.$emit('add-match', payload);
+      this.cancelAddMatch();
+    },
+    cancelAddMatch() {
       this.showAddForm = false;
+      this.errors = {};
+      this.newMatch = {
+        home_team: '', away_team: '', date: '', time: '',
+        timeHour: '', timeMinute: '', round: 'group',
+        group_name: '', home_score: null, away_score: null, status: 'open'
+      };
     },
     async awardChampion() {
       if (!this.championAwardSelected || this.awardLoading) return;
@@ -547,7 +560,7 @@ export default {
                  </div>
                  <span v-if="errors.time" class="field-error">{{ errors.time }}</span>
               </div>
-              <div class="form-group full-row">
+              <div class="form-group">
                  <label class="form-label">Tipo de partido</label>
                  <select v-model="newMatch.round" class="form-input" style="padding-left:0.5rem;">
                    <option value="group">Fase de Grupos</option>
@@ -558,10 +571,19 @@ export default {
                    <option value="final">Final</option>
                  </select>
               </div>
+              <div class="form-group" v-if="newMatch.round === 'group'">
+                 <label class="form-label">Grupo (A, B, C...)</label>
+                 <input type="text" v-model="newMatch.group_name" maxlength="3" class="form-input" placeholder="A" style="padding-left:0.5rem;text-transform:uppercase;">
+              </div>
            </div>
-           <button class="btn btn-primary w-full full-row" :disabled="!isFormValid" @click="submitMatch" style="margin-top: 1rem;">
-             GUARDAR PARTIDO
-           </button>
+           <div style="display:flex;gap:0.6rem;margin-top:1rem;">
+             <button class="btn btn-primary" :disabled="!isFormValid" @click="submitMatch" style="flex:2;padding:0.6rem 0.8rem;">
+               GUARDAR PARTIDO
+             </button>
+             <button type="button" @click="cancelAddMatch" style="flex:1;padding:0.6rem 0.8rem;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.85rem;">
+               ✕ Cancelar
+             </button>
+           </div>
         </div>
       </transition>
 
@@ -571,6 +593,12 @@ export default {
         <button class="tab-btn" :class="{active: adminTab === 'config'}" @click="adminTab = 'config'">CONFIGURACIÓN</button>
       </div>
 
+      <div v-if="adminTab === 'nuevos' && !showAddForm" style="margin-bottom: 0.75rem;">
+        <button @click="showAddForm = true" class="btn-add-match-toggle" :style="{display:'inline-flex',alignItems:'center',gap:'0.5rem',padding:'0.6rem 1.1rem',background:'var(--color-dark)', color:'white', border:'none', borderRadius:'8px', fontWeight:700, fontSize:'0.8rem', cursor:'pointer', boxShadow:'0 2px 6px rgba(0,0,0,0.1)'}">
+          ➕ Agregar Partido
+        </button>
+      </div>
+
       <div class="card" v-if="adminTab !== 'config'">
         <div v-for="match in filteredMatches" :key="match.id" class="admin-match-row" :class="{'admin-match-finished': match.status === 'finished'}" style="flex-direction: column; align-items: stretch;">
            <div style="display: flex; align-items: center; width: 100%;">
@@ -578,7 +606,9 @@ export default {
                 <div style="font-size: 0.6rem; opacity: 0.6;">{{ compactDate(match.date) }}</div>
                 <div class="match-time-badge">{{ match.time }}</div>
                 <span v-if="match.status === 'finished'" style="font-size:0.55rem;font-weight:700;color:var(--color-dark);background:#e2e8f0;padding:0.1rem 0.3rem;border-radius:4px;margin-top:2px;display:inline-block;">FINALIZADO</span>
-                <div style="font-size:0.55rem;opacity:0.5;margin-top:2px;">{{ roundLabel(match.round) }}</div>
+                <div class="round-badge" :class="'round-' + (match.round || 'group')" style="font-size:0.55rem;font-weight:700;margin-top:2px;display:inline-block;">
+                  {{ roundLabel(match.round) }}{{ groupLabel(match) ? ' · ' + groupLabel(match) : '' }}
+                </div>
               </div>
               <div class="admin-col-team home">
                  <span class="admin-team-name">{{ match.home_team }}</span>

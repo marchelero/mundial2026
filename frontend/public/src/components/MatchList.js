@@ -1,4 +1,4 @@
-import { roundLabel, formatDate, flagUrl, todayStr as todayStrLocal, addDaysStr as addDaysStrLocal, nowStr } from '../utils/helpers.js';
+import { roundLabel, formatDate, flagUrl, todayStr as todayStrLocal, addDaysStr as addDaysStrLocal, nowStr, groupLabel } from '../utils/helpers.js';
 import { api } from '../services/api.js';
 
 export default {
@@ -124,7 +124,7 @@ export default {
   },
   methods: {
     formatDate,
-    roundLabel,
+    roundLabel, groupLabel,
     compactDate(dateStr) {
       if (!dateStr) return '';
       const parts = dateStr.split('-');
@@ -526,7 +526,7 @@ export default {
               <span v-if="match.status === 'finished'" class="badge-finished" style="font-size:0.55rem;font-weight:700;color:var(--color-dark);background:#e2e8f0;padding:0.1rem 0.3rem;border-radius:4px;">FINALIZADO</span>
               <span v-else-if="isMatchPast(match)" class="badge-jugando" style="font-size:0.55rem;font-weight:700;color:#dc2626;background:#fef2f2;padding:0.1rem 0.3rem;border-radius:4px;animation:pulse 1.5s infinite;">🔴 JUGANDO</span>
             </div>
-            <span class="round-badge" :class="'round-' + (match.round || 'group')">{{ roundLabel(match.round) }}</span>
+            <span class="round-badge" :class="'round-' + (match.round || 'group')">{{ roundLabel(match.round) }}{{ groupLabel(match) ? ' · ' + groupLabel(match) : '' }}</span>
           </div>
 
           <!-- Comodín control (above scores, always visible when relevant) -->
