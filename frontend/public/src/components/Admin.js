@@ -135,6 +135,17 @@ export default {
         alert(e.message || 'Error al crear usuario');
       }
     },
+    async toggleAdmin(u) {
+      const newVal = !u.is_admin;
+      const action = newVal ? 'promover a admin' : 'degradar';
+      if (!confirm(`¿${action.charAt(0).toUpperCase() + action.slice(1)} a ${u.email}?`)) return;
+      try {
+        await api.patch(`/users/${u.id}/admin`, { is_admin: newVal });
+        this.users = await api.get('/users');
+      } catch (e) {
+        alert(e.message || `Error al ${action}`);
+      }
+    },
     async deleteUser(userId) {
       if (!confirm('¿Eliminar este usuario? Solo se permite si no ha vinculado Google aún.')) return;
       try {
@@ -784,11 +795,15 @@ export default {
 
           <div v-for="u in users" :key="u.id" style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid rgba(0,0,0,0.05);font-size:0.8rem;">
             <span style="flex:1;">
+              <span v-if="u.is_admin" title="Administrador" style="color:#f59e0b;margin-right:0.25rem;">👑</span>
               ✉️ {{ u.email }}
               <span v-if="u.name" style="font-size:0.65rem;color:var(--color-gray);margin-left:0.35rem;">({{ u.name }})</span>
               <span v-if="u.google_id" style="font-size:0.55rem;color:var(--color-green);margin-left:0.35rem;font-weight:600;">✅ Google vinculado</span>
               <span v-else style="font-size:0.55rem;color:var(--color-gray);margin-left:0.35rem;">⏳ Sin vincular</span>
             </span>
+            <button @click="toggleAdmin(u)" :title="u.is_admin ? 'Quitar admin' : 'Promover a admin'" :style="{background: u.is_admin ? '#fef3c7' : '#f1f5f9', border:'1px solid ' + (u.is_admin ? '#fcd34d' : '#cbd5e1'), color: u.is_admin ? '#92400e' : '#475569', cursor:'pointer', fontSize:'0.65rem', padding:'0.15rem 0.4rem', borderRadius:'4px', fontWeight:600}">
+              {{ u.is_admin ? '👑 ADMIN' : '+ admin' }}
+            </button>
             <button @click="openEditUser(u)" title="Editar usuario" style="background:none;border:none;color:var(--color-blue);cursor:pointer;font-size:0.9rem;padding:0 0.2rem;">✏️</button>
             <button v-if="!u.google_id" @click="deleteUser(u.id)" title="Eliminar usuario" style="background:none;border:none;color:var(--color-red);cursor:pointer;font-size:0.9rem;padding:0 0.2rem;">✕</button>
           </div>

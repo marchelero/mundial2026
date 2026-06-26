@@ -119,9 +119,24 @@ try {
     db.exec("ALTER TABLE users ADD COLUMN total_points INTEGER DEFAULT 0");
   }
 
+  const hasIsAdmin = db.prepare("SELECT name FROM pragma_table_info('users') WHERE name = 'is_admin'").get();
+  if (!hasIsAdmin) {
+    db.exec("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0");
+  }
+
   const hasChampPoints = db.prepare("SELECT name FROM pragma_table_info('champion_picks') WHERE name = 'points'").get();
   if (!hasChampPoints) {
     db.exec("ALTER TABLE champion_picks ADD COLUMN points INTEGER DEFAULT NULL");
+  }
+
+  // Migrate ADMIN_EMAILS to is_admin on startup
+  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+  if (adminEmails.length > 0) {
+    const placeholders = adminEmails.map(() => '?').join(',');
+    const result = db.prepare(`UPDATE users SET is_admin = 1 WHERE LOWER(email) IN (${placeholders})`).run(...adminEmails);
+    if (result.changes > 0) {
+      console.log(`[admin-migration] Promoted ${result.changes} user(s) to admin from ADMIN_EMAILS env`);
+    }
   }
 
   console.log('Database initialized');

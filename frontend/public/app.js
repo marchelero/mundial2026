@@ -114,9 +114,7 @@ createApp({
   computed: {
     appVersion() { return window.APP_VERSION || '2.0.0'; },
     isAdmin() {
-      const email = this.user?.email || '';
-      return (typeof ADMIN_EMAILS !== 'undefined' ? ADMIN_EMAILS : [])
-        .some(e => e.toLowerCase() === email.toLowerCase());
+      return !!(this.user && this.user.is_admin);
     },
     matchGroups() { return this._groupMatches(this.allMatches); },
     historyGroups() {

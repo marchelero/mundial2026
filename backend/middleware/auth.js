@@ -18,8 +18,7 @@ function authRequired(req, res, next) {
 }
 
 function adminRequired(req, res, next) {
-  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
-  if (!req.user || !adminEmails.includes(req.user.email?.toLowerCase())) {
+  if (!req.user || !req.user.is_admin) {
     return res.status(403).json({ error: 'Acceso administrador requerido' });
   }
   next();

@@ -37,14 +37,14 @@ router.post('/google', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, name: user.name },
+      { id: user.id, email: user.email, name: user.name, is_admin: user.is_admin ? 1 : 0 },
       process.env.JWT_SECRET,
       { expiresIn: '30d' }
     );
 
     res.json({
       token,
-      user: { id: user.id, email: user.email, name: user.name },
+      user: { id: user.id, email: user.email, name: user.name, is_admin: user.is_admin ? 1 : 0 },
     });
   } catch (e) {
     console.error('Auth error:', e.message);
@@ -54,7 +54,7 @@ router.post('/google', async (req, res) => {
 
 router.get('/me', authRequired, (req, res) => {
   try {
-    const user = db.prepare('SELECT id, email, name FROM users WHERE id = ?').get(req.user.id);
+    const user = db.prepare('SELECT id, email, name, is_admin FROM users WHERE id = ?').get(req.user.id);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
     res.json({ user });
   } catch (e) {
@@ -64,10 +64,10 @@ router.get('/me', authRequired, (req, res) => {
 
 router.post('/refresh', authRequired, (req, res) => {
   try {
-    const user = db.prepare('SELECT id, email, name FROM users WHERE id = ?').get(req.user.id);
+    const user = db.prepare('SELECT id, email, name, is_admin FROM users WHERE id = ?').get(req.user.id);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
     const token = jwt.sign(
-      { id: user.id, email: user.email, name: user.name },
+      { id: user.id, email: user.email, name: user.name, is_admin: user.is_admin ? 1 : 0 },
       process.env.JWT_SECRET,
       { expiresIn: '30d' }
     );

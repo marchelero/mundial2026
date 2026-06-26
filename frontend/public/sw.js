@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mundial2026-v40-landing';
+const CACHE_NAME = 'mundial2026-v42-swfix';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -51,27 +51,43 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(event.request.url);
 
-  // No cachear API ni config.js (config.js es dinámico)
-  if (url.pathname.startsWith('/api/') || url.pathname === '/config.js' || url.pathname.endsWith('.js')) {
+  // API: siempre red, sin cache
+  if (url.pathname.startsWith('/api/')) {
     event.respondWith(fetch(event.request));
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-
-      return fetch(event.request).then(response => {
-        // Solo cachear respuestas válidas de nuestro dominio
+  // HTML, JS y root: NETWORK-FIRST (fresh version siempre que hay red)
+  // Solo usa cache como fallback offline
+  if (url.pathname === '/' || url.pathname.endsWith('.html') || url.pathname.endsWith('.js')) {
+    event.respondWith(
+      fetch(event.request).then(response => {
         if (response.ok && url.origin === self.location.origin) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
       }).catch(() => {
-        if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
+        return caches.match(event.request).then(cached => {
+          if (cached) return cached;
+          if (event.request.mode === 'navigate') return caches.match('/index.html');
+        });
+      })
+    );
+    return;
+  }
+
+  // CSS, imágenes, config.js: CACHE-FIRST (rapido, no cambian seguido)
+  event.respondWith(
+    caches.match(event.request).then(cached => {
+      if (cached) return cached;
+
+      return fetch(event.request).then(response => {
+        if (response.ok && url.origin === self.location.origin) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
+        return response;
       });
     })
   );

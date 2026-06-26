@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.get('/', authRequired, adminRequired, (req, res) => {
   try {
-    const users = db.prepare('SELECT id, email, name, google_id, created_at, COALESCE(total_points, 0) as total_points FROM users ORDER BY created_at DESC').all();
+    const users = db.prepare('SELECT id, email, name, google_id, is_admin, created_at, COALESCE(total_points, 0) as total_points FROM users ORDER BY created_at DESC').all();
     res.json(users);
   } catch (e) {
     console.error('Error listing users:', e);
@@ -167,6 +167,37 @@ router.post('/recalculate-totals', authRequired, adminRequired, (req, res) => {
   } catch (e) {
     console.error('Recalculate totals error:', e);
     res.status(500).json({ error: 'Error al recalcular totales: ' + e.message });
+  }
+});
+
+router.patch('/:id/admin', authRequired, adminRequired, (req, res) => {
+  try {
+    const { is_admin } = req.body;
+    if (typeof is_admin !== 'boolean') {
+      return res.status(400).json({ error: 'is_admin debe ser boolean' });
+    }
+    const target = db.prepare('SELECT id, email, is_admin FROM users WHERE id = ?').get(req.params.id);
+    if (!target) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    // No permitir degradarse a si mismo (evita lockout)
+    if (target.id === req.user.id && !is_admin) {
+      return res.status(400).json({ error: 'No podés degradarte a vos mismo' });
+    }
+
+    // Si va a degradar, chequear que quede al menos 1 admin
+    if (!is_admin && target.is_admin) {
+      const adminCount = db.prepare('SELECT COUNT(*) as c FROM users WHERE is_admin = 1').get().c;
+      if (adminCount <= 1) {
+        return res.status(400).json({ error: 'No podés degradar al último admin' });
+      }
+    }
+
+    db.prepare('UPDATE users SET is_admin = ? WHERE id = ?').run(is_admin ? 1 : 0, target.id);
+    const updated = db.prepare('SELECT id, email, name, is_admin FROM users WHERE id = ?').get(target.id);
+    res.json(updated);
+  } catch (e) {
+    console.error('Promote/demote error:', e);
+    res.status(500).json({ error: 'Error al cambiar rol' });
   }
 });
 
