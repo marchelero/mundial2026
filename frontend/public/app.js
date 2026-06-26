@@ -15,6 +15,7 @@ import { flagUrl } from './src/utils/helpers.js';
 import { subscribeToPush } from './src/services/push.js';
 
 import Login from './src/components/Login.js';
+import Landing from './src/components/Landing.js';
 import Layout from './src/components/Layout.js';
 import MatchList from './src/components/MatchList.js';
 import Ranking from './src/components/Ranking.js';
@@ -26,6 +27,7 @@ const { createApp } = Vue;
 createApp({
   components: {
     Login,
+    Landing,
     Layout,
     Matchlist: MatchList,
     Mypredictions: MyPredictions,
@@ -38,8 +40,9 @@ createApp({
     </div>
 
     <template v-else>
-      <Login v-if="!user" :auth-error="authError" />
-      
+      <Login v-if="false" :auth-error="authError" />
+      <Landing v-else-if="!user" :landing-data="landingData" :auth-error="authError" />
+
       <Layout v-else :user="user" :current-view="view" :is-admin="isAdmin" :app-version="appVersion" :notification="notification" @change-view="view = $event" @logout="handleLogout" @clear-notification="notification.visible = false">
         <template v-if="view === 'votar'">
           <Matchlist
@@ -98,6 +101,7 @@ createApp({
   data() {
     return {
       loading: true, authError: '', user: null,
+      landingData: null, landingError: null,
       view: 'votar', allMatches: [], predictions: {},
       saving: false, championPick: { champion: '' },
       settings: {}, rankingsData: [], rankingsLoading: false,
@@ -498,6 +502,12 @@ createApp({
 
     window.addEventListener('google-login-success', (e) => {
       this.handleLoginSuccess(e.detail);
+    });
+
+    api.get('/public/landing-data').then(d => {
+      this.landingData = d;
+    }).catch(e => {
+      this.landingError = e?.message || 'No se pudo cargar la landing';
     });
 
     document.addEventListener('visibilitychange', () => {

@@ -53,13 +53,15 @@ export function renderGoogleButton() {
     use_fedcm_for_button: false,
   });
 
+  const buttonWidth = Math.min(300, Math.max(160, container.clientWidth || 300));
+
   google.accounts.id.renderButton(container, {
     type: 'standard',
     theme: 'outline',
-    size: 'large',
+    size: container.clientWidth < 240 ? 'medium' : 'large',
     text: 'signin_with',
     shape: 'rectangular',
-    width: 300,
+    width: buttonWidth,
   });
 
   console.log('Google button rendered');

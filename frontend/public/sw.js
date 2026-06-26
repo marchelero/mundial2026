@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mundial2026-v34';
+const CACHE_NAME = 'mundial2026-v40-landing';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -10,6 +10,7 @@ const STATIC_ASSETS = [
   '/icons/icon-512.png',
   '/icons/apple-touch-icon.png',
   '/src/components/Login.js',
+  '/src/components/Landing.js',
   '/src/components/Layout.js',
   '/src/components/MatchList.js',
   '/src/components/Admin.js',

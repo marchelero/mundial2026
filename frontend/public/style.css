@@ -1958,4 +1958,274 @@ body.dark-mode .champion-coming-soon { background: #334155 !important; color: #c
       #0f172a !important;
   }
 }
+
+/* ============================== */
+/* LANDING PAGE (visitantes) */
+/* ============================== */
+
+.landing {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+
+.landing-top {
+  position: sticky;
+  top: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 10;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.landing-logo-small {
+  height: 32px;
+  width: auto;
+  flex-shrink: 0;
+}
+
+.landing-google-btn {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1;
+  min-width: 0;
+  max-width: 320px;
+  overflow: hidden;
+}
+.landing-google-btn > div,
+.landing-google-btn > iframe { max-width: 100% !important; }
+
+.landing-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1rem;
+  color: var(--color-gray);
+  font-size: 0.9rem;
+}
+
+.landing-hero {
+  padding: 2rem 1rem 1rem;
+  text-align: center;
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.landing-title {
+  font-family: var(--font-brush);
+  font-size: clamp(1.5rem, 5vw, 2.5rem);
+  color: var(--color-dark);
+  margin: 0 0 0.5rem;
+  line-height: 1.1;
+}
+
+.landing-tagline {
+  font-size: clamp(0.9rem, 2vw, 1.05rem);
+  color: var(--color-gray);
+  margin: 0 0 1.5rem;
+  line-height: 1.5;
+}
+
+.race-section {
+  width: 100%;
+  margin: 0 auto 1.5rem;
+}
+
+.race-container {
+  width: 100%;
+  background: var(--color-card);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.race-toggle-btn {
+  display: block;
+  margin: 0.75rem auto 0;
+  padding: 0.5rem 1.25rem;
+  background: var(--color-dark);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: opacity 0.15s;
+}
+.race-toggle-btn:hover { opacity: 0.85; }
+
+.race-toggle-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin: 1.5rem auto 0;
+  padding: 1.1rem 1.5rem;
+  max-width: 360px;
+  width: 100%;
+  background: var(--color-dark);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+}
+.race-toggle-main:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+/* 👑 lider overlay (removido) */
+
+.race-empty {
+  padding: 2.5rem 1rem;
+  background: var(--color-card);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  margin: 0 auto 1.5rem;
+  max-width: 480px;
+}
+.race-empty-icon {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+.race-empty h3 {
+  margin: 0 0 0.5rem;
+  color: var(--color-dark);
+  font-size: 1.1rem;
+}
+.race-empty p {
+  margin: 0;
+  color: var(--color-gray);
+  font-size: 0.9rem;
+}
+
+.landing-stats {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  padding: 0 1rem;
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+}
+@media (min-width: 768px) {
+  .landing-stats { grid-template-columns: repeat(3, 1fr); }
+}
+
+.landing-stats .stat-card {
+  text-align: center;
+  padding: 1.25rem 1rem;
+  background: var(--color-dark);
+  color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.landing-stats .stat-value {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: white;
+  line-height: 1.1;
+}
+.landing-stats .stat-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+  margin-top: 0.3rem;
+}
+
+.landing-top5 {
+  padding: 1.25rem 1rem 0;
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+}
+.landing-top5-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--color-dark);
+}
+.top5-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.top5-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  background: var(--color-card);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 6px;
+}
+.top5-pos {
+  font-weight: 800;
+  color: var(--color-red);
+  min-width: 2.25rem;
+  font-size: 0.95rem;
+}
+.top5-name {
+  flex: 1;
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.top5-comodines {
+  font-size: 0.8rem;
+}
+.top5-pts {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--color-dark);
+  white-space: nowrap;
+}
+
+.landing-footer {
+  text-align: center;
+  padding: 2rem 1rem 1.5rem;
+  color: var(--color-gray);
+  font-size: 0.75rem;
+  margin-top: auto;
+}
+
+/* Landing dark mode */
+body.dark-mode .landing-top { background: rgba(15, 23, 42, 0.92); border-bottom-color: #1e293b; }
+body.dark-mode .race-container { background: var(--color-card); border-color: var(--color-border); }
+body.dark-mode .race-empty { background: var(--color-card); border-color: var(--color-border); }
+body.dark-mode .race-empty h3 { color: var(--color-text); }
+body.dark-mode .landing-stats .stat-card { background: var(--color-card); border: 1px solid var(--color-border); }
+body.dark-mode .landing-stats .stat-value { color: var(--color-text); }
+body.dark-mode .top5-item { background: var(--color-card); border-color: var(--color-border); }
+body.dark-mode .top5-name { color: var(--color-text); }
+body.dark-mode .top5-pts { color: var(--color-text); }
+body.dark-mode .landing-title { color: var(--color-text); }
+body.dark-mode .landing-top5-title { color: var(--color-text); }
+
 
