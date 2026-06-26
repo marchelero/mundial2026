@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mundial2026-v44-cancelbtn';
+const CACHE_NAME = 'mundial2026-v45-brackets';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -14,6 +14,7 @@ const STATIC_ASSETS = [
   '/src/components/Layout.js',
   '/src/components/MatchList.js',
   '/src/components/Admin.js',
+  '/src/components/Bracket.js',
   '/src/components/Ranking.js',
   '/src/components/MyPredictions.js',
   '/src/services/api.js',

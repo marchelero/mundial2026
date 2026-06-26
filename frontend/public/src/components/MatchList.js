@@ -1,12 +1,15 @@
 import { roundLabel, formatDate, flagUrl, todayStr as todayStrLocal, addDaysStr as addDaysStrLocal, nowStr, groupLabel } from '../utils/helpers.js';
 import { api } from '../services/api.js';
+import Bracket from './Bracket.js';
 
 export default {
   props: ['matchGroups', 'predictions', 'user', 'saving', 'comodinUsado', 'comodinMax', 'countries', 'settings', 'championPick', 'userStreak', 'userRank', 'userRankDelta', 'pendingTodayCount'],
   emits: ['set-score', 'toggle-comodin', 'submit', 'save-champion-pick', 'saved', 'save-error'],
+  components: { Bracket },
   data() {
     return {
       activeTab: 'HOY',
+      groupsSectionTab: 'grupos',
       championSelected: '',
       showConfirmModal: false,
       pendingMatches: [],
@@ -419,15 +422,23 @@ export default {
 
       <!-- Group Standings (Siempre Arriba) -->
       <div ref="groupsContainer" class="card" style="padding: 0; margin-bottom: 1.25rem;">
-        <div @click="showGroupsPanel = !showGroupsPanel; if(showGroupsPanel && groups.length && !expandedGroup) expandedGroup = groups[0].group" data-dark-bg="subtle" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding:0.75rem 1rem;border-radius:8px;background:#f1f5f9;transition:background 0.2s;" @mouseover="$event.currentTarget.style.background='#e2e8f0'" @mouseout="$event.currentTarget.style.background='#f1f5f9'">
+        <div data-dark-bg="subtle" style="display:flex;align-items:center;justify-content:space-between;background:#f1f5f9;border-radius:8px 8px 0 0;padding:0.5rem 0.5rem 0.5rem 1rem;">
           <div style="display:flex;align-items:center;gap:0.5rem;">
             <span style="font-size:1.1rem;">#</span>
-            <span style="font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.02em;">TABLA DE GRUPOS</span>
+            <span style="font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.02em;">FASE DE GRUPOS</span>
           </div>
-          <span style="font-size:0.85rem;color:#64748b;font-weight:700;transition:transform 0.2s;" :style="{transform: showGroupsPanel ? 'rotate(180deg)' : ''}">▼</span>
+          <div style="display:flex;align-items:center;gap:0.25rem;">
+            <button @click="groupsSectionTab = 'grupos'; showGroupsPanel = true" :style="{padding:'0.35rem 0.7rem',border:'none',borderRadius:'6px',cursor:'pointer',fontWeight:700,fontSize:'0.7rem',background: groupsSectionTab === 'grupos' ? 'var(--color-dark)' : 'transparent', color: groupsSectionTab === 'grupos' ? 'white' : 'var(--color-dark)'}">TABLA</button>
+            <button @click="groupsSectionTab = 'brackets'; showGroupsPanel = true" :style="{padding:'0.35rem 0.7rem',border:'none',borderRadius:'6px',cursor:'pointer',fontWeight:700,fontSize:'0.7rem',background: groupsSectionTab === 'brackets' ? 'var(--color-dark)' : 'transparent', color: groupsSectionTab === 'brackets' ? 'white' : 'var(--color-dark)'}">BRACKETS</button>
+            <span @click="showGroupsPanel = !showGroupsPanel" style="font-size:0.85rem;color:#64748b;font-weight:700;cursor:pointer;padding:0 0.4rem;transition:transform 0.2s;" :style="{transform: showGroupsPanel ? 'rotate(180deg)' : ''}">▼</span>
+          </div>
         </div>
         <Transition name="fade">
         <div v-show="showGroupsPanel" style="padding:0.75rem 1rem 1rem;">
+          <div v-if="groupsSectionTab === 'brackets'">
+            <Bracket :countries="countries" />
+          </div>
+          <div v-else>
           <div v-if="groupsLoading" style="text-align:center;padding:0.5rem;font-size:0.75rem;color:var(--color-gray);">Cargando grupos...</div>
           <div v-else-if="groups.length === 0" style="text-align:center;padding:0.5rem;font-size:0.75rem;color:var(--color-gray);">No hay datos de grupos</div>
           <template v-else>
@@ -475,7 +486,8 @@ export default {
               </div>
             </div>
           </template>
-        </div>
+          </div>
+          </div>
         </Transition>
       </div>
 

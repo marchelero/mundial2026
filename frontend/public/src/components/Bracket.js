@@ -1,5 +1,4 @@
 import { flagUrl } from '../utils/helpers.js';
-import { api } from '../services/api.js';
 
 const SHORT_MONTHS = { '01': 'ene', '02': 'feb', '03': 'mar', '04': 'abr', '05': 'may', '06': 'jun', '07': 'jul', '08': 'ago', '09': 'sep', '10': 'oct', '11': 'nov', '12': 'dic' };
 const DAYS_ES = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
@@ -16,30 +15,69 @@ function fmtWeekday(iso) {
 }
 
 const ROUND_LABELS = {
-  r32:   { eyebrow: '🚀 DIECISEISAVOS DE FINAL', meta: '28 jun – 3 jul · 16 partidos · 32 equipos', pill: '16avos',  pillClass: 'pill-r32' },
-  r16:   { eyebrow: '🎯 OCTAVOS DE FINAL',     meta: '4 – 7 jul · 8 partidos',                    pill: 'Octavos', pillClass: 'pill-r16' },
-  qf:    { eyebrow: '⚡ CUARTOS DE FINAL',      meta: '11 – 12 jul · 4 partidos',                  pill: 'Cuartos', pillClass: 'pill-qf' },
-  sf:    { eyebrow: '🔥 SEMIFINALES',           meta: '14 – 15 jul · 2 partidos',                  pill: 'Semis',   pillClass: 'pill-sf' },
-  third: { eyebrow: '🥉 PARTIDO POR EL 3.er LUGAR', meta: '18 jul · 1 partido · perdedores de semis', pill: '3.er lugar', pillClass: 'pill-third' },
-  final: { eyebrow: '⭐ FINAL',                 meta: '19 jul · 1 partido · MetLife Stadium',     pill: 'Final',   pillClass: 'pill-final' },
+  r32:   { eyebrow: '🚀 DIECISEISAVOS DE FINAL', meta: '28 jun – 3 jul · 16 partidos',              pill: '16avos',    pillClass: 'pill-r32',  stripe: 'stripe-r32' },
+  r16:   { eyebrow: '🎯 OCTAVOS DE FINAL',      meta: '4 – 7 jul · 8 partidos',                    pill: '8vos',      pillClass: 'pill-r16',  stripe: 'stripe-r16' },
+  qf:    { eyebrow: '⚡ CUARTOS DE FINAL',       meta: '11 – 12 jul · 4 partidos',                  pill: '4tos',      pillClass: 'pill-qf',   stripe: 'stripe-qf' },
+  sf:    { eyebrow: '🔥 SEMIFINALES',            meta: '14 – 15 jul · 2 partidos',                  pill: 'Semifinal', pillClass: 'pill-sf',   stripe: 'stripe-sf' },
+  third: { eyebrow: '🥉 PARTIDO POR EL 3.er LUGAR', meta: '18 jul · 1 partido · perdedores de semis', pill: '3.er lugar', pillClass: 'pill-third', stripe: 'stripe-third' },
+  final: { eyebrow: '⭐ FINAL',                  meta: '19 jul · 1 partido · MetLife Stadium',     pill: 'Final',     pillClass: 'pill-final', stripe: 'stripe-final' },
 };
 
+const ROUND_ORDER = ['r32', 'r16', 'qf', 'sf', 'third', 'final'];
+
+const ROUND_SLOTS = {
+  r32: 16,
+  r16: 8,
+  qf: 4,
+  sf: 2,
+  third: 1,
+  final: 1,
+};
+
+const ROUND_DATES = {
+  r32: ['2026-06-28','2026-06-29','2026-06-30','2026-07-01','2026-07-02','2026-07-03'],
+  r16: ['2026-07-04','2026-07-05','2026-07-06','2026-07-07'],
+  qf:  ['2026-07-11','2026-07-12'],
+  sf:  ['2026-07-14','2026-07-15'],
+  third: ['2026-07-18'],
+  final: ['2026-07-19'],
+};
+
+const ROUND_TIMES = {
+  r32: ['12:00','15:00','18:00','21:00'],
+  r16: ['12:00','15:00','18:00','21:00'],
+  qf:  ['15:00','18:00','21:00'],
+  sf:  ['18:00','21:00'],
+  third: ['15:00'],
+  final: ['21:00'],
+};
+
+function buildEmptyBracket() {
+  const out = {};
+  for (const round of ROUND_ORDER) {
+    const n = ROUND_SLOTS[round];
+    const dates = ROUND_DATES[round];
+    const times = ROUND_TIMES[round];
+    out[round] = Array.from({ length: n }, (_, i) => ({
+      id: `${round}_${i + 1}`,
+      home_team: '',
+      away_team: '',
+      match_date: dates[i % dates.length],
+      match_time: times[i % times.length],
+    }));
+  }
+  return out;
+}
+
 export default {
-  props: ['countries', 'isAdmin'],
-  emits: ['notify'],
+  props: ['countries'],
   data() {
     return {
       activeRound: 'all',
-      bracket: null,
-      loading: true,
-      actionInProgress: null,
+      bracket: buildEmptyBracket(),
     };
   },
-  async mounted() {
-    await this.loadBracket();
-  },
   methods: {
-    flagUrl,
     teamFlag(teamName) {
       if (!teamName) return '';
       const c = this.countries.find(x => x.name === teamName);
@@ -60,87 +98,21 @@ export default {
         }
       });
     },
-    async loadBracket() {
-      this.loading = true;
-      try {
-        this.bracket = await api.get('/bracket');
-      } catch (e) {
-        this.bracket = { r32: [], r16: [], qf: [], sf: [], final: [] };
-      }
-      this.loading = false;
-    },
-    async initBracket() {
-      this.actionInProgress = 'init';
-      try {
-        const r = await api.post('/bracket/init', {});
-        this.notify(r.message || 'Bracket inicializado', 'success');
-        await this.loadBracket();
-      } catch (e) {
-        this.notify(e.message || 'Error al inicializar', 'error');
-      }
-      this.actionInProgress = null;
-    },
-    async resetBracket() {
-      if (!confirm('¿Reiniciar todo el bracket? Se perderán los ganadores cargados.')) return;
-      this.actionInProgress = 'reset';
-      try {
-        const r = await api.post('/bracket/reset', {});
-        this.notify(r.message || 'Bracket reiniciado', 'success');
-        await this.loadBracket();
-      } catch (e) {
-        this.notify(e.message || 'Error al reiniciar', 'error');
-      }
-      this.actionInProgress = null;
-    },
-    async refreshR32() {
-      this.actionInProgress = 'refresh';
-      try {
-        const r = await api.post('/bracket/refresh-r32', {});
-        this.notify(r.message || 'R32 actualizado', 'success');
-        await this.loadBracket();
-      } catch (e) {
-        this.notify(e.message || 'Error al actualizar', 'error');
-      }
-      this.actionInProgress = null;
-    },
-    async setWinner(matchId, winner) {
-      this.actionInProgress = matchId;
-      try {
-        const r = await api.post(`/bracket/match/${encodeURIComponent(matchId)}/winner`, { winner });
-        this.notify(r.message || 'Ganador guardado', 'success');
-        await this.loadBracket();
-      } catch (e) {
-        this.notify(e.message || 'Error al guardar', 'error');
-      }
-      this.actionInProgress = null;
-    },
-    notify(message, type = 'success') {
-      this.$emit('notify', { message, type });
-    },
-    hasR32Data() {
-      return this.bracket && this.bracket.r32 && this.bracket.r32.length > 0;
-    },
-    roundEmpty(roundKey) {
-      if (!this.bracket) return true;
-      const arr = this.bracket[roundKey];
-      return !arr || arr.length === 0;
-    },
   },
   template: `
     <div class="bracket-modern">
 
-      <div v-if="!hasR32Data()" class="bracket-info-notice" data-dark-border="border">
+      <div class="bracket-info-notice">
         <span class="bracket-info-icon">ℹ️</span>
-        <span class="bracket-info-text" v-if="isAdmin">El bracket aún no fue inicializado. Andá a <strong>ADMIN → CONFIGURACIÓN</strong> para inicializarlo.</span>
-        <span class="bracket-info-text" v-else>El administrador va a inicializar los brackets en cuanto termine la fase de grupos. ¡Pronto habrá partidos para pronosticar! 🏆</span>
+        <span class="bracket-info-text">Visualización de brackets del Mundial 2026. Los equipos se cargarán cuando termine la fase de grupos.</span>
       </div>
 
-      <div class="bracket-filters" data-dark-border="border">
+      <div class="bracket-filters">
         <button class="bracket-chip" :class="{active: activeRound === 'all'}" @click="activeRound = 'all'">Todas</button>
-        <button class="bracket-chip chip-r32" :class="{active: activeRound === 'r32'}" @click="scrollTo('r32')">Dieciseisavos</button>
-        <button class="bracket-chip chip-r16" :class="{active: activeRound === 'r16'}" @click="scrollTo('r16')">Octavos</button>
-        <button class="bracket-chip chip-qf" :class="{active: activeRound === 'qf'}" @click="scrollTo('qf')">Cuartos</button>
-        <button class="bracket-chip chip-sf" :class="{active: activeRound === 'sf'}" @click="scrollTo('sf')">Semis</button>
+        <button class="bracket-chip chip-r32" :class="{active: activeRound === 'r32'}" @click="scrollTo('r32')">16avos</button>
+        <button class="bracket-chip chip-r16" :class="{active: activeRound === 'r16'}" @click="scrollTo('r16')">8vos</button>
+        <button class="bracket-chip chip-qf" :class="{active: activeRound === 'qf'}" @click="scrollTo('qf')">4tos</button>
+        <button class="bracket-chip chip-sf" :class="{active: activeRound === 'sf'}" @click="scrollTo('sf')">Semifinal</button>
         <button class="bracket-chip chip-third" :class="{active: activeRound === 'third'}" @click="scrollTo('third')">3.er lugar</button>
         <button class="bracket-chip chip-final" :class="{active: activeRound === 'final'}" @click="scrollTo('final')">Final</button>
       </div>
@@ -156,36 +128,29 @@ export default {
             </div>
             <span class="section-pill" :class="roundLabels('r32').pillClass">{{ roundLabels('r32').pill }}</span>
           </div>
-          <div v-if="roundEmpty('r32')" class="bracket-empty">Aún no hay partidos. Inicializá el bracket para cargar los 16 partidos de dieciseisavos.</div>
-          <div v-else class="matches-grid grid-2">
+          <div class="matches-grid grid-2">
             <div v-for="m in bracket.r32" :key="m.id" class="match-card match-r32">
               <div class="match-meta">
-                <span class="match-id">dieciseisavos #{{ m.position }}</span>
+                <span class="match-id">dieciseisavos #{{ m.id.split('_')[1] }}</span>
                 <span class="match-date">{{ fmtWeekday(m.match_date) }} {{ fmtDate(m.match_date) }} · {{ m.match_time }}</span>
               </div>
-              <div class="team-row" :class="{'team-row-winner': m.winner === 'home', 'team-row-clickable': isAdmin && m.home_team, 'team-row-disabled': isAdmin && !m.home_team}">
-                <span class="team-pos">{{ m.home_label }}</span>
-                <img v-if="teamFlag(m.home_team)" :src="teamFlag(m.home_team)" alt="" class="team-flag-img">
-                <span v-else class="team-flag-img team-flag-empty"></span>
-                <span class="team-name" :class="{'team-tbd': !m.home_team}">{{ m.home_team || 'Por definir' }}</span>
-                <span v-if="m.winner === 'home'" class="team-trophy">★</span>
-
+              <div class="team-row">
+                <span class="team-pos">A</span>
+                <span class="team-flag-img team-flag-empty"></span>
+                <span class="team-name team-tbd">{{ m.home_team || 'Por definir' }}</span>
               </div>
               <div class="team-divider"></div>
-              <div class="team-row" :class="{'team-row-winner': m.winner === 'away', 'team-row-clickable': isAdmin && m.away_team, 'team-row-disabled': isAdmin && !m.away_team}">
-                <span class="team-pos">{{ m.away_label }}</span>
-                <img v-if="teamFlag(m.away_team)" :src="teamFlag(m.away_team)" alt="" class="team-flag-img">
-                <span v-else class="team-flag-img team-flag-empty"></span>
-                <span class="team-name" :class="{'team-tbd': !m.away_team}">{{ m.away_team || 'Por definir' }}</span>
-                <span v-if="m.winner === 'away'" class="team-trophy">★</span>
-
+              <div class="team-row">
+                <span class="team-pos">B</span>
+                <span class="team-flag-img team-flag-empty"></span>
+                <span class="team-name team-tbd">{{ m.away_team || 'Por definir' }}</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <div v-show="(isVisible('r32') || isVisible('r16')) && hasR32Data()" class="bracket-link link-down link-blue">
+      <div v-show="(isVisible('r32') || isVisible('r16'))" class="bracket-link link-down link-blue">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
       </div>
 
@@ -200,34 +165,27 @@ export default {
             </div>
             <span class="section-pill" :class="roundLabels('r16').pillClass">{{ roundLabels('r16').pill }}</span>
           </div>
-          <div v-if="roundEmpty('r16')" class="bracket-empty">Los octavos se generan automáticamente al inicializar el bracket.</div>
-          <div v-else class="matches-grid grid-2">
+          <div class="matches-grid grid-2">
             <div v-for="m in bracket.r16" :key="m.id" class="match-card match-r16">
               <div class="match-meta">
                 <span class="match-id">{{ m.id.replace('r16_', 'G').toUpperCase() }}</span>
                 <span class="match-date">{{ fmtWeekday(m.match_date) }} {{ fmtDate(m.match_date) }} · {{ m.match_time }}</span>
               </div>
-              <div class="team-row" :class="{'team-row-winner': m.winner === 'home', 'team-row-clickable': isAdmin && m.home_team, 'team-row-disabled': isAdmin && !m.home_team}">
-                <img v-if="teamFlag(m.home_team)" :src="teamFlag(m.home_team)" alt="" class="team-flag-img">
-                <span v-else class="team-flag-img team-flag-empty"></span>
-                <span class="team-name" :class="{'team-tbd': !m.home_team}">{{ m.home_team || 'Por definir' }}</span>
-                <span v-if="m.winner === 'home'" class="team-trophy">★</span>
-
+              <div class="team-row">
+                <span class="team-flag-img team-flag-empty"></span>
+                <span class="team-name team-tbd">{{ m.home_team || 'Por definir' }}</span>
               </div>
               <div class="team-divider"></div>
-              <div class="team-row" :class="{'team-row-winner': m.winner === 'away', 'team-row-clickable': isAdmin && m.away_team, 'team-row-disabled': isAdmin && !m.away_team}">
-                <img v-if="teamFlag(m.away_team)" :src="teamFlag(m.away_team)" alt="" class="team-flag-img">
-                <span v-else class="team-flag-img team-flag-empty"></span>
-                <span class="team-name" :class="{'team-tbd': !m.away_team}">{{ m.away_team || 'Por definir' }}</span>
-                <span v-if="m.winner === 'away'" class="team-trophy">★</span>
-
+              <div class="team-row">
+                <span class="team-flag-img team-flag-empty"></span>
+                <span class="team-name team-tbd">{{ m.away_team || 'Por definir' }}</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <div v-show="(isVisible('r16') || isVisible('qf')) && hasR32Data()" class="bracket-link link-down link-cyan">
+      <div v-show="(isVisible('r16') || isVisible('qf'))" class="bracket-link link-down link-cyan">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
       </div>
 
@@ -242,34 +200,27 @@ export default {
             </div>
             <span class="section-pill" :class="roundLabels('qf').pillClass">{{ roundLabels('qf').pill }}</span>
           </div>
-          <div v-if="roundEmpty('qf')" class="bracket-empty">Los cuartos se generan automáticamente al inicializar el bracket.</div>
-          <div v-else class="matches-grid grid-2">
+          <div class="matches-grid grid-2">
             <div v-for="m in bracket.qf" :key="m.id" class="match-card match-qf">
               <div class="match-meta">
                 <span class="match-id">{{ m.id.replace('qf_', 'G').toUpperCase() }}</span>
                 <span class="match-date">{{ fmtWeekday(m.match_date) }} {{ fmtDate(m.match_date) }} · {{ m.match_time }}</span>
               </div>
-              <div class="team-row" :class="{'team-row-winner': m.winner === 'home', 'team-row-clickable': isAdmin && m.home_team, 'team-row-disabled': isAdmin && !m.home_team}">
-                <img v-if="teamFlag(m.home_team)" :src="teamFlag(m.home_team)" alt="" class="team-flag-img">
-                <span v-else class="team-flag-img team-flag-empty"></span>
-                <span class="team-name" :class="{'team-tbd': !m.home_team}">{{ m.home_team || 'Por definir' }}</span>
-                <span v-if="m.winner === 'home'" class="team-trophy">★</span>
-
+              <div class="team-row">
+                <span class="team-flag-img team-flag-empty"></span>
+                <span class="team-name team-tbd">{{ m.home_team || 'Por definir' }}</span>
               </div>
               <div class="team-divider"></div>
-              <div class="team-row" :class="{'team-row-winner': m.winner === 'away', 'team-row-clickable': isAdmin && m.away_team, 'team-row-disabled': isAdmin && !m.away_team}">
-                <img v-if="teamFlag(m.away_team)" :src="teamFlag(m.away_team)" alt="" class="team-flag-img">
-                <span v-else class="team-flag-img team-flag-empty"></span>
-                <span class="team-name" :class="{'team-tbd': !m.away_team}">{{ m.away_team || 'Por definir' }}</span>
-                <span v-if="m.winner === 'away'" class="team-trophy">★</span>
-
+              <div class="team-row">
+                <span class="team-flag-img team-flag-empty"></span>
+                <span class="team-name team-tbd">{{ m.away_team || 'Por definir' }}</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <div v-show="(isVisible('qf') || isVisible('sf')) && hasR32Data()" class="bracket-link link-down link-orange">
+      <div v-show="(isVisible('qf') || isVisible('sf'))" class="bracket-link link-down link-orange">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
       </div>
 
@@ -284,34 +235,27 @@ export default {
             </div>
             <span class="section-pill" :class="roundLabels('sf').pillClass">{{ roundLabels('sf').pill }}</span>
           </div>
-          <div v-if="roundEmpty('sf')" class="bracket-empty">Las semis se generan automáticamente al inicializar el bracket.</div>
-          <div v-else class="matches-grid grid-2">
+          <div class="matches-grid grid-2">
             <div v-for="m in bracket.sf" :key="m.id" class="match-card match-sf">
               <div class="match-meta">
                 <span class="match-id">{{ m.id.replace('sf_', 'G').toUpperCase() }}</span>
                 <span class="match-date">{{ fmtWeekday(m.match_date) }} {{ fmtDate(m.match_date) }} · {{ m.match_time }}</span>
               </div>
-              <div class="team-row" :class="{'team-row-winner': m.winner === 'home', 'team-row-clickable': isAdmin && m.home_team, 'team-row-disabled': isAdmin && !m.home_team}">
-                <img v-if="teamFlag(m.home_team)" :src="teamFlag(m.home_team)" alt="" class="team-flag-img">
-                <span v-else class="team-flag-img team-flag-empty"></span>
-                <span class="team-name" :class="{'team-tbd': !m.home_team}">{{ m.home_team || 'Por definir' }}</span>
-                <span v-if="m.winner === 'home'" class="team-trophy">★</span>
-
+              <div class="team-row">
+                <span class="team-flag-img team-flag-empty"></span>
+                <span class="team-name team-tbd">{{ m.home_team || 'Por definir' }}</span>
               </div>
               <div class="team-divider"></div>
-              <div class="team-row" :class="{'team-row-winner': m.winner === 'away', 'team-row-clickable': isAdmin && m.away_team, 'team-row-disabled': isAdmin && !m.away_team}">
-                <img v-if="teamFlag(m.away_team)" :src="teamFlag(m.away_team)" alt="" class="team-flag-img">
-                <span v-else class="team-flag-img team-flag-empty"></span>
-                <span class="team-name" :class="{'team-tbd': !m.away_team}">{{ m.away_team || 'Por definir' }}</span>
-                <span v-if="m.winner === 'away'" class="team-trophy">★</span>
-
+              <div class="team-row">
+                <span class="team-flag-img team-flag-empty"></span>
+                <span class="team-name team-tbd">{{ m.away_team || 'Por definir' }}</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <div v-show="(isVisible('sf') || isVisible('third')) && hasR32Data()" class="bracket-link link-down link-red">
+      <div v-show="(isVisible('sf') || isVisible('third'))" class="bracket-link link-down link-red">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
       </div>
 
@@ -326,34 +270,27 @@ export default {
             </div>
             <span class="section-pill" :class="roundLabels('third').pillClass">{{ roundLabels('third').pill }}</span>
           </div>
-          <div v-if="roundEmpty('third')" class="bracket-empty">El partido por el 3.er lugar se genera automáticamente al inicializar el bracket. Lo juegan los perdedores de las semifinales.</div>
-          <div v-else class="matches-grid grid-1">
+          <div class="matches-grid grid-1">
             <div v-for="m in bracket.third" :key="m.id" class="match-card match-third">
               <div class="match-meta">
-                <span class="match-id">G{{ m.id.replace('third_', '').toUpperCase() }}</span>
+                <span class="match-id">3.er LUGAR</span>
                 <span class="match-date">{{ fmtWeekday(m.match_date) }} {{ fmtDate(m.match_date) }} · {{ m.match_time }}</span>
               </div>
-              <div class="team-row" :class="{'team-row-winner': m.winner === 'home', 'team-row-clickable': isAdmin && m.home_team, 'team-row-disabled': isAdmin && !m.home_team}">
-                <img v-if="teamFlag(m.home_team)" :src="teamFlag(m.home_team)" alt="" class="team-flag-img">
-                <span v-else class="team-flag-img team-flag-empty"></span>
-                <span class="team-name" :class="{'team-tbd': !m.home_team}">{{ m.home_team || 'Perdedor SF 1' }}</span>
-                <span v-if="m.winner === 'home'" class="team-trophy">🥉</span>
-
+              <div class="team-row">
+                <span class="team-flag-img team-flag-empty"></span>
+                <span class="team-name team-tbd">{{ m.home_team || 'Perdedor SF 1' }}</span>
               </div>
               <div class="team-divider"></div>
-              <div class="team-row" :class="{'team-row-winner': m.winner === 'away', 'team-row-clickable': isAdmin && m.away_team, 'team-row-disabled': isAdmin && !m.away_team}">
-                <img v-if="teamFlag(m.away_team)" :src="teamFlag(m.away_team)" alt="" class="team-flag-img">
-                <span v-else class="team-flag-img team-flag-empty"></span>
-                <span class="team-name" :class="{'team-tbd': !m.away_team}">{{ m.away_team || 'Perdedor SF 2' }}</span>
-                <span v-if="m.winner === 'away'" class="team-trophy">🥉</span>
-
+              <div class="team-row">
+                <span class="team-flag-img team-flag-empty"></span>
+                <span class="team-name team-tbd">{{ m.away_team || 'Perdedor SF 2' }}</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <div v-show="(isVisible('third') || isVisible('final')) && hasR32Data()" class="bracket-link link-down link-bronze">
+      <div v-show="(isVisible('third') || isVisible('final'))" class="bracket-link link-down link-bronze">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
       </div>
 
@@ -368,27 +305,20 @@ export default {
             </div>
             <span class="section-pill" :class="roundLabels('final').pillClass">{{ roundLabels('final').pill }}</span>
           </div>
-          <div v-if="roundEmpty('final')" class="bracket-empty">La final se genera automáticamente al inicializar el bracket.</div>
-          <div v-else class="matches-grid grid-1">
+          <div class="matches-grid grid-1">
             <div v-for="m in bracket.final" :key="m.id" class="match-card match-final">
               <div class="match-meta">
-                <span class="match-id">G{{ m.id.replace('final_', '').toUpperCase() }}</span>
+                <span class="match-id">FINAL</span>
                 <span class="match-date">{{ fmtWeekday(m.match_date) }} {{ fmtDate(m.match_date) }} · {{ m.match_time }}</span>
               </div>
-              <div class="team-row" :class="{'team-row-winner': m.winner === 'home', 'team-row-clickable': isAdmin && m.home_team, 'team-row-disabled': isAdmin && !m.home_team}">
-                <img v-if="teamFlag(m.home_team)" :src="teamFlag(m.home_team)" alt="" class="team-flag-img">
-                <span v-else class="team-flag-img team-flag-empty"></span>
-                <span class="team-name" :class="{'team-tbd': !m.home_team}">{{ m.home_team || 'Por definir' }}</span>
-                <span v-if="m.winner === 'home'" class="team-trophy">🏆</span>
-
+              <div class="team-row">
+                <span class="team-flag-img team-flag-empty"></span>
+                <span class="team-name team-tbd">{{ m.home_team || 'Por definir' }}</span>
               </div>
               <div class="team-divider"></div>
-              <div class="team-row" :class="{'team-row-winner': m.winner === 'away', 'team-row-clickable': isAdmin && m.away_team, 'team-row-disabled': isAdmin && !m.away_team}">
-                <img v-if="teamFlag(m.away_team)" :src="teamFlag(m.away_team)" alt="" class="team-flag-img">
-                <span v-else class="team-flag-img team-flag-empty"></span>
-                <span class="team-name" :class="{'team-tbd': !m.away_team}">{{ m.away_team || 'Por definir' }}</span>
-                <span v-if="m.winner === 'away'" class="team-trophy">🏆</span>
-
+              <div class="team-row">
+                <span class="team-flag-img team-flag-empty"></span>
+                <span class="team-name team-tbd">{{ m.away_team || 'Por definir' }}</span>
               </div>
             </div>
           </div>
