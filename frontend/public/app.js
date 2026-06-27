@@ -59,6 +59,7 @@ createApp({
             :user-rank="userRank"
             :user-rank-delta="userRankDelta"
             :pending-today-count="pendingTodayCount"
+            :is-admin="isAdmin"
             @set-score="setScore"
             @toggle-comodin="toggleComodin"
             @submit="submitPredictions"

@@ -3,7 +3,7 @@ import { api } from '../services/api.js';
 import Bracket from './Bracket.js';
 
 export default {
-  props: ['matchGroups', 'predictions', 'user', 'saving', 'comodinUsado', 'comodinMax', 'countries', 'settings', 'championPick', 'userStreak', 'userRank', 'userRankDelta', 'pendingTodayCount'],
+  props: ['matchGroups', 'predictions', 'user', 'saving', 'comodinUsado', 'comodinMax', 'countries', 'settings', 'championPick', 'userStreak', 'userRank', 'userRankDelta', 'pendingTodayCount', 'isAdmin'],
   emits: ['set-score', 'toggle-comodin', 'submit', 'save-champion-pick', 'saved', 'save-error'],
   components: { Bracket },
   data() {
@@ -435,9 +435,9 @@ export default {
         </div>
         <Transition name="fade">
         <div v-show="showGroupsPanel" style="padding:0.75rem 1rem 1rem;">
-          <div v-if="groupsSectionTab === 'brackets'">
-            <Bracket :countries="countries" />
-          </div>
+      <div v-if="groupsSectionTab === 'brackets'">
+        <Bracket :countries="countries" :is-admin="isAdmin" />
+      </div>
           <div v-else>
           <div v-if="groupsLoading" style="text-align:center;padding:0.5rem;font-size:0.75rem;color:var(--color-gray);">Cargando grupos...</div>
           <div v-else-if="groups.length === 0" style="text-align:center;padding:0.5rem;font-size:0.75rem;color:var(--color-gray);">No hay datos de grupos</div>

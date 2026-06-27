@@ -41,6 +41,7 @@ app.use('/api/groups', require('../backend/routes/groups'));
 app.use('/api/public', require('../backend/routes/public'));
 app.use('/api/push', require('../backend/routes/push'));
 app.use('/api/backup', require('../backend/routes/backup'));
+app.use('/api/bracket', require('../backend/routes/bracket'));
 
 const { nowStr, partsInTZ } = require('./utils/datetime');
 

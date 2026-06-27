@@ -134,6 +134,25 @@ try {
     db.exec("ALTER TABLE champion_picks ADD COLUMN points INTEGER DEFAULT NULL");
   }
 
+  const hasBracket = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bracket_matches'").get();
+  if (!hasBracket) {
+    db.exec(`
+      CREATE TABLE bracket_matches (
+        id TEXT PRIMARY KEY,
+        round TEXT NOT NULL,
+        position INTEGER NOT NULL,
+        match_id TEXT REFERENCES matches(id) ON DELETE SET NULL,
+        home_team TEXT,
+        away_team TEXT,
+        home_seed INTEGER,
+        away_seed INTEGER,
+        winner TEXT,
+        UNIQUE(round, position)
+      );
+      CREATE INDEX IF NOT EXISTS idx_bracket_round ON bracket_matches(round);
+    `);
+  }
+
   // Migrate ADMIN_EMAILS to is_admin on startup
   const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
   if (adminEmails.length > 0) {

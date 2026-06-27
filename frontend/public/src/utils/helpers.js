@@ -66,10 +66,10 @@ export function formatDate(dateStr) {
 export function roundLabel(r) {
     return {
         group: 'Fase Grupos',
-        round_32: '32vos',
-        round_16: '16vos',
-        quarter: 'Cuartos',
-        semi: 'Semis',
+        round_16: '16avos',
+        round_8: '8vos',
+        quarter: '4tos',
+        semi: 'Semifinal',
         final: 'Final'
     }[r] || r;
 }

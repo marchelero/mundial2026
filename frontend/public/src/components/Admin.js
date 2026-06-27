@@ -564,12 +564,12 @@ export default {
                  <label class="form-label">Tipo de partido</label>
                  <select v-model="newMatch.round" class="form-input" style="padding-left:0.5rem;">
                    <option value="group">Fase de Grupos</option>
-                   <option value="round_32">32vos de Final</option>
-                   <option value="round_16">16vos de Final</option>
+                   <option value="round_8">Octavos de Final</option>
                    <option value="quarter">Cuartos de Final</option>
                    <option value="semi">Semifinal</option>
                    <option value="final">Final</option>
                  </select>
+                 <span style="font-size:0.6rem;color:var(--color-gray);margin-top:0.25rem;display:block;">Los 16avos se generan automáticamente desde el bracket.</span>
               </div>
               <div class="form-group" v-if="newMatch.round === 'group'">
                  <label class="form-label">Grupo (A, B, C...)</label>
