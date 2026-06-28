@@ -14,26 +14,45 @@ try {
 }
 
 // Fixture oficial de los 16avos del Mundial 2026 (P73-P88, orden oficial)
+// Horas oficiales FIFA convertidas a hora de Bolivia (UTC-4)
 const R32_FIXTURE = [
-  { pos: 1,  date: '2026-06-29', time: '16:30', home: 'Alemania',              away: 'Paraguay' },         // P73
-  { pos: 2,  date: '2026-06-30', time: '17:00', home: 'Francia',               away: 'Suecia' },           // P74
-  { pos: 3,  date: '2026-06-28', time: '15:00', home: 'Sudáfrica',            away: 'Canadá' },           // P75
-  { pos: 4,  date: '2026-06-29', time: '21:00', home: 'Países Bajos',          away: 'Marruecos' },        // P76
-  { pos: 5,  date: '2026-07-02', time: '19:00', home: 'Portugal',              away: 'Croacia' },          // P77
-  { pos: 6,  date: '2026-07-02', time: '15:00', home: 'España',                away: 'Austria' },          // P78
-  { pos: 7,  date: '2026-07-01', time: '20:00', home: 'Estados Unidos',        away: 'Bosnia y Herzegovina' }, // P79
-  { pos: 8,  date: '2026-07-01', time: '16:00', home: 'Bélgica',               away: 'Senegal' },          // P80
-  { pos: 9,  date: '2026-06-29', time: '13:00', home: 'Brasil',                away: 'Japón' },            // P81
-  { pos: 10, date: '2026-06-30', time: '13:00', home: 'Costa de Marfil',       away: 'Noruega' },          // P82
-  { pos: 11, date: '2026-06-30', time: '21:00', home: 'México',                away: 'Ecuador' },          // P83
-  { pos: 12, date: '2026-07-01', time: '12:00', home: 'Inglaterra',            away: 'Congo DR' },         // P84
-  { pos: 13, date: '2026-07-03', time: '18:00', home: 'Argentina',             away: 'Cabo Verde' },       // P85
-  { pos: 14, date: '2026-07-03', time: '14:00', home: 'Australia',             away: 'Egipto' },           // P86
-  { pos: 15, date: '2026-07-02', time: '23:00', home: 'Suiza',                 away: 'Argelia' },          // P87
-  { pos: 16, date: '2026-07-03', time: '21:30', home: 'Colombia',              away: 'Ghana' },            // P88
+  { pos: 1,  date: '2026-06-29', time: '16:30', home: 'Alemania',              away: 'Paraguay' },         // P73 - Boston (UTC-4, 16:30 local)
+  { pos: 2,  date: '2026-06-30', time: '17:00', home: 'Francia',               away: 'Suecia' },           // P74 - NY/NJ (UTC-4, 17:00 local)
+  { pos: 3,  date: '2026-06-28', time: '15:00', home: 'Sudáfrica',            away: 'Canadá' },           // P75 - LA (UTC-7, 12:00+3)
+  { pos: 4,  date: '2026-06-29', time: '21:00', home: 'Países Bajos',          away: 'Marruecos' },        // P76 - Monterrey (UTC-6, 19:00+2)
+  { pos: 5,  date: '2026-07-02', time: '19:00', home: 'Portugal',              away: 'Croacia' },          // P77 - Toronto (UTC-4, 19:00 local)
+  { pos: 6,  date: '2026-07-02', time: '15:00', home: 'España',                away: 'Austria' },          // P78 - LA (UTC-7, 12:00+3)
+  { pos: 7,  date: '2026-07-01', time: '20:00', home: 'Estados Unidos',        away: 'Bosnia y Herzegovina' }, // P79 - SF (UTC-7, 17:00+3)
+  { pos: 8,  date: '2026-07-01', time: '16:00', home: 'Bélgica',               away: 'Senegal' },          // P80 - Seattle (UTC-7, 13:00+3)
+  { pos: 9,  date: '2026-06-29', time: '13:00', home: 'Brasil',                away: 'Japón' },            // P81 - Houston (UTC-5, 12:00+1)
+  { pos: 10, date: '2026-06-30', time: '13:00', home: 'Costa de Marfil',       away: 'Noruega' },          // P82 - Dallas (UTC-5, 12:00+1)
+  { pos: 11, date: '2026-06-30', time: '21:00', home: 'México',                away: 'Ecuador' },          // P83 - CDMX (UTC-6, 19:00+2)
+  { pos: 12, date: '2026-07-01', time: '12:00', home: 'Inglaterra',            away: 'Congo DR' },         // P84 - Atlanta (UTC-4, 12:00 local)
+  { pos: 13, date: '2026-07-03', time: '18:00', home: 'Argentina',             away: 'Cabo Verde' },       // P85 - Miami (UTC-4, 18:00 local)
+  { pos: 14, date: '2026-07-03', time: '14:00', home: 'Australia',             away: 'Egipto' },           // P86 - Dallas (UTC-5, 13:00+1)
+  { pos: 15, date: '2026-07-02', time: '23:00', home: 'Suiza',                 away: 'Argelia' },          // P87 - Vancouver (UTC-7, 20:00+3)
+  { pos: 16, date: '2026-07-03', time: '21:30', home: 'Colombia',              away: 'Ghana' },            // P88 - Kansas City (UTC-5, 20:30+1)
 ];
 
-// Fechas y horas del Mundial 2026 para las rondas eliminatorias (r16 en adelante)
+// Fixture de 8vos (P89-P96) y 4tos (P97-P100) — horas oficiales Bolivia UTC-4
+const R16_FIXTURE = [
+  { pos: 1, date: '2026-07-04', time: '17:00' },  // P89 - Filadelfia (UTC-4)
+  { pos: 2, date: '2026-07-04', time: '13:00' },  // P90 - Houston (UTC-5, 12:00+1)
+  { pos: 3, date: '2026-07-05', time: '16:00' },  // P91 - NY/NJ (UTC-4)
+  { pos: 4, date: '2026-07-05', time: '20:00' },  // P92 - CDMX (UTC-6, 18:00+2)
+  { pos: 5, date: '2026-07-06', time: '15:00' },  // P93 - Dallas (UTC-5, 14:00+1)
+  { pos: 6, date: '2026-07-06', time: '20:00' },  // P94 - Seattle (UTC-7, 17:00+3)
+  { pos: 7, date: '2026-07-07', time: '12:00' },  // P95 - Atlanta (UTC-4)
+  { pos: 8, date: '2026-07-07', time: '16:00' },  // P96 - Vancouver (UTC-7, 13:00+3)
+];
+const QF_FIXTURE = [
+  { pos: 1, date: '2026-07-09', time: '16:00' },  // P97 - Boston (UTC-4)
+  { pos: 2, date: '2026-07-10', time: '15:00' },  // P98 - LA (UTC-7, 12:00+3)
+  { pos: 3, date: '2026-07-11', time: '17:00' },  // P99 - Miami (UTC-4)
+  { pos: 4, date: '2026-07-11', time: '21:00' },  // P100 - Kansas City (UTC-5, 20:00+1)
+];
+
+// Fechas y horas para las rondas finales (SF, 3er, Final)
 const BRACKET_SCHEDULE = {
   r16: { start: '2026-07-04', end: '2026-07-07', times: ['12:00', '15:00', '18:00', '21:00'] },
   qf:  { start: '2026-07-11', end: '2026-07-12', times: ['15:00', '18:00', '21:00'] },
@@ -80,8 +99,26 @@ function initBracket() {
     created++;
   }
 
-  // R16, QF, SF, third, final: fechas automaticas como antes
-  for (const round of ['r16', 'qf', 'sf', 'third', 'final']) {
+  // R16: usar el fixture oficial
+  for (const m of R16_FIXTURE) {
+    const id = `r16_${m.pos}`;
+    const matchId = generateId();
+    insertMatch.run(matchId, m.date, m.time, 'Por definir', 'Por definir', 'round_8');
+    insertBracket.run(id, 'r16', m.pos, matchId, null, null, null, null);
+    created++;
+  }
+
+  // QF: usar el fixture oficial
+  for (const m of QF_FIXTURE) {
+    const id = `qf_${m.pos}`;
+    const matchId = generateId();
+    insertMatch.run(matchId, m.date, m.time, 'Por definir', 'Por definir', 'quarter');
+    insertBracket.run(id, 'qf', m.pos, matchId, null, null, null, null);
+    created++;
+  }
+
+  // SF, third, final: fechas automaticas como antes
+  for (const round of ['sf', 'third', 'final']) {
     const n = ROUND_SLOTS[round];
     const sched = BRACKET_SCHEDULE[round];
     const dates = sched.end ? dateRange(sched.start, sched.end) : [sched.start];
@@ -237,4 +274,4 @@ function resolveFixtureSlot(slot, standingsByGroup, qualifiedThirds) {
   return slot;
 }
 
-module.exports = { initBracket, resetBracket, getQualifiersFromGroups, resolveFixtureSlot, R32_FIXTURE, BRACKET_SCHEDULE, ROUND_SLOTS };
+module.exports = { initBracket, resetBracket, getQualifiersFromGroups, resolveFixtureSlot, R32_FIXTURE, R16_FIXTURE, QF_FIXTURE, BRACKET_SCHEDULE, ROUND_SLOTS };
