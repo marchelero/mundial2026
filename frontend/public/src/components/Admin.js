@@ -747,6 +747,21 @@ export default {
         </div>
         <div class="card">
           <div style="display: flex; align-items: center; gap: 1rem;">
+            <span style="font-size: 1.5rem; line-height: 1;">🔒</span>
+            <div style="flex: 1;">
+              <h3 style="font-family:var(--font-header);font-size:0.95rem;letter-spacing:0.04em;margin:0;">BOTONES DEL BRACKET</h3>
+              <p style="font-size: 0.65rem; color: var(--color-gray); margin-top: 0.15rem; font-family:var(--font-main);">Oculta los botones de Inicializar, Auto-llenar y Resetear del bracket para evitar borrados accidentales.</p>
+            </div>
+            <div style="text-align: right;">
+              <div :style="{fontSize:'0.55rem', fontWeight:700, textTransform:'uppercase', marginBottom:'0.15rem', color: settings.bracket_admin_buttons_visible !== 'false' ? '#16a34a' : '#ef4444'}">{{ settings.bracket_admin_buttons_visible !== 'false' ? 'VISIBLES' : 'OCULTOS' }}</div>
+              <button @click="$emit('save-setting', { key: 'bracket_admin_buttons_visible', value: settings.bracket_admin_buttons_visible === 'false' ? 'true' : 'false' })" :style="{padding:'0.25rem 0.5rem', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:600, fontSize:'0.65rem', background: settings.bracket_admin_buttons_visible === 'false' ? '#16a34a' : '#ef4444', color:'white'}">
+                {{ settings.bracket_admin_buttons_visible === 'false' ? 'MOSTRAR' : 'OCULTAR' }}
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display: flex; align-items: center; gap: 1rem;">
             <span style="font-size: 1.5rem; line-height: 1;">⏰</span>
             <div style="flex: 1;">
               <h3 style="font-family:var(--font-header);font-size:0.95rem;letter-spacing:0.04em;margin:0;">RECORDATORIO DE PRONÓSTICOS</h3>

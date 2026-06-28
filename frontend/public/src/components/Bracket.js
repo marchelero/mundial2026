@@ -27,7 +27,7 @@ const ROUND_LABELS = {
 const ROUND_ORDER = ['r32', 'r16', 'qf', 'sf', 'third', 'final'];
 
 export default {
-  props: ['countries', 'isAdmin'],
+  props: ['countries', 'isAdmin', 'settings'],
   emits: ['notify'],
   data() {
     return {
@@ -254,7 +254,7 @@ export default {
   template: `
     <div class="bracket-modern">
 
-      <div v-if="isAdmin" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+      <div v-if="isAdmin && settings?.bracket_admin_buttons_visible !== 'false'" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem;">
         <button @click="initBracket" :disabled="actionInProgress === 'init' || hasAnyData()" class="btn-bracket-admin" :style="{padding:'0.5rem 0.8rem',background:'var(--color-dark)',color:'white',border:'none',borderRadius:'6px',fontWeight:700,fontSize:'0.7rem',cursor: hasAnyData() ? 'not-allowed' : 'pointer', opacity: hasAnyData() ? 0.5 : 1}">
           {{ actionInProgress === 'init' ? '⏳' : '🏁' }} Inicializar Bracket
         </button>

@@ -424,7 +424,7 @@ export default {
         <Transition name="fade">
         <div v-show="showGroupsPanel" style="padding:0.75rem 1rem 1rem;">
       <div v-if="groupsSectionTab === 'brackets'">
-        <Bracket :countries="countries" :is-admin="isAdmin" />
+        <Bracket :countries="countries" :is-admin="isAdmin" :settings="settings" />
       </div>
           <div v-else>
           <div v-if="groupsLoading" style="text-align:center;padding:0.5rem;font-size:0.75rem;color:var(--color-gray);">Cargando grupos...</div>
