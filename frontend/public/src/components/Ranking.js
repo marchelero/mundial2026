@@ -5,6 +5,7 @@ export default {
   data() {
     return {
       expandedUser: null, userBreakdown: null, statFilter: null, userPreds: [],
+      championPickLabel: '',
       showCompare: false, compareUsers: [], comparePredictions: {}, compareTab: 'table',
       compareColors: ['#3b82f6', '#f59e0b', '#10b981', '#ef4444'],
       compareLoading: {}, compareError: {}, raceTimer: null
@@ -85,6 +86,18 @@ export default {
     }
   },
   methods: {
+    isFinalWin(match, pred) {
+      if (!match || !pred) return false;
+      if (match.round !== 'final') return false;
+      if (match.status !== 'finished') return false;
+      if (match.home_score == null || match.away_score == null) return false;
+      if (pred.home == null || pred.away == null) return false;
+      if (pred.home === match.home_score && pred.away === match.away_score) return true;
+      const pd = pred.home - pred.away;
+      const rd = match.home_score - match.away_score;
+      if ((pd === 0 && rd === 0) || (pd > 0 && rd > 0) || (pd < 0 && rd < 0)) return true;
+      return false;
+    },
     async toggleUser(userId) {
       if (this.expandedUser === userId) {
         this.expandedUser = null; this.userBreakdown = null; this.statFilter = null; this.userPreds = [];
@@ -116,7 +129,12 @@ export default {
         });
         const champPicks = await api.get('/champion-picks/all').catch(() => []);
         const champPick = champPicks.find(cp => cp.user === userId);
-        const champBonus = champPick ? 5 : 0;
+        const settings = await api.get('/settings').catch(() => []);
+        const settingsMap = {};
+        for (const s of settings) settingsMap[s.key] = s.value;
+        const championWinner = settingsMap.champion_winner || '';
+        const champBonus = (champPick && championWinner && champPick.champion === championWinner) ? 5 : 0;
+        this.championPickLabel = champPick?.champion || '';
         this.userBreakdown = { exactos, resultados, errors, comodines, pendientes, champBonus, exactoPts, resultadoPts };
         this.statFilter = null;
         this.expandedUser = userId;
@@ -417,10 +435,11 @@ export default {
                 <tr data-dark-border="border" style="border-bottom: 1px solid rgba(0,0,0,0.05); cursor:pointer;" @click="r && toggleUser(r.id)">
                   <td data-dark-text="gray" style="padding: 0.5rem; font-size: 0.8rem; color: var(--color-gray); font-weight: 700;">{{ i + 1 }}</td>
                   <td style="padding: 0.5rem; line-height: 1.3;">
-                    <div data-dark-text="text" style="font-weight: 600; font-size: 0.85rem; display:flex; align-items:center; gap:0.25rem; flex-wrap:wrap;">
-                      <span>{{ r.name }}</span>
-                      <span v-for="i in (r.comodines_usados || 0)" :key="'c'+i" style="font-size:0.75rem;" title="Comodín usado">🍀</span>
-                    </div>
+                      <div data-dark-text="text" style="font-weight: 600; font-size: 0.85rem; display:flex; align-items:center; gap:0.25rem; flex-wrap:wrap;">
+                        <span>{{ r.name }}</span>
+                        <span v-for="i in (r.comodines_usados || 0)" :key="'c'+i" style="font-size:0.75rem;" title="Comodín usado">🍀</span>
+                        <span v-if="r.champion_pick" style="font-size:0.85rem;" :title="'Predijo campeón: ' + r.champion_pick">🏆</span>
+                      </div>
                     <div data-dark-text="gray" style="font-size: 0.55rem; color: var(--color-gray); opacity: 0.45;">{{ r.email }}</div>
                   </td>
                   <td style="padding: 0.5rem; text-align: right; font-weight: 700; font-size: 0.7rem; white-space: nowrap;" v-if="r.prize"><span :style="{ color: r.prize.color }">{{ r.prize.label }}</span></td>
@@ -432,19 +451,19 @@ export default {
                     <template v-if="userBreakdown">
                     <div style="width:100%;text-align:right;">
                       <div data-dark-text="text" style="font-size:0.7rem;font-weight:700;color:var(--color-dark);margin-bottom:0.3rem;">Total: <span style="color:var(--color-green);">{{ userBreakdown.exactoPts + userBreakdown.resultadoPts + userBreakdown.champBonus }} pts</span>
-                        ({{ userBreakdown.exactoPts }}{{ userBreakdown.resultadoPts > 0 ? ' + ' + userBreakdown.resultadoPts : '' }}{{ userBreakdown.champBonus > 0 ? ' + ' + userBreakdown.champBonus + ' (🏆)' : '' }})
+                        ({{ userBreakdown.exactoPts }}{{ userBreakdown.resultadoPts > 0 ? ' + ' + userBreakdown.resultadoPts : '' }}<span v-if="userBreakdown.champBonus > 0"> + {{ userBreakdown.champBonus }} 🏆</span>)
                       </div>
                       <div style="display:flex;gap:0.35rem;flex-wrap:wrap;font-size:0.75rem;justify-content:flex-end;">
                         <span v-if="userBreakdown.exactos > 0" @click="toggleStat('exact')" class="breakdown-pill breakdown-exact" style="cursor:pointer;background:#f0fdf4;color:#16a34a;border:1px solid #dcfce7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'exact' ? 'box-shadow:0 0 0 2px #16a34a;' : ''">{{ userBreakdown.exactos }}× Exacto ({{ userBreakdown.exactoPts }}pts)</span>
                         <span v-if="userBreakdown.resultados > 0" @click="toggleStat('result')" class="breakdown-pill breakdown-result" style="cursor:pointer;background:#fefce8;color:#ca8a04;border:1px solid #fef3c7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'result' ? 'box-shadow:0 0 0 2px #ca8a04;' : ''">{{ userBreakdown.resultados }}× Resultado ({{ userBreakdown.resultadoPts }}pts)</span>
                         <span v-if="userBreakdown.errors > 0" @click="toggleStat('wrong')" class="breakdown-pill breakdown-wrong" style="cursor:pointer;background:#fef2f2;color:#ef4444;border:1px solid #fee2e2;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'wrong' ? 'box-shadow:0 0 0 2px #ef4444;' : ''">{{ userBreakdown.errors }}× Error (0pts)</span>
                         <span v-if="userBreakdown.pendientes > 0" @click="toggleStat('pendientes')" class="breakdown-pill breakdown-pendiente" style="cursor:pointer;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'pendientes' ? 'box-shadow:0 0 0 2px #475569;' : ''">⏳ {{ userBreakdown.pendientes }} Pendiente<span v-if="userBreakdown.pendientes > 1">s</span></span>
-                        <span v-if="userBreakdown.champBonus > 0" class="breakdown-pill breakdown-champ" style="background:#fff7ed;color:#d97706;border:1px solid #ffedd5;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;">🏆 Campeón (+{{ userBreakdown.champBonus }}pts)</span>
                       </div>
                     </div>
                     <div v-if="statFilter && getStatMatches(statFilter).length > 0" data-dark-border="border" style="width:100%;display:flex;flex-wrap:wrap;gap:0.3rem;justify-content:flex-end;margin-top:0.4rem;padding-top:0.4rem;border-top:1px solid #e2e8f0;">
-                      <div v-for="({match, pred, comodin}) in getStatMatches(statFilter)" :key="match.id" class="breakdown-match-card" data-dark-bg="card" data-dark-border="border" :style="comodin ? 'position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);border:2px solid #f59e0b;border-radius:6px;padding:0.3rem 0.4rem 0.3rem 1.5rem;text-align:center;width:130px;box-shadow:0 0 12px rgba(245,158,11,0.5);animation:comodinPulse 1.8s ease-in-out infinite;' : 'display:flex;flex-direction:column;align-items:center;justify-content:center;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;padding:0.3rem 0.4rem;text-align:center;width:120px;'">
+                      <div v-for="({match, pred, comodin}) in getStatMatches(statFilter)" :key="match.id" class="breakdown-match-card" data-dark-bg="card" data-dark-border="border" :style="(comodin || isFinalWin(match, pred)) ? 'position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);border:2px solid #f59e0b;border-radius:6px;padding:0.3rem 0.4rem 0.3rem 1.5rem;text-align:center;width:130px;box-shadow:0 0 12px rgba(245,158,11,0.5);animation:comodinPulse 1.8s ease-in-out infinite;' : 'display:flex;flex-direction:column;align-items:center;justify-content:center;background:white;border:1px solid rgba(0,0,0,0.07);border-radius:6px;padding:0.3rem 0.4rem;text-align:center;width:120px;'">
                         <span v-if="comodin" style="position:absolute;top:50%;left:4px;transform:translateY(-50%);font-size:0.95rem;filter:drop-shadow(0 0 4px rgba(245,158,11,0.8));animation:comodinSpin 3s linear infinite;">🍀</span>
+                        <span v-else-if="isFinalWin(match, pred)" style="position:absolute;top:50%;left:4px;transform:translateY(-50%);font-size:0.95rem;filter:drop-shadow(0 0 4px rgba(212,175,55,0.9));animation:comodinSpin 3s linear infinite;">🏆</span>
                         <template v-if="statFilter === 'exact'">
                           <div data-dark-text="text" style="font-weight:700;font-size:0.75rem;white-space:nowrap;"><img v-if="match.home_flag_url" :src="match.home_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;"> {{ match.home_score }}-{{ match.away_score }} <img v-if="match.away_flag_url" :src="match.away_flag_url" alt="" style="width:14px;height:10px;border-radius:2px;vertical-align:middle;"></div>
                         </template>

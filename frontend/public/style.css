@@ -2103,6 +2103,8 @@ body.dark-mode .champion-coming-soon { background: #334155 !important; color: #c
 }
 /* 👑 lider overlay (removido) */
 
+body.dark-mode .breakdown-champ { background: rgba(217, 119, 6, 0.15) !important; color: #fbbf24 !important; border-color: rgba(217, 119, 6, 0.4) !important; }
+
 /* Modal overlay (Teleport target - body) */
 .bracket-winner-modal-overlay {
   position: fixed;

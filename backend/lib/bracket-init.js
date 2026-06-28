@@ -14,7 +14,6 @@ try {
 }
 
 // Fixture oficial de los 16avos del Mundial 2026
-// Algunos cruces dependen de quien quede 3° en ciertos grupos (placeholders "3° X/Y")
 const R32_FIXTURE = [
   { pos: 1,  date: '2026-06-28', time: '12:00', home: 'Sudáfrica',            away: 'Canadá' },
   { pos: 2,  date: '2026-06-29', time: '12:00', home: 'Brasil',                away: 'Japón' },
@@ -22,15 +21,15 @@ const R32_FIXTURE = [
   { pos: 4,  date: '2026-06-29', time: '19:00', home: 'Países Bajos',          away: 'Marruecos' },
   { pos: 5,  date: '2026-06-30', time: '17:00', home: 'Francia',               away: 'Suecia' },
   { pos: 6,  date: '2026-06-30', time: '19:00', home: 'México',                away: 'Ecuador' },
-  { pos: 7,  date: '2026-07-01', time: '12:00', home: 'Inglaterra',            away: '3° Grupo I/K' },
-  { pos: 8,  date: '2026-07-01', time: '13:00', home: 'Bélgica',               away: '3° Grupo A/E/J' },
+  { pos: 7,  date: '2026-07-01', time: '12:00', home: 'Inglaterra',            away: 'Congo DR' },
+  { pos: 8,  date: '2026-07-01', time: '13:00', home: 'Bélgica',               away: 'Senegal' },
   { pos: 9,  date: '2026-07-01', time: '17:00', home: 'Estados Unidos',        away: 'Bosnia y Herzegovina' },
-  { pos: 10, date: '2026-07-02', time: '19:00', home: '2° Grupo K',            away: 'Croacia' },
-  { pos: 11, date: '2026-07-02', time: '19:00', home: 'España',                away: '2° Grupo J' },
-  { pos: 12, date: '2026-07-02', time: '19:00', home: 'Suiza',                 away: '3° Grupo G/J' },
+  { pos: 10, date: '2026-07-02', time: '19:00', home: 'Portugal',              away: 'Croacia' },
+  { pos: 11, date: '2026-07-02', time: '19:00', home: 'España',                away: 'Austria' },
+  { pos: 12, date: '2026-07-02', time: '19:00', home: 'Suiza',                 away: 'Argelia' },
   { pos: 13, date: '2026-07-03', time: '13:00', home: 'Australia',             away: 'Egipto' },
   { pos: 14, date: '2026-07-03', time: '19:00', home: 'Argentina',             away: 'Cabo Verde' },
-  { pos: 15, date: '2026-07-03', time: '19:00', home: '1° Grupo K',            away: '3° Grupo D/I/L' },
+  { pos: 15, date: '2026-07-03', time: '19:00', home: 'Colombia',              away: 'Ghana' },
   { pos: 16, date: '2026-07-03', time: 'TBD',   home: 'Costa de Marfil',       away: 'Noruega' },
 ];
 

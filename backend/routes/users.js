@@ -103,12 +103,13 @@ router.get('/unlinked', authRequired, adminRequired, (req, res) => {
 
 router.get('/rankings', authRequired, (req, res) => {
   try {
-    // Base rankings: all users with their total_points
+    // Base rankings: all users with their total_points + champion pick
     const users = db.prepare(`
-      SELECT id, email, name, COALESCE(total_points, 0) as points,
+      SELECT u.id, u.email, u.name, COALESCE(u.total_points, 0) as points,
         (SELECT COUNT(*) FROM predictions WHERE user_id = u.id AND comodin = 1) as comodines_usados,
         (SELECT COUNT(*) FROM predictions p JOIN matches m ON m.id = p.match_id
-         WHERE p.user_id = u.id AND p.comodin = 1 AND m.status != 'finished') as comodines_pendientes
+         WHERE p.user_id = u.id AND p.comodin = 1 AND m.status != 'finished') as comodines_pendientes,
+        (SELECT champion FROM champion_picks WHERE user_id = u.id) as champion_pick
       FROM users u
       ORDER BY points DESC, email ASC
     `).all();
@@ -146,7 +147,8 @@ router.get('/rankings', authRequired, (req, res) => {
       potential_points: potMap[u.id] || 0,
       comodin_usado: (u.comodines_usados || 0) > 0,
       comodines_usados: u.comodines_usados || 0,
-      comodines_pendientes: u.comodines_pendientes || 0
+      comodines_pendientes: u.comodines_pendientes || 0,
+      champion_pick: u.champion_pick || null,
     })).sort((a, b) => {
       const diff = (b.points + b.potential_points) - (a.points + a.potential_points);
       return diff !== 0 ? diff : a.email.localeCompare(b.email);
