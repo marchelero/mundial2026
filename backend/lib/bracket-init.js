@@ -13,9 +13,29 @@ try {
   groupsData = [];
 }
 
-// Fechas y horas del Mundial 2026 para las rondas eliminatorias
+// Fixture oficial de los 16avos del Mundial 2026
+// Algunos cruces dependen de quien quede 3° en ciertos grupos (placeholders "3° X/Y")
+const R32_FIXTURE = [
+  { pos: 1,  date: '2026-06-28', time: '12:00', home: 'Sudáfrica',            away: 'Canadá' },
+  { pos: 2,  date: '2026-06-29', time: '12:00', home: 'Brasil',                away: 'Japón' },
+  { pos: 3,  date: '2026-06-29', time: '16:30', home: 'Alemania',              away: 'Paraguay' },
+  { pos: 4,  date: '2026-06-29', time: '19:00', home: 'Países Bajos',          away: 'Marruecos' },
+  { pos: 5,  date: '2026-06-30', time: '17:00', home: 'Francia',               away: 'Suecia' },
+  { pos: 6,  date: '2026-06-30', time: '19:00', home: 'México',                away: 'Ecuador' },
+  { pos: 7,  date: '2026-07-01', time: '12:00', home: 'Inglaterra',            away: '3° Grupo I/K' },
+  { pos: 8,  date: '2026-07-01', time: '13:00', home: 'Bélgica',               away: '3° Grupo A/E/J' },
+  { pos: 9,  date: '2026-07-01', time: '17:00', home: 'Estados Unidos',        away: 'Bosnia y Herzegovina' },
+  { pos: 10, date: '2026-07-02', time: '19:00', home: '2° Grupo K',            away: 'Croacia' },
+  { pos: 11, date: '2026-07-02', time: '19:00', home: 'España',                away: '2° Grupo J' },
+  { pos: 12, date: '2026-07-02', time: '19:00', home: 'Suiza',                 away: '3° Grupo G/J' },
+  { pos: 13, date: '2026-07-03', time: '13:00', home: 'Australia',             away: 'Egipto' },
+  { pos: 14, date: '2026-07-03', time: '19:00', home: 'Argentina',             away: 'Cabo Verde' },
+  { pos: 15, date: '2026-07-03', time: '19:00', home: '1° Grupo K',            away: '3° Grupo D/I/L' },
+  { pos: 16, date: '2026-07-03', time: 'TBD',   home: 'Costa de Marfil',       away: 'Noruega' },
+];
+
+// Fechas y horas del Mundial 2026 para las rondas eliminatorias (r16 en adelante)
 const BRACKET_SCHEDULE = {
-  r32: { start: '2026-06-28', end: '2026-07-03', times: ['12:00', '15:00', '18:00', '21:00'] },
   r16: { start: '2026-07-04', end: '2026-07-07', times: ['12:00', '15:00', '18:00', '21:00'] },
   qf:  { start: '2026-07-11', end: '2026-07-12', times: ['15:00', '18:00', '21:00'] },
   sf:  { start: '2026-07-14', end: '2026-07-15', times: ['18:00', '21:00'] },
@@ -51,7 +71,18 @@ function initBracket() {
   `);
 
   let created = 0;
-  for (const round of Object.keys(ROUND_SLOTS)) {
+
+  // R32: usar el fixture oficial
+  for (const m of R32_FIXTURE) {
+    const id = `r32_${m.pos}`;
+    const matchId = generateId();
+    insertMatch.run(matchId, m.date, m.time, m.home, m.away, 'round_16');
+    insertBracket.run(id, 'r32', m.pos, matchId, m.home, m.away, null, null);
+    created++;
+  }
+
+  // R16, QF, SF, third, final: fechas automaticas como antes
+  for (const round of ['r16', 'qf', 'sf', 'third', 'final']) {
     const n = ROUND_SLOTS[round];
     const sched = BRACKET_SCHEDULE[round];
     const dates = sched.end ? dateRange(sched.start, sched.end) : [sched.start];
@@ -62,7 +93,7 @@ function initBracket() {
       const matchId = generateId();
       const date = dates[(pos - 1) % dates.length];
       const time = times[(pos - 1) % times.length];
-      const roundDb = round === 'r32' ? 'round_16' : (round === 'r16' ? 'round_8' : (round === 'qf' ? 'quarter' : (round === 'sf' ? 'semi' : (round === 'third' ? 'third' : 'final'))));
+      const roundDb = round === 'r16' ? 'round_8' : (round === 'qf' ? 'quarter' : (round === 'sf' ? 'semi' : (round === 'third' ? 'third' : 'final')));
 
       insertMatch.run(matchId, date, time, 'Por definir', 'Por definir', roundDb);
       insertBracket.run(id, round, pos, matchId, null, null, null, null);
@@ -150,12 +181,58 @@ function getQualifiersFromGroups() {
     })
     .slice(0, 8);
 
+  // Standings por grupo (para resolver placeholders del fixture)
+  const standingsByGroup = {};
+  for (const gs of groupStandings) {
+    standingsByGroup[gs.group] = gs.teams.map(t => t.name);
+  }
+
   return {
     qualifiers: [...qualifiers, ...terceros],
+    standingsByGroup,
     calculated: anyCalculated,
     groupsFound: groupsData.length,
     finishedMatches: finishedMatches.length,
   };
 }
 
-module.exports = { initBracket, resetBracket, getQualifiersFromGroups, BRACKET_SCHEDULE, ROUND_SLOTS };
+// Resolver placeholders del fixture oficial
+// "1° X" → primer del grupo X
+// "2° X" → segundo del grupo X
+// "3° X/Y/Z" → mejor tercero entre los grupos X, Y, Z (entre los 8 que clasifican)
+function resolveFixtureSlot(slot, standingsByGroup, qualifiedThirds) {
+  if (!slot) return null;
+  // Si ya es un equipo (no es placeholder), devolver tal cual
+  if (!slot.startsWith('1°') && !slot.startsWith('2°') && !slot.startsWith('3°')) {
+    return slot;
+  }
+  const seedMatch = slot.match(/^(\d)°\s*Grupo\s*([A-L])(?:\/([A-L]))?(?:\/([A-L]))?/);
+  if (!seedMatch) return slot;
+  const seed = parseInt(seedMatch[1], 10);
+  const groups = [seedMatch[2], seedMatch[3], seedMatch[4]].filter(Boolean);
+  if (seed === 1 || seed === 2) {
+    const group = groups[0];
+    const standing = standingsByGroup[group];
+    if (standing && standing[seed - 1]) return standing[seed - 1];
+    return null;
+  }
+  if (seed === 3) {
+    // Buscar entre los grupos el 3° con mejor standing (menor idx en qualifiedThirds)
+    let best = null;
+    let bestIdx = Infinity;
+    for (const g of groups) {
+      const third = standingsByGroup[g]?.[2];
+      if (!third) continue;
+      const idx = qualifiedThirds.indexOf(third);
+      if (idx === -1) continue; // no califica
+      if (idx < bestIdx) {
+        best = third;
+        bestIdx = idx;
+      }
+    }
+    return best;
+  }
+  return slot;
+}
+
+module.exports = { initBracket, resetBracket, getQualifiersFromGroups, resolveFixtureSlot, R32_FIXTURE, BRACKET_SCHEDULE, ROUND_SLOTS };

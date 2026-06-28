@@ -36,24 +36,34 @@ router.post('/reset', authRequired, adminRequired, (req, res) => {
   }
 });
 
+const { R32_FIXTURE, resolveFixtureSlot } = require('../lib/bracket-init');
+
 router.post('/auto-fill', authRequired, adminRequired, (req, res) => {
   try {
     const result = getQualifiersFromGroups();
     const qualifiers = result.qualifiers;
+    const standingsByGroup = result.standingsByGroup || {};
+    const qualifiedThirds = qualifiers.filter(q => q.seed === 3).map(q => q.team);
     const warnings = [];
     if (qualifiers.length < 32) {
       warnings.push(`Solo ${qualifiers.length} equipos detectados, faltan ${32 - qualifiers.length} (grupos sin partidos finalizados?)`);
     }
     const { db } = require('../db');
     let assigned = 0;
-    for (let i = 0; i < 32; i++) {
-      const slot = i % 2 === 0 ? 'home' : 'away';
-      const pos = Math.floor(i / 2) + 1;
-      const q = qualifiers[i];
-      if (q) {
-        db.prepare(`UPDATE bracket_matches SET ${slot}_team = ?, ${slot}_seed = ? WHERE round = 'r32' AND position = ?`).run(q.team, q.seed, pos);
-        assigned++;
-      }
+    let placeholdersResolved = 0;
+    let placeholdersRemaining = 0;
+    for (const m of R32_FIXTURE) {
+      const home = resolveFixtureSlot(m.home, standingsByGroup, qualifiedThirds);
+      const away = resolveFixtureSlot(m.away, standingsByGroup, qualifiedThirds);
+      const homeIsResolved = home && (!home.startsWith('1°') && !home.startsWith('2°') && !home.startsWith('3°'));
+      const awayIsResolved = away && (!away.startsWith('1°') && !away.startsWith('2°') && !away.startsWith('3°'));
+      if (homeIsResolved) assigned++; else if (home && home.includes('°')) placeholdersRemaining++;
+      if (awayIsResolved) assigned++; else if (away && away.includes('°')) placeholdersRemaining++;
+      if (home && home !== m.home) placeholdersResolved++;
+      if (away && away !== m.away) placeholdersResolved++;
+      db.prepare(`UPDATE bracket_matches SET home_team = ?, away_team = ? WHERE round = 'r32' AND position = ?`).run(
+        home || m.home, away || m.away, m.pos
+      );
     }
     const r32 = db.prepare("SELECT * FROM bracket_matches WHERE round = 'r32'").all();
     for (const m of r32) {
@@ -63,7 +73,10 @@ router.post('/auto-fill', authRequired, adminRequired, (req, res) => {
         );
       }
     }
-    res.json({ ok: true, assigned, total: qualifiers.length, calculated: result.calculated, warnings });
+    if (placeholdersRemaining > 0) {
+      warnings.push(`${placeholdersRemaining} placeholder(s) del fixture no se pudieron resolver (faltan clasificados de algunos grupos)`);
+    }
+    res.json({ ok: true, assigned, placeholdersResolved, placeholdersRemaining, calculated: result.calculated, warnings });
   } catch (e) {
     console.error('Auto-fill error:', e);
     res.status(500).json({ error: 'Error al auto-llenar' });
