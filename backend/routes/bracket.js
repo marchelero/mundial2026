@@ -27,9 +27,10 @@ router.post('/init', authRequired, adminRequired, (req, res) => {
 
 router.post('/reset', authRequired, adminRequired, (req, res) => {
   try {
-    const result = resetBracket();
-    if (result.error) return res.status(400).json({ error: result.error });
-    res.json({ ok: true });
+    const force = req.body?.force === true || req.query.force === '1' || req.query.force === 'true';
+    const result = resetBracket(force);
+    if (result.error) return res.status(400).json({ error: result.error, predictionsCount: result.predictionsCount });
+    res.json(result);
   } catch (e) {
     console.error('Reset bracket error:', e);
     res.status(500).json({ error: 'Error al resetear bracket' });

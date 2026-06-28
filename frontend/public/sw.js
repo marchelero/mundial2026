@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mundial2026-v57-bracketflow';
+const CACHE_NAME = 'mundial2026-v58-resetforce';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

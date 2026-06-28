@@ -88,11 +88,11 @@ export default {
       this.actionInProgress = null;
     },
     async resetBracket() {
-      if (!confirm('¿Reiniciar TODO el bracket? Se borrarán los 32 partidos.')) return;
+      if (!confirm('¿Reiniciar TODO el bracket? Se borrarán los 32 partidos y todas las predicciones asociadas.')) return;
       this.actionInProgress = 'reset';
       try {
-        await api.post('/bracket/reset', {});
-        this.notify('Bracket reiniciado', 'success');
+        await api.post('/bracket/reset', { force: true });
+        this.notify('Bracket reiniciado (predicciones borradas)', 'success');
         await this.loadBracket();
       } catch (e) {
         this.notify(e.message || 'Error al reiniciar', 'error');

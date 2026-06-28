@@ -103,19 +103,22 @@ function initBracket() {
   return { created, message: `Bracket creado con ${created} partidos` };
 }
 
-function resetBracket() {
+function resetBracket(force = false) {
   const tx = db.transaction(() => {
-    const matchIds = db.prepare("SELECT match_id FROM bracket_matches WHERE match_id IS NOT NULL").all().map(r => r.match_id);
+    const matchIds = db.prepare("SELECT match_id FROM bracket_matches WHERE match_id IS NOT NULL").all().map(r => r.match_id).filter(Boolean);
     if (matchIds.length > 0) {
       const placeholders = matchIds.map(() => '?').join(',');
-      const predCount = db.prepare(`SELECT COUNT(*) as c FROM predictions WHERE match_id IN (${placeholders})`).get(...matchIds).c;
-      if (predCount > 0) {
-        return { error: 'No se puede resetear: hay ' + predCount + ' pronosticos cargados' };
+      if (!force) {
+        const predCount = db.prepare(`SELECT COUNT(*) as c FROM predictions WHERE match_id IN (${placeholders})`).get(...matchIds).c;
+        if (predCount > 0) {
+          return { error: 'No se puede resetear: hay ' + predCount + ' pronosticos cargados. Use force=true para borrar todo.', predictionsCount: predCount };
+        }
       }
+      db.prepare(`DELETE FROM predictions WHERE match_id IN (${placeholders})`).run(matchIds);
       db.prepare(`DELETE FROM matches WHERE id IN (${placeholders})`).run(matchIds);
     }
     db.prepare("DELETE FROM bracket_matches").run();
-    return { ok: true };
+    return { ok: true, deleted: matchIds.length, force };
   });
   return tx();
 }
