@@ -15,22 +15,22 @@ try {
 
 // Fixture oficial de los 16avos del Mundial 2026
 const R32_FIXTURE = [
-  { pos: 1,  date: '2026-06-28', time: '12:00', home: 'Sudáfrica',            away: 'Canadá' },
-  { pos: 2,  date: '2026-06-29', time: '12:00', home: 'Brasil',                away: 'Japón' },
+  { pos: 1,  date: '2026-06-28', time: '15:00', home: 'Sudáfrica',            away: 'Canadá' },
+  { pos: 2,  date: '2026-06-29', time: '13:00', home: 'Brasil',                away: 'Japón' },
   { pos: 3,  date: '2026-06-29', time: '16:30', home: 'Alemania',              away: 'Paraguay' },
-  { pos: 4,  date: '2026-06-29', time: '19:00', home: 'Países Bajos',          away: 'Marruecos' },
-  { pos: 5,  date: '2026-06-30', time: '17:00', home: 'Francia',               away: 'Suecia' },
-  { pos: 6,  date: '2026-06-30', time: '19:00', home: 'México',                away: 'Ecuador' },
-  { pos: 7,  date: '2026-07-01', time: '12:00', home: 'Inglaterra',            away: 'Congo DR' },
-  { pos: 8,  date: '2026-07-01', time: '13:00', home: 'Bélgica',               away: 'Senegal' },
-  { pos: 9,  date: '2026-07-01', time: '17:00', home: 'Estados Unidos',        away: 'Bosnia y Herzegovina' },
-  { pos: 10, date: '2026-07-02', time: '19:00', home: 'Portugal',              away: 'Croacia' },
-  { pos: 11, date: '2026-07-02', time: '19:00', home: 'España',                away: 'Austria' },
-  { pos: 12, date: '2026-07-02', time: '19:00', home: 'Suiza',                 away: 'Argelia' },
-  { pos: 13, date: '2026-07-03', time: '13:00', home: 'Australia',             away: 'Egipto' },
-  { pos: 14, date: '2026-07-03', time: '19:00', home: 'Argentina',             away: 'Cabo Verde' },
-  { pos: 15, date: '2026-07-03', time: '19:00', home: 'Colombia',              away: 'Ghana' },
-  { pos: 16, date: '2026-07-03', time: 'TBD',   home: 'Costa de Marfil',       away: 'Noruega' },
+  { pos: 4,  date: '2026-06-29', time: '21:00', home: 'Países Bajos',          away: 'Marruecos' },
+  { pos: 5,  date: '2026-06-30', time: '13:00', home: 'Costa de Marfil',       away: 'Noruega' },
+  { pos: 6,  date: '2026-06-30', time: '17:00', home: 'Francia',               away: 'Suecia' },
+  { pos: 7,  date: '2026-06-30', time: '21:00', home: 'México',                away: 'Ecuador' },
+  { pos: 8,  date: '2026-07-01', time: '12:00', home: 'Inglaterra',            away: 'Congo DR' },
+  { pos: 9,  date: '2026-07-01', time: '16:00', home: 'Bélgica',               away: 'Senegal' },
+  { pos: 10, date: '2026-07-01', time: '20:00', home: 'Estados Unidos',        away: 'Bosnia y Herzegovina' },
+  { pos: 11, date: '2026-07-02', time: '15:00', home: 'España',                away: 'Austria' },
+  { pos: 12, date: '2026-07-02', time: '19:00', home: 'Portugal',              away: 'Croacia' },
+  { pos: 13, date: '2026-07-02', time: '23:00', home: 'Suiza',                 away: 'Argelia' },
+  { pos: 14, date: '2026-07-03', time: '14:00', home: 'Australia',             away: 'Egipto' },
+  { pos: 15, date: '2026-07-03', time: '18:00', home: 'Argentina',             away: 'Cabo Verde' },
+  { pos: 16, date: '2026-07-03', time: '21:30', home: 'Colombia',              away: 'Ghana' },
 ];
 
 // Fechas y horas del Mundial 2026 para las rondas eliminatorias (r16 en adelante)
