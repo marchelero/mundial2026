@@ -32,6 +32,7 @@ export default {
   data() {
     return {
       activeRound: 'all',
+      viewMode: 'list',
       bracket: { r32: [], r16: [], qf: [], sf: [], third: [], final: [] },
       loading: true,
       actionInProgress: null,
@@ -40,7 +41,16 @@ export default {
     };
   },
   async mounted() {
+    try {
+      const saved = localStorage.getItem('mundial2026_bracket_view');
+      if (saved === 'list' || saved === 'tree') this.viewMode = saved;
+    } catch { /* noop */ }
     await this.loadBracket();
+  },
+  watch: {
+    viewMode(val) {
+      try { localStorage.setItem('mundial2026_bracket_view', val); } catch { /* noop */ }
+    },
   },
   methods: {
     teamFlag(teamName) {
@@ -211,6 +221,35 @@ export default {
     hasAnyData() {
       return this.bracket.r32.length > 0 || this.bracket.r16.length > 0;
     },
+    matchByRoundPosition(round, position) {
+      const list = this.bracket[round] || [];
+      return list.find(m => m.position === position) || null;
+    },
+    treeMatchClass(round) {
+      return `tree-match tree-match-${round}`;
+    },
+    treeWinnerIcon(round) {
+      if (round === 'final') return '🏆';
+      if (round === 'third') return '🥉';
+      return '★';
+    },
+    treeRoundLabel(round) {
+      const map = { r32: '16avos', r16: '8vos', qf: '4tos', sf: 'Semi', third: '3.er', final: 'Final' };
+      return map[round] || round;
+    },
+    treeMatchIdLabel(round, position) {
+      if (round === 'final') return 'FINAL';
+      if (round === 'third') return '3.ER LUGAR';
+      return `G${position}`;
+    },
+    treeEmptySlots(round) {
+      const map = { r32: 8, r16: 4, qf: 2, sf: 1 };
+      return map[round] || 0;
+    },
+    isTreeLast(round, pos) {
+      const map = { r32: 8, r16: 4, qf: 2, sf: 1 };
+      return pos === map[round];
+    },
   },
   template: `
     <div class="bracket-modern">
@@ -233,6 +272,15 @@ export default {
         <span class="bracket-info-text" v-else>El administrador va a inicializar los brackets en cuanto termine la fase de grupos. 🏆</span>
       </div>
 
+      <div class="bracket-view-toggle" title="Cambiar vista">
+        <button class="view-toggle-btn" :class="{active: viewMode === 'list'}" @click="viewMode = 'list'" aria-label="Vista lista">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+        </button>
+        <button class="view-toggle-btn" :class="{active: viewMode === 'tree'}" @click="viewMode = 'tree'" aria-label="Vista torneo">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M12 7v2"/><path d="M6 17v-2h12v2"/></svg>
+        </button>
+      </div>
+
       <div class="bracket-filters">
         <button class="bracket-chip" :class="{active: activeRound === 'all'}" @click="activeRound = 'all'">Todas</button>
         <button class="bracket-chip chip-r32" :class="{active: activeRound === 'r32'}" @click="scrollTo('r32')">16avos</button>
@@ -242,6 +290,8 @@ export default {
         <button class="bracket-chip chip-third" :class="{active: activeRound === 'third'}" @click="scrollTo('third')">3.er lugar</button>
         <button class="bracket-chip chip-final" :class="{active: activeRound === 'final'}" @click="scrollTo('final')">Final</button>
       </div>
+
+      <div v-if="viewMode === 'list'" class="bracket-list-view">
 
       <!-- ============ DIECISEISAVOS (R32) ============ -->
       <section v-show="isVisible('r32')" ref="section_r32" class="bracket-section section-r32" data-round="r32">
@@ -504,6 +554,365 @@ export default {
           </div>
         </div>
       </section>
+
+      </div> <!-- /bracket-list-view -->
+
+      <!-- ============ VISTA TORNEO ============ -->
+      <div v-else-if="viewMode === 'tree' && hasAnyData()" class="bracket-tree-view">
+        <div class="bracket-tree-scroll">
+          <div class="bracket-tree">
+          <!-- LEFT HALF -->
+          <div class="tree-side tree-side-left">
+            <div class="tree-column" data-round="r32">
+              <div v-for="pos in 8" :key="'l_r32_' + pos" :class="['tree-match', 'tree-match-r32', { 'tree-match-last': isTreeLast('r32', pos) }]">
+                <div class="tree-match-connector connector-right"></div>
+                <div class="tree-match-inner" v-if="matchByRoundPosition('r32', pos)" v-for="m in [matchByRoundPosition('r32', pos)]" :key="m.id">
+                  <div class="tree-match-meta">
+                    <span class="tree-match-id">{{ treeMatchIdLabel('r32', pos) }}</span>
+                    <span class="tree-match-date">{{ fmtWeekday(m.match_date) }} {{ fmtDate(m.match_date) }}</span>
+                  </div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'home' }]">
+                    <img v-if="teamFlag(m.home_team)" :src="teamFlag(m.home_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.home_team}">{{ m.home_team || 'Por definir' }}</span>
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'home')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <span v-if="m.winner === 'home'" class="tree-team-trophy">{{ treeWinnerIcon('r32') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'home')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                  <div class="tree-team-divider"></div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'away' }]">
+                    <img v-if="teamFlag(m.away_team)" :src="teamFlag(m.away_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.away_team}">{{ m.away_team || 'Por definir' }}</span>
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'away')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <span v-if="m.winner === 'away'" class="tree-team-trophy">{{ treeWinnerIcon('r32') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'away')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                </div>
+                <div class="tree-match-inner tree-match-empty" v-else>
+                  <div class="tree-match-meta"><span class="tree-match-id">{{ treeMatchIdLabel('r32', pos) }}</span></div>
+                  <div class="tree-team-row"><span class="tree-team-flag tree-flag-empty"></span><span class="tree-team-name tree-team-tbd">Por definir</span></div>
+                  <div class="tree-team-divider"></div>
+                  <div class="tree-team-row"><span class="tree-team-flag tree-flag-empty"></span><span class="tree-team-name tree-team-tbd">Por definir</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="tree-column" data-round="r16">
+              <div v-for="pos in 4" :key="'l_r16_' + pos" :class="['tree-match', 'tree-match-r16', { 'tree-match-last': isTreeLast('r16', pos) }]">
+                <div class="tree-match-connector connector-right"></div>
+                <div class="tree-match-inner" v-if="matchByRoundPosition('r16', pos)" v-for="m in [matchByRoundPosition('r16', pos)]" :key="m.id">
+                  <div class="tree-match-meta">
+                    <span class="tree-match-id">{{ treeMatchIdLabel('r16', pos) }}</span>
+                    <span class="tree-match-date">{{ fmtWeekday(m.match_date) }} {{ fmtDate(m.match_date) }}</span>
+                  </div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'home' }]">
+                    <img v-if="teamFlag(m.home_team)" :src="teamFlag(m.home_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.home_team}">{{ m.home_team || 'Ganador 16avos' }}</span>
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'home')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <span v-if="m.winner === 'home'" class="tree-team-trophy">{{ treeWinnerIcon('r16') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'home')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                  <div class="tree-team-divider"></div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'away' }]">
+                    <img v-if="teamFlag(m.away_team)" :src="teamFlag(m.away_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.away_team}">{{ m.away_team || 'Ganador 16avos' }}</span>
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'away')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <span v-if="m.winner === 'away'" class="tree-team-trophy">{{ treeWinnerIcon('r16') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'away')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                </div>
+                <div class="tree-match-inner tree-match-empty" v-else>
+                  <div class="tree-match-meta"><span class="tree-match-id">{{ treeMatchIdLabel('r16', pos) }}</span></div>
+                  <div class="tree-team-row"><span class="tree-team-flag tree-flag-empty"></span><span class="tree-team-name tree-team-tbd">Ganador 16avos</span></div>
+                  <div class="tree-team-divider"></div>
+                  <div class="tree-team-row"><span class="tree-team-flag tree-flag-empty"></span><span class="tree-team-name tree-team-tbd">Ganador 16avos</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="tree-column" data-round="qf">
+              <div v-for="pos in 2" :key="'l_qf_' + pos" :class="['tree-match', 'tree-match-qf', { 'tree-match-last': isTreeLast('qf', pos) }]">
+                <div class="tree-match-connector connector-right"></div>
+                <div class="tree-match-inner" v-if="matchByRoundPosition('qf', pos)" v-for="m in [matchByRoundPosition('qf', pos)]" :key="m.id">
+                  <div class="tree-match-meta">
+                    <span class="tree-match-id">{{ treeMatchIdLabel('qf', pos) }}</span>
+                    <span class="tree-match-date">{{ fmtWeekday(m.match_date) }} {{ fmtDate(m.match_date) }}</span>
+                  </div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'home' }]">
+                    <img v-if="teamFlag(m.home_team)" :src="teamFlag(m.home_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.home_team}">{{ m.home_team || 'Ganador 8vos' }}</span>
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'home')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <span v-if="m.winner === 'home'" class="tree-team-trophy">{{ treeWinnerIcon('qf') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'home')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                  <div class="tree-team-divider"></div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'away' }]">
+                    <img v-if="teamFlag(m.away_team)" :src="teamFlag(m.away_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.away_team}">{{ m.away_team || 'Ganador 8vos' }}</span>
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'away')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <span v-if="m.winner === 'away'" class="tree-team-trophy">{{ treeWinnerIcon('qf') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'away')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                </div>
+                <div class="tree-match-inner tree-match-empty" v-else>
+                  <div class="tree-match-meta"><span class="tree-match-id">{{ treeMatchIdLabel('qf', pos) }}</span></div>
+                  <div class="tree-team-row"><span class="tree-team-flag tree-flag-empty"></span><span class="tree-team-name tree-team-tbd">Ganador 8vos</span></div>
+                  <div class="tree-team-divider"></div>
+                  <div class="tree-team-row"><span class="tree-team-flag tree-flag-empty"></span><span class="tree-team-name tree-team-tbd">Ganador 8vos</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="tree-column" data-round="sf">
+              <div v-for="pos in 1" :key="'l_sf_' + pos" :class="['tree-match', 'tree-match-sf', { 'tree-match-last': isTreeLast('sf', pos) }]">
+                <div class="tree-match-connector connector-right"></div>
+                <div class="tree-match-inner" v-if="matchByRoundPosition('sf', pos)" v-for="m in [matchByRoundPosition('sf', pos)]" :key="m.id">
+                  <div class="tree-match-meta">
+                    <span class="tree-match-id">{{ treeMatchIdLabel('sf', pos) }}</span>
+                    <span class="tree-match-date">{{ fmtWeekday(m.match_date) }} {{ fmtDate(m.match_date) }}</span>
+                  </div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'home' }]">
+                    <img v-if="teamFlag(m.home_team)" :src="teamFlag(m.home_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.home_team}">{{ m.home_team || 'Ganador 4tos' }}</span>
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'home')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <span v-if="m.winner === 'home'" class="tree-team-trophy">{{ treeWinnerIcon('sf') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'home')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                  <div class="tree-team-divider"></div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'away' }]">
+                    <img v-if="teamFlag(m.away_team)" :src="teamFlag(m.away_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.away_team}">{{ m.away_team || 'Ganador 4tos' }}</span>
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'away')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <span v-if="m.winner === 'away'" class="tree-team-trophy">{{ treeWinnerIcon('sf') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'away')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                </div>
+                <div class="tree-match-inner tree-match-empty" v-else>
+                  <div class="tree-match-meta"><span class="tree-match-id">{{ treeMatchIdLabel('sf', pos) }}</span></div>
+                  <div class="tree-team-row"><span class="tree-team-flag tree-flag-empty"></span><span class="tree-team-name tree-team-tbd">Ganador 4tos</span></div>
+                  <div class="tree-team-divider"></div>
+                  <div class="tree-team-row"><span class="tree-team-flag tree-flag-empty"></span><span class="tree-team-name tree-team-tbd">Ganador 4tos</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CENTER -->
+          <div class="tree-center">
+            <div class="tree-center-final">
+              <div :class="treeMatchClass('final')">
+                <div class="tree-match-inner" v-if="matchByRoundPosition('final', 1)" v-for="m in [matchByRoundPosition('final', 1)]" :key="m.id">
+                  <div class="tree-match-meta">
+                    <span class="tree-match-id">{{ treeMatchIdLabel('final', 1) }}</span>
+                    <span class="tree-match-date">{{ fmtWeekday(m.match_date) }} {{ fmtDate(m.match_date) }}</span>
+                  </div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'home' }]">
+                    <img v-if="teamFlag(m.home_team)" :src="teamFlag(m.home_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.home_team}">{{ m.home_team || 'Ganador SF 1' }}</span>
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'home')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <span v-if="m.winner === 'home'" class="tree-team-trophy">{{ treeWinnerIcon('final') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'home')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                  <div class="tree-team-divider"></div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'away' }]">
+                    <img v-if="teamFlag(m.away_team)" :src="teamFlag(m.away_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.away_team}">{{ m.away_team || 'Ganador SF 2' }}</span>
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'away')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <span v-if="m.winner === 'away'" class="tree-team-trophy">{{ treeWinnerIcon('final') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'away')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                </div>
+                <div class="tree-match-inner tree-match-empty" v-else>
+                  <div class="tree-match-meta"><span class="tree-match-id">FINAL</span></div>
+                  <div class="tree-team-row"><span class="tree-team-flag tree-flag-empty"></span><span class="tree-team-name tree-team-tbd">Ganador SF 1</span></div>
+                  <div class="tree-team-divider"></div>
+                  <div class="tree-team-row"><span class="tree-team-flag tree-flag-empty"></span><span class="tree-team-name tree-team-tbd">Ganador SF 2</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="tree-center-third">
+              <div :class="treeMatchClass('third')">
+                <div class="tree-match-inner" v-if="matchByRoundPosition('third', 1)" v-for="m in [matchByRoundPosition('third', 1)]" :key="m.id">
+                  <div class="tree-match-meta">
+                    <span class="tree-match-id">{{ treeMatchIdLabel('third', 1) }}</span>
+                    <span class="tree-match-date">{{ fmtWeekday(m.match_date) }} {{ fmtDate(m.match_date) }}</span>
+                  </div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'home' }]">
+                    <img v-if="teamFlag(m.home_team)" :src="teamFlag(m.home_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.home_team}">{{ m.home_team || 'Perdedor SF 1' }}</span>
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'home')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <span v-if="m.winner === 'home'" class="tree-team-trophy">{{ treeWinnerIcon('third') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'home')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                  <div class="tree-team-divider"></div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'away' }]">
+                    <img v-if="teamFlag(m.away_team)" :src="teamFlag(m.away_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.away_team}">{{ m.away_team || 'Perdedor SF 2' }}</span>
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'away')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <span v-if="m.winner === 'away'" class="tree-team-trophy">{{ treeWinnerIcon('third') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'away')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                </div>
+                <div class="tree-match-inner tree-match-empty" v-else>
+                  <div class="tree-match-meta"><span class="tree-match-id">3.ER LUGAR</span></div>
+                  <div class="tree-team-row"><span class="tree-team-flag tree-flag-empty"></span><span class="tree-team-name tree-team-tbd">Perdedor SF 1</span></div>
+                  <div class="tree-team-divider"></div>
+                  <div class="tree-team-row"><span class="tree-team-flag tree-flag-empty"></span><span class="tree-team-name tree-team-tbd">Perdedor SF 2</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT HALF -->
+          <div class="tree-side tree-side-right">
+            <div class="tree-column" data-round="sf">
+              <div v-for="pos in 1" :key="'r_sf_' + pos" :class="['tree-match', 'tree-match-sf', { 'tree-match-last': isTreeLast('sf', pos) }]">
+                <div class="tree-match-connector connector-left"></div>
+                <div class="tree-match-inner" v-if="matchByRoundPosition('sf', pos + 1)" v-for="m in [matchByRoundPosition('sf', pos + 1)]" :key="m.id">
+                  <div class="tree-match-meta">
+                    <span class="tree-match-id">{{ treeMatchIdLabel('sf', pos + 1) }}</span>
+                    <span class="tree-match-date">{{ fmtWeekday(m.match_date) }} {{ fmtDate(m.match_date) }}</span>
+                  </div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'home' }]">
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'home')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <img v-if="teamFlag(m.home_team)" :src="teamFlag(m.home_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.home_team}">{{ m.home_team || 'Ganador 4tos' }}</span>
+                    <span v-if="m.winner === 'home'" class="tree-team-trophy">{{ treeWinnerIcon('sf') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'home')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                  <div class="tree-team-divider"></div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'away' }]">
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'away')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <img v-if="teamFlag(m.away_team)" :src="teamFlag(m.away_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.away_team}">{{ m.away_team || 'Ganador 4tos' }}</span>
+                    <span v-if="m.winner === 'away'" class="tree-team-trophy">{{ treeWinnerIcon('sf') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'away')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                </div>
+                <div class="tree-match-inner tree-match-empty" v-else>
+                  <div class="tree-match-meta"><span class="tree-match-id">{{ treeMatchIdLabel('sf', pos + 1) }}</span></div>
+                  <div class="tree-team-row"><span class="tree-team-name tree-team-tbd">Ganador 4tos</span><span class="tree-team-flag tree-flag-empty"></span></div>
+                  <div class="tree-team-divider"></div>
+                  <div class="tree-team-row"><span class="tree-team-name tree-team-tbd">Ganador 4tos</span><span class="tree-team-flag tree-flag-empty"></span></div>
+                </div>
+              </div>
+            </div>
+            <div class="tree-column" data-round="qf">
+              <div v-for="pos in 2" :key="'r_qf_' + pos" :class="['tree-match', 'tree-match-qf', { 'tree-match-last': isTreeLast('qf', pos) }]">
+                <div class="tree-match-connector connector-left"></div>
+                <div class="tree-match-inner" v-if="matchByRoundPosition('qf', pos + 2)" v-for="m in [matchByRoundPosition('qf', pos + 2)]" :key="m.id">
+                  <div class="tree-match-meta">
+                    <span class="tree-match-id">{{ treeMatchIdLabel('qf', pos + 2) }}</span>
+                    <span class="tree-match-date">{{ fmtWeekday(m.match_date) }} {{ fmtDate(m.match_date) }}</span>
+                  </div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'home' }]">
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'home')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <img v-if="teamFlag(m.home_team)" :src="teamFlag(m.home_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.home_team}">{{ m.home_team || 'Ganador 8vos' }}</span>
+                    <span v-if="m.winner === 'home'" class="tree-team-trophy">{{ treeWinnerIcon('qf') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'home')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                  <div class="tree-team-divider"></div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'away' }]">
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'away')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <img v-if="teamFlag(m.away_team)" :src="teamFlag(m.away_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.away_team}">{{ m.away_team || 'Ganador 8vos' }}</span>
+                    <span v-if="m.winner === 'away'" class="tree-team-trophy">{{ treeWinnerIcon('qf') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'away')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                </div>
+                <div class="tree-match-inner tree-match-empty" v-else>
+                  <div class="tree-match-meta"><span class="tree-match-id">{{ treeMatchIdLabel('qf', pos + 2) }}</span></div>
+                  <div class="tree-team-row"><span class="tree-team-name tree-team-tbd">Ganador 8vos</span><span class="tree-team-flag tree-flag-empty"></span></div>
+                  <div class="tree-team-divider"></div>
+                  <div class="tree-team-row"><span class="tree-team-name tree-team-tbd">Ganador 8vos</span><span class="tree-team-flag tree-flag-empty"></span></div>
+                </div>
+              </div>
+            </div>
+            <div class="tree-column" data-round="r16">
+              <div v-for="pos in 4" :key="'r_r16_' + pos" :class="['tree-match', 'tree-match-r16', { 'tree-match-last': isTreeLast('r16', pos) }]">
+                <div class="tree-match-connector connector-left"></div>
+                <div class="tree-match-inner" v-if="matchByRoundPosition('r16', pos + 4)" v-for="m in [matchByRoundPosition('r16', pos + 4)]" :key="m.id">
+                  <div class="tree-match-meta">
+                    <span class="tree-match-id">{{ treeMatchIdLabel('r16', pos + 4) }}</span>
+                    <span class="tree-match-date">{{ fmtWeekday(m.match_date) }} {{ fmtDate(m.match_date) }}</span>
+                  </div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'home' }]">
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'home')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <img v-if="teamFlag(m.home_team)" :src="teamFlag(m.home_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.home_team}">{{ m.home_team || 'Ganador 16avos' }}</span>
+                    <span v-if="m.winner === 'home'" class="tree-team-trophy">{{ treeWinnerIcon('r16') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'home')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                  <div class="tree-team-divider"></div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'away' }]">
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'away')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <img v-if="teamFlag(m.away_team)" :src="teamFlag(m.away_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.away_team}">{{ m.away_team || 'Ganador 16avos' }}</span>
+                    <span v-if="m.winner === 'away'" class="tree-team-trophy">{{ treeWinnerIcon('r16') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'away')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                </div>
+                <div class="tree-match-inner tree-match-empty" v-else>
+                  <div class="tree-match-meta"><span class="tree-match-id">{{ treeMatchIdLabel('r16', pos + 4) }}</span></div>
+                  <div class="tree-team-row"><span class="tree-team-name tree-team-tbd">Ganador 16avos</span><span class="tree-team-flag tree-flag-empty"></span></div>
+                  <div class="tree-team-divider"></div>
+                  <div class="tree-team-row"><span class="tree-team-name tree-team-tbd">Ganador 16avos</span><span class="tree-team-flag tree-flag-empty"></span></div>
+                </div>
+              </div>
+            </div>
+            <div class="tree-column" data-round="r32">
+              <div v-for="pos in 8" :key="'r_r32_' + pos" :class="['tree-match', 'tree-match-r32', { 'tree-match-last': isTreeLast('r32', pos) }]">
+                <div class="tree-match-connector connector-left"></div>
+                <div class="tree-match-inner" v-if="matchByRoundPosition('r32', pos + 8)" v-for="m in [matchByRoundPosition('r32', pos + 8)]" :key="m.id">
+                  <div class="tree-match-meta">
+                    <span class="tree-match-id">{{ treeMatchIdLabel('r32', pos + 8) }}</span>
+                    <span class="tree-match-date">{{ fmtWeekday(m.match_date) }} {{ fmtDate(m.match_date) }}</span>
+                  </div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'home' }]">
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'home')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <img v-if="teamFlag(m.home_team)" :src="teamFlag(m.home_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.home_team}">{{ m.home_team || 'Por definir' }}</span>
+                    <span v-if="m.winner === 'home'" class="tree-team-trophy">{{ treeWinnerIcon('r32') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'home')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                  <div class="tree-team-divider"></div>
+                  <div :class="['tree-team-row', { 'tree-team-winner': m.winner === 'away' }]">
+                    <button v-if="isAdmin" @click="openTeamEdit(m.id, 'away')" class="tree-edit-btn" title="Editar equipo">✎</button>
+                    <img v-if="teamFlag(m.away_team)" :src="teamFlag(m.away_team)" alt="" class="tree-team-flag">
+                    <span v-else class="tree-team-flag tree-flag-empty"></span>
+                    <span class="tree-team-name" :class="{'tree-team-tbd': !m.away_team}">{{ m.away_team || 'Por definir' }}</span>
+                    <span v-if="m.winner === 'away'" class="tree-team-trophy">{{ treeWinnerIcon('r32') }}</span>
+                    <button v-if="isAdmin && m.home_team && m.away_team && !m.winner" @click="openWinnerConfirm(m.id, 'away')" :disabled="actionInProgress === 'winner-' + m.id" class="tree-win-btn">GANA</button>
+                  </div>
+                </div>
+                <div class="tree-match-inner tree-match-empty" v-else>
+                  <div class="tree-match-meta"><span class="tree-match-id">{{ treeMatchIdLabel('r32', pos + 8) }}</span></div>
+                  <div class="tree-team-row"><span class="tree-team-name tree-team-tbd">Por definir</span><span class="tree-team-flag tree-flag-empty"></span></div>
+                  <div class="tree-team-divider"></div>
+                  <div class="tree-team-row"><span class="tree-team-name tree-team-tbd">Por definir</span><span class="tree-team-flag tree-flag-empty"></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+      </div>
 
       <!-- Team Edit Modal (Teleport to body) -->
       <Teleport to="body">

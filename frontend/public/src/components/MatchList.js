@@ -31,20 +31,8 @@ export default {
   async mounted() {
     await this.loadGroups();
     await this.fetchStreams();
-    this.$nextTick(() => {
-      const el = this.$refs?.groupsContainer;
-      if (el && typeof IntersectionObserver !== 'undefined') {
-        this.groupsObserver = new IntersectionObserver(([entry]) => {
-          if (!entry.isIntersecting && this.showGroupsPanel) {
-            this.showGroupsPanel = false;
-          }
-        }, { threshold: 0 });
-        this.groupsObserver.observe(el);
-      }
-    });
   },
   unmounted() {
-    if (this.groupsObserver) { this.groupsObserver.disconnect(); this.groupsObserver = null; }
     if (this.hlsInstance) { this.hlsInstance.destroy(); this.hlsInstance = null; }
   },
   watch: {

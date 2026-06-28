@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mundial2026-v61-fifatimes';
+const CACHE_NAME = 'mundial2026-v62-thirdplace';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

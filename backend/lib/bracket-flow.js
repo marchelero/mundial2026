@@ -45,10 +45,11 @@ function propagateWinner(bracketId, winner) {
   }
 
   // Si es SF, el perdedor va al partido de 3er lugar
+  // SF1 → home, SF2 → away (fijo, no depende de quien gano)
   if (bm.round === 'sf') {
-    const loserSlot = winner === 'home' ? 'away' : 'home';
     const losingTeam = winner === 'home' ? bm.away_team : bm.home_team;
-    db.prepare(`UPDATE bracket_matches SET ${loserSlot}_team = ? WHERE round = 'third' AND position = 1`).run(losingTeam);
+    const slot = bm.position === 1 ? 'home' : 'away';
+    db.prepare(`UPDATE bracket_matches SET ${slot}_team = ? WHERE round = 'third' AND position = 1`).run(losingTeam);
   }
 
   // Actualizar matches.home_team / away_team
