@@ -1,39 +1,12 @@
 const { db } = require('../db');
 
-// Fixture oficial del Mundial 2026: cruces r32 → r16 (no consecutivos)
-// Formato: cada r32_N va a un r16_M en home o away
-// Mapeado del fixture:
-//   P89 = r32_1 (home) + r32_4 (away)   → r16_1
-//   P90 = r32_2 (home) + r32_5 (away)   → r16_2
-//   P91 = r32_3 (home) + r32_6 (away)   → r16_3
-//   P92 = r32_7 (home) + r32_8 (away)   → r16_4
-//   P93 = r32_9 (home) + r32_10 (away)  → r16_5
-//   P94 = r32_11 (home) + r32_12 (away) → r16_6
-//   P95 = r32_13 (home) + r32_15 (away) → r16_7
-//   P96 = r32_14 (home) + r32_16 (away) → r16_8
-const R32_TO_R16 = {
-  1:  { round: 'r16', position: 1, slot: 'home' },
-  2:  { round: 'r16', position: 2, slot: 'home' },
-  3:  { round: 'r16', position: 3, slot: 'home' },
-  4:  { round: 'r16', position: 1, slot: 'away' },
-  5:  { round: 'r16', position: 2, slot: 'away' },
-  6:  { round: 'r16', position: 3, slot: 'away' },
-  7:  { round: 'r16', position: 4, slot: 'home' },
-  8:  { round: 'r16', position: 4, slot: 'away' },
-  9:  { round: 'r16', position: 5, slot: 'home' },
-  10: { round: 'r16', position: 5, slot: 'away' },
-  11: { round: 'r16', position: 6, slot: 'home' },
-  12: { round: 'r16', position: 6, slot: 'away' },
-  13: { round: 'r16', position: 7, slot: 'home' },
-  14: { round: 'r16', position: 8, slot: 'home' },
-  15: { round: 'r16', position: 7, slot: 'away' },
-  16: { round: 'r16', position: 8, slot: 'away' },
-};
-
 // Dado un round y position, devuelve el siguiente bracket_match
-// r32: usa fixture oficial (no consecutivo)
-// r16+: consecutivo (1+2, 3+4, etc)
-// ademas, el perdedor de sf_X va a third_1 (siempre)
+// Fixture oficial: TODOS los cruces son consecutivos (1+2, 3+4, etc)
+// r32: 16 -> r16: 8 (1+2 -> r16_1, 3+4 -> r16_2, etc)
+// r16: 8 -> qf: 4
+// qf: 4 -> sf: 2
+// sf: 2 -> final: 1
+// ademas, el perdedor de sf_X va a third_1
 function getNextMatch(round, position, isLoser = false) {
   if (round === 'sf' && isLoser) {
     return { round: 'third', position: 1, slot: position === 1 ? 'home' : 'away' };
@@ -44,17 +17,11 @@ function getNextMatch(round, position, isLoser = false) {
   if (round === 'final' || round === 'third') {
     return null;
   }
-  if (round === 'r32') {
-    return R32_TO_R16[position] || null;
-  }
-  if (round === 'r16') {
-    const nextPos = Math.ceil(position / 2);
-    return { round: 'qf', position: nextPos, slot: position % 2 === 1 ? 'home' : 'away' };
-  }
-  if (round === 'qf') {
-    const nextPos = Math.ceil(position / 2);
-    return { round: 'sf', position: nextPos, slot: position % 2 === 1 ? 'home' : 'away' };
-  }
+  const nextPos = Math.ceil(position / 2);
+  const slot = position % 2 === 1 ? 'home' : 'away';
+  if (round === 'r32') return { round: 'r16', position: nextPos, slot };
+  if (round === 'r16') return { round: 'qf', position: nextPos, slot };
+  if (round === 'qf') return { round: 'sf', position: nextPos, slot };
   return null;
 }
 
