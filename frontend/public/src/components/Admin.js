@@ -3,7 +3,7 @@ import { api } from '../services/api.js';
 
 export default {
   props: ['matches', 'settings', 'isAdmin', 'countries'],
-  emits: ['save-score', 'finish-match', 'add-match', 'export-csv', 'export-match', 'save-setting', 'award-champion'],
+  emits: ['save-score', 'finish-match', 'add-match', 'export-csv', 'export-match', 'save-setting', 'award-champion', 'update-match'],
   data() {
     return {
       newMatch: {
@@ -20,6 +20,10 @@ export default {
         status: 'open'
       },
       showAddForm: false,
+      showMatchEditModal: false,
+      matchEditData: null,
+      matchEditErrors: {},
+      matchEditSaving: false,
       errors: {},
       adminTab: 'nuevos',
       users: [],
@@ -112,6 +116,15 @@ export default {
         this.newMatch.date &&
         this.newMatch.timeHour !== '' &&
         this.newMatch.timeMinute !== '';
+    },
+    isMatchEditFormValid() {
+      if (!this.matchEditData) return false;
+      const d = this.matchEditData;
+      return d.date && /^\d{4}-\d{2}-\d{2}$/.test(d.date) &&
+        /^([01]\d|2[0-3]):[0-5]\d$/.test(d.time || '') &&
+        d.home_team && this.countries.some(c => c.name === d.home_team) &&
+        d.away_team && this.countries.some(c => c.name === d.away_team) &&
+        d.home_team !== d.away_team;
     },
     filteredMatches() {
       const dir = this.adminTab === 'antiguos' ? -1 : 1;
@@ -339,6 +352,47 @@ export default {
       }
       this.showFinishModal = false;
       this.finishMatchData = null;
+    },
+    openMatchEditModal(match) {
+      this.matchEditData = {
+        id: match.id,
+        date: match.date,
+        time: match.time,
+        home_team: match.home_team,
+        away_team: match.away_team
+      };
+      this.matchEditErrors = {};
+      this.matchEditSaving = false;
+      this.showMatchEditModal = true;
+    },
+    cancelMatchEdit() {
+      this.showMatchEditModal = false;
+      this.matchEditData = null;
+      this.matchEditErrors = {};
+      this.matchEditSaving = false;
+    },
+    submitMatchEdit() {
+      this.matchEditErrors = {};
+      if (!this.isMatchEditFormValid) {
+        const d = this.matchEditData || {};
+        if (!d.date || !/^\d{4}-\d{2}-\d{2}$/.test(d.date)) this.matchEditErrors.date = 'Fecha inválida';
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(d.time || '')) this.matchEditErrors.time = 'Hora debe ser HH:MM (24h)';
+        if (!d.home_team || !this.countries.some(c => c.name === d.home_team)) this.matchEditErrors.home_team = 'Seleccioná un equipo válido';
+        if (!d.away_team || !this.countries.some(c => c.name === d.away_team)) this.matchEditErrors.away_team = 'Seleccioná un equipo válido';
+        if (d.home_team && d.home_team === d.away_team) this.matchEditErrors.away_team = 'Los equipos deben ser diferentes';
+        return;
+      }
+      this.matchEditSaving = true;
+      this.$emit('update-match', { ...this.matchEditData });
+    },
+    closeMatchEdit() {
+      this.showMatchEditModal = false;
+      this.matchEditData = null;
+      this.matchEditErrors = {};
+      this.matchEditSaving = false;
+    },
+    failMatchEdit() {
+      this.matchEditSaving = false;
     },
     compactDate(dateStr) {
       const parts = dateStr.split('-');
@@ -629,8 +683,12 @@ export default {
               </div>
   
                 <div v-if="match.status !== 'finished'" class="admin-col-actions">
+                  <button class="btn btn-edit-match" @click="openMatchEditModal(match)" style="padding: 0.3rem 0.4rem; font-size: 0.65rem; background: #6366f1; color: white;" title="Editar partido">✏️</button>
                   <button class="btn btn-primary" @click="$emit('save-score', match)" :disabled="match.home_score == null || match.away_score == null" style="padding: 0.3rem 0.4rem; font-size: 0.65rem;" title="Guardar score">💾</button>
                   <button class="btn btn-finish-match" @click="openFinishModal(match)" :disabled="match.home_score == null || match.away_score == null" style="padding: 0.3rem 0.4rem; font-size: 0.65rem; background: var(--color-accent); color: white;" title="Finalizar partido">🏁</button>
+                </div>
+                <div v-else class="admin-col-actions">
+                  <button class="btn btn-edit-match" @click="openMatchEditModal(match)" style="padding: 0.3rem 0.4rem; font-size: 0.65rem; background: #6366f1; color: white;" title="Editar partido">✏️</button>
                 </div>
             </div>
              <div style="width: 100%; display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed rgba(0,0,0,0.1);">
@@ -919,6 +977,57 @@ export default {
           <div style="display:flex;gap:0.6rem;">
             <button @click="cancelManualSave" class="modal-btn-cancel" data-dark-bg="card" data-dark-border="border" data-dark-text="text" style="flex:1;padding:0.65rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.8rem;">CANCELAR</button>
             <button @click="confirmManualSave" style="flex:1;padding:0.65rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:600;cursor:pointer;font-size:0.8rem;">CONFIRMAR</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Match Edit Modal -->
+      <div v-if="showMatchEditModal && matchEditData" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;" @click.self="cancelMatchEdit">
+        <div class="modal-content" data-dark-bg="card" data-dark-border="border" style="background:white;border-radius:16px;padding:1.5rem;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+          <div style="text-align:center;margin-bottom:1.25rem;">
+            <div style="font-size:2.5rem;margin-bottom:0.5rem;">✏️</div>
+            <h3 data-dark-text="text" style="font-family:var(--font-header);font-size:1.25rem;margin:0 0 0.25rem;">EDITAR PARTIDO</h3>
+            <p style="font-size:0.75rem;color:var(--color-gray);margin:0;">Modificá fecha, hora o equipos. Este cambio se aplica de inmediato.</p>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.85rem;">
+            <div class="form-group">
+              <label class="form-label" style="display:block;margin-bottom:0.25rem;">Fecha</label>
+              <input type="date" v-model="matchEditData.date" class="form-input" :class="{'input-error': matchEditErrors.date}" style="width:100%;padding:0.5rem;font-size:0.85rem;box-sizing:border-box;">
+              <span v-if="matchEditErrors.date" class="field-error">{{ matchEditErrors.date }}</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="display:block;margin-bottom:0.25rem;">Hora</label>
+              <input type="time" v-model="matchEditData.time" class="form-input" :class="{'input-error': matchEditErrors.time}" style="width:100%;padding:0.5rem;font-size:0.85rem;box-sizing:border-box;">
+              <span v-if="matchEditErrors.time" class="field-error">{{ matchEditErrors.time }}</span>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:0.75rem;">
+            <label class="form-label" style="display:block;margin-bottom:0.25rem;">Local</label>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <img v-if="flagMap[matchEditData.home_team]" :src="flagMap[matchEditData.home_team]" alt="" style="width:24px;height:18px;border-radius:2px;">
+              <span v-else style="width:24px;"></span>
+              <input type="text" v-model="matchEditData.home_team" list="editHomeTeams" class="form-input" :class="{'input-error': matchEditErrors.home_team}" placeholder="Escribí o seleccioná..." style="flex:1;padding:0.5rem;font-size:0.85rem;">
+              <datalist id="editHomeTeams">
+                <option v-for="c in countries" :key="c.name" :value="c.name">{{ c.name }}</option>
+              </datalist>
+            </div>
+            <span v-if="matchEditErrors.home_team" class="field-error">{{ matchEditErrors.home_team }}</span>
+          </div>
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label class="form-label" style="display:block;margin-bottom:0.25rem;">Visitante</label>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <img v-if="flagMap[matchEditData.away_team]" :src="flagMap[matchEditData.away_team]" alt="" style="width:24px;height:18px;border-radius:2px;">
+              <span v-else style="width:24px;"></span>
+              <input type="text" v-model="matchEditData.away_team" list="editAwayTeams" class="form-input" :class="{'input-error': matchEditErrors.away_team}" placeholder="Escribí o seleccioná..." style="flex:1;padding:0.5rem;font-size:0.85rem;">
+              <datalist id="editAwayTeams">
+                <option v-for="c in countries" :key="c.name" :value="c.name">{{ c.name }}</option>
+              </datalist>
+            </div>
+            <span v-if="matchEditErrors.away_team" class="field-error">{{ matchEditErrors.away_team }}</span>
+          </div>
+          <div style="display:flex;gap:0.6rem;">
+            <button @click="cancelMatchEdit" class="modal-btn-cancel" data-dark-bg="card" data-dark-border="border" data-dark-text="text" style="flex:1;padding:0.75rem;border:1px solid #d1d5db;border-radius:8px;background:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">CANCELAR</button>
+            <button @click="submitMatchEdit" :disabled="!isMatchEditFormValid || matchEditSaving" style="flex:1;padding:0.75rem;border:none;border-radius:8px;background:var(--color-dark);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;">{{ matchEditSaving ? 'GUARDANDO...' : 'GUARDAR CAMBIOS' }}</button>
           </div>
         </div>
       </div>

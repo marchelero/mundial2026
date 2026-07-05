@@ -84,6 +84,7 @@ createApp({
         </template>
         <template v-else-if="view === 'admin' && isAdmin">
           <Admin
+            ref="adminRef"
             :matches="allMatches"
             :settings="settings"
             :is-admin="isAdmin"
@@ -91,6 +92,7 @@ createApp({
             @save-score="saveScore"
             @finish-match="finishMatch"
             @add-match="addMatch"
+            @update-match="updateMatch"
             @delete-match="deleteMatch"
             @export-csv="exportToCSV"
             @export-match="exportMatchCSV"
@@ -342,6 +344,22 @@ createApp({
         await this.loadAllData();
       } catch (e) {
         this.notify(e.message || 'Error al registrar partido', 'error');
+      }
+    },
+    async updateMatch(payload) {
+      try {
+        await api.patch('/matches/' + payload.id, {
+          date: payload.date,
+          time: payload.time,
+          home_team: payload.home_team,
+          away_team: payload.away_team
+        });
+        this.notify('Partido actualizado');
+        if (this.$refs.adminRef) this.$refs.adminRef.closeMatchEdit();
+        await this.loadAllData();
+      } catch (e) {
+        if (this.$refs.adminRef) this.$refs.adminRef.failMatchEdit();
+        this.notify(e.message || 'Error al actualizar partido', 'error');
       }
     },
     async deleteMatch(id) {
