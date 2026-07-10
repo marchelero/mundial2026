@@ -86,6 +86,16 @@ export default {
     }
   },
   methods: {
+    championTooltip(r) {
+      if (!r.champion_pick) return '';
+      if (r.champion_status === 'winner') return `🏆 ¡${r.champion_pick} es el campeón del mundo!`;
+      if (r.champion_status === 'alive') return `🏆 Predijo campeón: ${r.champion_pick} (sigue en carrera)`;
+      return `🏆 Predijo campeón: ${r.champion_pick} (ya fue eliminado)`;
+    },
+    championIcon(status) {
+      if (status === 'winner') return '👑';
+      return '🏆';
+    },
     isFinalWin(match, pred) {
       if (!match || !pred) return false;
       if (match.round !== 'final') return false;
@@ -365,6 +375,13 @@ export default {
         <span>El ranking se actualiza automáticamente después de cada partido.</span>
       </div>
 
+      <div class="champion-legend" data-dark-text="gray">
+        <span style="font-weight:800;">PRONÓSTICO CAMPEÓN:</span>
+        <span class="champion-legend-item"><span class="champion-legend-swatch alive"></span><span>Sigue en carrera</span></span>
+        <span class="champion-legend-item"><span class="champion-legend-swatch eliminated"></span><span>Ya fue eliminado</span></span>
+        <span class="champion-legend-item"><span class="champion-legend-swatch winner"></span><span>¡Es el campeón!</span></span>
+      </div>
+
       <!-- 🔍 Comparación -->
       <div class="card" style="margin-bottom:0.75rem;padding:0.5rem 0.75rem;">
         <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
@@ -438,7 +455,11 @@ export default {
                       <div data-dark-text="text" style="font-weight: 600; font-size: 0.85rem; display:flex; align-items:center; gap:0.25rem; flex-wrap:wrap;">
                         <span>{{ r.name }}</span>
                         <span v-for="i in (r.comodines_usados || 0)" :key="'c'+i" style="font-size:0.75rem;" title="Comodín usado">🍀</span>
-                        <span v-if="r.champion_pick" style="font-size:0.85rem;" :title="'Predijo campeón: ' + r.champion_pick">🏆</span>
+                        <span v-if="r.champion_pick" class="champion-pick-badge" :class="r.champion_status" :title="championTooltip(r)">
+                          <span class="champion-pick-icon">{{ championIcon(r.champion_status) }}</span>
+                          <span class="champion-pick-flag">{{ r.champion_flag }}</span>
+                          <span class="champion-pick-name">{{ r.champion_pick }}</span>
+                        </span>
                       </div>
                     <div data-dark-text="gray" style="font-size: 0.55rem; color: var(--color-gray); opacity: 0.45;">{{ r.email }}</div>
                   </td>

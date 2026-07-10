@@ -2,6 +2,44 @@ const express = require('express');
 const { db, generateId } = require('../db');
 const { authRequired, adminRequired } = require('../middleware/auth');
 const { recalcAllTotals } = require('../services/scoring');
+const { flagEmoji } = require('../data/countries');
+
+function computeTeamChampionStatus() {
+  const status = {};
+  const bracketMatches = db.prepare(`
+    SELECT bm.round, bm.position, bm.home_team, bm.away_team, bm.winner,
+           m.home_score, m.away_score, m.status as match_status
+    FROM bracket_matches bm
+    LEFT JOIN matches m ON bm.match_id = m.id
+  `).all();
+
+  for (const bm of bracketMatches) {
+    if (bm.home_team && bm.home_team !== 'Por definir' && status[bm.home_team] !== 'eliminated') {
+      status[bm.home_team] = 'alive';
+    }
+    if (bm.away_team && bm.away_team !== 'Por definir' && status[bm.away_team] !== 'eliminated') {
+      status[bm.away_team] = 'alive';
+    }
+  }
+
+  for (const bm of bracketMatches) {
+    if (bm.round === 'third') continue;
+
+    let loser = null;
+    if (bm.winner === 'home') {
+      loser = bm.away_team;
+    } else if (bm.winner === 'away') {
+      loser = bm.home_team;
+    } else if (bm.match_status === 'finished' && bm.home_score != null && bm.away_score != null) {
+      if (bm.home_score > bm.away_score) loser = bm.away_team;
+      else if (bm.away_score > bm.home_score) loser = bm.home_team;
+    }
+
+    if (loser && loser !== 'Por definir') status[loser] = 'eliminated';
+  }
+
+  return status;
+}
 
 const router = express.Router();
 
@@ -138,18 +176,38 @@ router.get('/rankings', authRequired, (req, res) => {
     const potMap = {};
     for (const p of potentials) potMap[p.user_id] = p.pts || 0;
 
+    // Champion pick status (alive / eliminated / winner)
+    const teamStatus = computeTeamChampionStatus();
+    const champWinnerRow = db.prepare("SELECT value FROM settings WHERE key='champion_winner'").get();
+    const championWinner = (champWinnerRow && champWinnerRow.value) ? champWinnerRow.value : '';
+
     // Merge and sort by total + potential
-    const result = users.map(u => ({
-      id: u.id,
-      email: u.email,
-      name: u.name,
-      points: u.points,
-      potential_points: potMap[u.id] || 0,
-      comodin_usado: (u.comodines_usados || 0) > 0,
-      comodines_usados: u.comodines_usados || 0,
-      comodines_pendientes: u.comodines_pendientes || 0,
-      champion_pick: u.champion_pick || null,
-    })).sort((a, b) => {
+    const result = users.map(u => {
+      const pick = u.champion_pick || null;
+      let championStatus = null;
+      if (pick) {
+        if (championWinner && pick === championWinner) {
+          championStatus = 'winner';
+        } else if (teamStatus[pick] === 'alive') {
+          championStatus = 'alive';
+        } else {
+          championStatus = 'eliminated';
+        }
+      }
+      return {
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        points: u.points,
+        potential_points: potMap[u.id] || 0,
+        comodin_usado: (u.comodines_usados || 0) > 0,
+        comodines_usados: u.comodines_usados || 0,
+        comodines_pendientes: u.comodines_pendientes || 0,
+        champion_pick: pick,
+        champion_status: championStatus,
+        champion_flag: pick ? flagEmoji(pick) : null,
+      };
+    }).sort((a, b) => {
       const diff = (b.points + b.potential_points) - (a.points + a.potential_points);
       return diff !== 0 ? diff : a.email.localeCompare(b.email);
     });
