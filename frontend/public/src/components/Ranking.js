@@ -374,10 +374,10 @@ export default {
           <p class="banner-subtitle">Tabla de posiciones generales acumuladas del torneo.</p>
         </div>
         <div style="margin-left:auto;display:flex;gap:0.5rem;flex-wrap:wrap;">
-          <button v-if="isAdmin" @click="downloadExcel" :disabled="exporting" class="btn-export-ranking" data-dark-bg="subtle" style="padding:0.45rem 0.85rem;background:#16a34a;color:white;border:none;border-radius:8px;font-weight:700;font-size:0.75rem;cursor:pointer;display:inline-flex;align-items:center;gap:0.35rem;box-shadow:0 1px 3px rgba(22,163,74,0.3);transition:all 0.15s;" @mouseover="$event.target.style.background='#15803d'" @mouseout="$event.target.style.background='#16a34a'">
+          <button @click="downloadExcel" :disabled="exporting" class="btn-export-ranking" data-dark-bg="subtle" style="padding:0.45rem 0.85rem;background:#16a34a;color:white;border:none;border-radius:8px;font-weight:700;font-size:0.75rem;cursor:pointer;display:inline-flex;align-items:center;gap:0.35rem;box-shadow:0 1px 3px rgba(22,163,74,0.3);transition:all 0.15s;" @mouseover="$event.target.style.background='#15803d'" @mouseout="$event.target.style.background='#16a34a'">
             <span v-if="exporting" style="display:inline-block;width:10px;height:10px;border:2px solid white;border-top-color:transparent;border-radius:50%;animation:exportSpin 0.7s linear infinite;"></span>
             <span v-else>📥</span>
-            {{ exporting ? 'Generando...' : 'Descargar Excel' }}
+            {{ exporting ? 'Generando...' : 'Descargar' }}
           </button>
         </div>
       </div>

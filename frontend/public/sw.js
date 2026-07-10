@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mundial2026-v68-merged-bonus';
+const CACHE_NAME = 'mundial2026-v69-download-public';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

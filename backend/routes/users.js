@@ -285,7 +285,7 @@ const ROUND_LABELS = {
   final: 'Final',
 };
 
-router.get('/rankings/export', authRequired, adminRequired, async (req, res) => {
+router.get('/rankings/export', authRequired, async (req, res) => {
   try {
     const matches = db.prepare(`
       SELECT * FROM matches
