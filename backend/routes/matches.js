@@ -10,7 +10,12 @@ const router = express.Router();
 
 router.get('/', (req, res) => {
   try {
-    const matches = db.prepare('SELECT * FROM matches ORDER BY date, time').all();
+    const matches = db.prepare(`
+      SELECT m.*, bm.winner as bracket_winner
+      FROM matches m
+      LEFT JOIN bracket_matches bm ON bm.match_id = m.id
+      ORDER BY m.date, m.time
+    `).all();
     res.json(matches);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener partidos' });

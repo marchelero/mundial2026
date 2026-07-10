@@ -80,7 +80,8 @@ createApp({
           <Ranking
             :rankings-data="rankingsData"
             :rankings-loading="rankingsLoading"
-            :all-matches="allMatches" />
+            :all-matches="allMatches"
+            :is-admin="isAdmin" />
         </template>
         <template v-else-if="view === 'admin' && isAdmin">
           <Admin

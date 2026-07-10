@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mundial2026-v63-champion-badge';
+const CACHE_NAME = 'mundial2026-v68-merged-bonus';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

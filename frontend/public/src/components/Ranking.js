@@ -1,14 +1,15 @@
 import { api } from '../services/api.js';
 
 export default {
-  props: ['rankingsData', 'rankingsLoading', 'allMatches'],
+  props: ['rankingsData', 'rankingsLoading', 'allMatches', 'isAdmin'],
   data() {
     return {
       expandedUser: null, userBreakdown: null, statFilter: null, userPreds: [],
       championPickLabel: '',
       showCompare: false, compareUsers: [], comparePredictions: {}, compareTab: 'table',
       compareColors: ['#3b82f6', '#f59e0b', '#10b981', '#ef4444'],
-      compareLoading: {}, compareError: {}, raceTimer: null
+      compareLoading: {}, compareError: {}, raceTimer: null,
+      exporting: false
     };
   },
   computed: {
@@ -92,9 +93,43 @@ export default {
       if (r.champion_status === 'alive') return `🏆 Predijo campeón: ${r.champion_pick} (sigue en carrera)`;
       return `🏆 Predijo campeón: ${r.champion_pick} (ya fue eliminado)`;
     },
+    championBonusTooltip(r) {
+      const partidos = r.points - r.champion_bonus;
+      return partidos + ' pts de partidos + ' + r.champion_bonus + ' pts de campeón = ' + r.points + ' total';
+    },
     championIcon(status) {
       if (status === 'winner') return '👑';
       return '🏆';
+    },
+    async downloadExcel() {
+      if (this.exporting) return;
+      this.exporting = true;
+      try {
+        const token = localStorage.getItem('token') || '';
+        const res = await fetch('/api/users/rankings/export', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Error al generar Excel');
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const disposition = res.headers.get('Content-Disposition') || '';
+        const match = disposition.match(/filename="([^"]+)"/);
+        a.download = match ? match[1] : 'ranking_mundial2026.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        window.dispatchEvent(new CustomEvent('app-notify', { detail: { message: 'Excel descargado', type: 'success' } }));
+      } catch (e) {
+        window.dispatchEvent(new CustomEvent('app-notify', { detail: { message: e.message || 'Error al descargar', type: 'error' } }));
+      } finally {
+        this.exporting = false;
+      }
     },
     isFinalWin(match, pred) {
       if (!match || !pred) return false;
@@ -338,6 +373,13 @@ export default {
           <h2 class="banner-title">RANKING</h2>
           <p class="banner-subtitle">Tabla de posiciones generales acumuladas del torneo.</p>
         </div>
+        <div style="margin-left:auto;display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <button v-if="isAdmin" @click="downloadExcel" :disabled="exporting" class="btn-export-ranking" data-dark-bg="subtle" style="padding:0.45rem 0.85rem;background:#16a34a;color:white;border:none;border-radius:8px;font-weight:700;font-size:0.75rem;cursor:pointer;display:inline-flex;align-items:center;gap:0.35rem;box-shadow:0 1px 3px rgba(22,163,74,0.3);transition:all 0.15s;" @mouseover="$event.target.style.background='#15803d'" @mouseout="$event.target.style.background='#16a34a'">
+            <span v-if="exporting" style="display:inline-block;width:10px;height:10px;border:2px solid white;border-top-color:transparent;border-radius:50%;animation:exportSpin 0.7s linear infinite;"></span>
+            <span v-else>📥</span>
+            {{ exporting ? 'Generando...' : 'Descargar Excel' }}
+          </button>
+        </div>
       </div>
 
       <div class="ranking-stats-grid">
@@ -459,20 +501,26 @@ export default {
                           <span class="champion-pick-icon">{{ championIcon(r.champion_status) }}</span>
                           <span class="champion-pick-flag">{{ r.champion_flag }}</span>
                           <span class="champion-pick-name">{{ r.champion_pick }}</span>
+                          <span v-if="r.champion_status === 'winner'" class="champion-pick-icon">👑</span>
                         </span>
                       </div>
                     <div data-dark-text="gray" style="font-size: 0.55rem; color: var(--color-gray); opacity: 0.45;">{{ r.email }}</div>
                   </td>
                   <td style="padding: 0.5rem; text-align: right; font-weight: 700; font-size: 0.7rem; white-space: nowrap;" v-if="r.prize"><span :style="{ color: r.prize.color }">{{ r.prize.label }}</span></td>
                   <td data-dark-text="gray" style="padding: 0.5rem; text-align: right; font-size: 0.7rem; color: #ccc;" v-else>-</td>
-                  <td data-dark-text="text" style="padding: 0.5rem; text-align: right; font-weight: bold; font-size: 1rem; white-space: nowrap;">{{ r.points }}<span v-if="r.potential_points > 0" class="pts-potential-rank">+{{ r.potential_points }}</span></td>
+                  <td data-dark-text="text" style="padding: 0.5rem; text-align: right; font-weight: bold; font-size: 1rem; white-space: nowrap;">
+                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.15rem;">
+                      <span>{{ r.points }}</span>
+                      <span v-if="r.potential_points > 0" class="pts-potential-rank">+{{ r.potential_points }}</span>
+                    </div>
+                  </td>
                 </tr>
                 <tr v-if="r && expandedUser === r.id">
                   <td colspan="4" style="padding: 0.5rem 0.5rem 0.5rem;">
                     <template v-if="userBreakdown">
                     <div style="width:100%;text-align:right;">
                       <div data-dark-text="text" style="font-size:0.7rem;font-weight:700;color:var(--color-dark);margin-bottom:0.3rem;">Total: <span style="color:var(--color-green);">{{ userBreakdown.exactoPts + userBreakdown.resultadoPts + userBreakdown.champBonus }} pts</span>
-                        ({{ userBreakdown.exactoPts }}{{ userBreakdown.resultadoPts > 0 ? ' + ' + userBreakdown.resultadoPts : '' }}<span v-if="userBreakdown.champBonus > 0"> + {{ userBreakdown.champBonus }} 🏆</span>)
+                        ({{ userBreakdown.exactoPts }}{{ userBreakdown.resultadoPts > 0 ? ' + ' + userBreakdown.resultadoPts : '' }}<span v-if="userBreakdown.champBonus > 0" class="champion-bonus-pill" style="font-size:0.6rem;padding:0.05rem 0.35rem;margin-left:0.15rem;">+ {{ userBreakdown.champBonus }} 🏆</span>)
                       </div>
                       <div style="display:flex;gap:0.35rem;flex-wrap:wrap;font-size:0.75rem;justify-content:flex-end;">
                         <span v-if="userBreakdown.exactos > 0" @click="toggleStat('exact')" class="breakdown-pill breakdown-exact" style="cursor:pointer;background:#f0fdf4;color:#16a34a;border:1px solid #dcfce7;padding:0.25rem 0.5rem;border-radius:4px;font-weight:700;transition:all 0.15s;" :style="statFilter === 'exact' ? 'box-shadow:0 0 0 2px #16a34a;' : ''">{{ userBreakdown.exactos }}× Exacto ({{ userBreakdown.exactoPts }}pts)</span>

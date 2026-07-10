@@ -107,6 +107,30 @@ export default {
       this.countries.forEach(c => { m[c.name] = flagUrl(c.flag); });
       return m;
     },
+    aliveChampionOptions() {
+      const koMatches = (this.matches || []).filter(m => m.round && m.round !== 'group');
+      const inBracket = new Set();
+      const eliminated = new Set();
+      for (const m of koMatches) {
+        if (m.home_team && m.home_team !== 'Por definir') inBracket.add(m.home_team);
+        if (m.away_team && m.away_team !== 'Por definir') inBracket.add(m.away_team);
+      }
+      for (const m of koMatches) {
+        if (m.round === 'third') continue;
+        let loser = null;
+        if (m.bracket_winner === 'home') loser = m.away_team;
+        else if (m.bracket_winner === 'away') loser = m.home_team;
+        else if (m.status === 'finished' && m.home_score != null && m.away_score != null) {
+          if (m.home_score > m.away_score) loser = m.away_team;
+          else if (m.away_score > m.home_score) loser = m.home_team;
+        }
+        if (loser && loser !== 'Por definir') eliminated.add(loser);
+      }
+      return (this.countries || [])
+        .filter(c => inBracket.has(c.name) && !eliminated.has(c.name))
+        .map(c => c.name)
+        .sort((a, b) => a.localeCompare(b, 'es'));
+    },
     isFormValid() {
       return this.newMatch.home_team &&
         this.newMatch.away_team &&
@@ -778,8 +802,8 @@ export default {
               </div>
               <div v-else style="display: flex; gap: 0.5rem; margin-top: 0.75rem; align-items: stretch;">
                 <select v-model="championAwardSelected" class="form-input" style="flex: 1; padding: 0.5rem; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: var(--font-main); font-size: 0.8rem; background: #f8fafc; cursor: pointer;">
-                  <option value="">Seleccionar campeón...</option>
-                  <option v-for="c in countries" :key="c.name" :value="c.name">{{ c.name }}</option>
+                  <option value="">Seleccionar campeón ({{ aliveChampionOptions.length }} disponibles)...</option>
+                  <option v-for="name in aliveChampionOptions" :key="name" :value="name">{{ name }}</option>
                 </select>
                 <button class="btn btn-primary" :disabled="!championAwardSelected || awardLoading" @click="awardChampion" style="padding: 0.5rem 0.8rem; font-size: 0.7rem; white-space: nowrap;">
                   {{ awardLoading ? 'OTORGANDO...' : 'OTORGAR +5 PTS' }}
