@@ -78,6 +78,7 @@ createApp({
         </template>
         <template v-else-if="view === 'posiciones'">
           <Ranking
+            ref="rankingRef"
             :rankings-data="rankingsData"
             :rankings-loading="rankingsLoading"
             :all-matches="allMatches"
@@ -108,7 +109,7 @@ createApp({
       landingData: null, landingError: null,
       view: 'votar', allMatches: [], predictions: {},
       saving: false, championPick: { champion: '' },
-      settings: {}, rankingsData: [], rankingsLoading: false,
+      settings: {}, rankingsData: [], rankingsLoading: false, championWinner: '',
       countries: typeof PAISES_MUNDIAL2026 !== 'undefined' ? PAISES_MUNDIAL2026 : [],
       notification: { message: '', type: 'success', visible: false },
       notificationTimer: null,
@@ -251,7 +252,10 @@ createApp({
       this.settings = await loadSettings();
       this.championPick = await loadChampionPick();
       this.comodinMax = parseInt(this.settings.comodin_max_per_user, 10) || 1;
-      this.rankingsData = await api.get('/users/rankings').catch(() => []);
+      const r = await api.get('/users/rankings').catch(() => ({ users: [], champion_winner: '' }));
+      this.rankingsData = r.users || (Array.isArray(r) ? r : []);
+      this.championWinner = r.champion_winner || '';
+      if (this.$refs.rankingRef) this.$refs.rankingRef.championWinner = this.championWinner;
     },
     setScore(matchId, side, val) {
       if (!this.predictions[matchId]) this.predictions[matchId] = { home: null, away: null };
@@ -308,9 +312,15 @@ createApp({
             try { localStorage.setItem(`mundial_rank_${this.user.id}`, String(currentIdx + 1)); } catch (_) {}
           }
         }
-        this.rankingsData = await api.get('/users/rankings');
+        const r = await api.get('/users/rankings').catch(() => ({ users: [], champion_winner: '' }));
+        const arr = r.users || (Array.isArray(r) ? r : []);
+        this.rankingsData = arr;
+        this.championWinner = r.champion_winner || '';
+        if (this.$refs.rankingRef) this.$refs.rankingRef.championWinner = this.championWinner;
       } catch (_) {
         this.rankingsData = [];
+        this.championWinner = '';
+        if (this.$refs.rankingRef) this.$refs.rankingRef.championWinner = '';
       }
       this.rankingsLoading = false;
     },

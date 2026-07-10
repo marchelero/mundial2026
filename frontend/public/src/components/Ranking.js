@@ -9,12 +9,31 @@ export default {
       showCompare: false, compareUsers: [], comparePredictions: {}, compareTab: 'table',
       compareColors: ['#3b82f6', '#f59e0b', '#10b981', '#ef4444'],
       compareLoading: {}, compareError: {}, raceTimer: null,
-      exporting: false
+      exporting: false,
+      mentions: [], mentionsLoading: false,
+      expandedMentions: new Set(),
+      allExpandedFlag: false,
+      hidePodioMentions: (typeof localStorage !== 'undefined' && localStorage.getItem('hidePodioMentions') === '1'),
+      championWinner: ''
     };
   },
   computed: {
     totalMatches() { return this.allMatches.length; },
     playedMatches() { return this.allMatches.filter(m => m.status === 'finished').length; },
+    topPositions() {
+      const data = this.rankingsData || [];
+      const positions = { first: [], second: [], third: [], fourth: [], fifth: [] };
+      const keys = ['first', 'second', 'third', 'fourth', 'fifth'];
+      let i = 0, posIdx = 0;
+      while (i < data.length && posIdx < 5) {
+        const group = [data[i]];
+        let j = i + 1;
+        while (j < data.length && data[j].points === data[i].points) { group.push(data[j]); j++; }
+        positions[keys[posIdx]] = group;
+        posIdx++; i = j;
+      }
+      return positions;
+    },
     rankingsWithPrize() {
       const LABELS = [
         { label: '1ro 45%', color: '#f59e0b' },
@@ -84,6 +103,10 @@ export default {
         for (const u of this.compareUsers)
           if (point[u.id] > max) max = point[u.id];
       return max || 1;
+    },
+    isPodioVisible() {
+      if (this.isAdmin) return !this.hidePodioMentions;
+      return !!this.championWinner;
     }
   },
   methods: {
@@ -97,9 +120,46 @@ export default {
       const partidos = r.points - r.champion_bonus;
       return partidos + ' pts de partidos + ' + r.champion_bonus + ' pts de campeón = ' + r.points + ' total';
     },
+    podiumUserTooltip(u) {
+      return u.points + ' puntos';
+    },
     championIcon(status) {
       if (status === 'winner') return '👑';
       return '🏆';
+    },
+    async loadMentions() {
+      this.mentionsLoading = true;
+      try {
+        this.mentions = await api.get('/users/rankings/mentions');
+      } catch (_) {
+        this.mentions = [];
+      }
+      this.mentionsLoading = false;
+    },
+    isMentionExpanded(idx) {
+      return this.expandedMentions.has(idx);
+    },
+    toggleMention(idx) {
+      const newSet = new Set(this.expandedMentions);
+      if (newSet.has(idx)) newSet.delete(idx);
+      else newSet.add(idx);
+      this.expandedMentions = newSet;
+      this.allExpandedFlag = newSet.size === this.mentions.length;
+    },
+    toggleAllMentions() {
+      if (this.allExpandedFlag) {
+        this.expandedMentions = new Set();
+        this.allExpandedFlag = false;
+      } else {
+        const newSet = new Set();
+        for (let i = 0; i < this.mentions.length; i++) newSet.add(i);
+        this.expandedMentions = newSet;
+        this.allExpandedFlag = true;
+      }
+    },
+    togglePodioVisibility() {
+      this.hidePodioMentions = !this.hidePodioMentions;
+      try { localStorage.setItem('hidePodioMentions', this.hidePodioMentions ? '1' : '0'); } catch (_) {}
     },
     async downloadExcel() {
       if (this.exporting) return;
@@ -359,6 +419,7 @@ export default {
   },
   mounted() {
     window.addEventListener('dark-mode-change', this._onDarkModeChange);
+    this.loadMentions();
   },
   unmounted() {
     if (this._chart) { this._chart.dispose(); this._chart = null; }
@@ -374,6 +435,10 @@ export default {
           <p class="banner-subtitle">Tabla de posiciones generales acumuladas del torneo.</p>
         </div>
         <div style="margin-left:auto;display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <button v-if="isAdmin" @click="togglePodioVisibility" :title="hidePodioMentions ? 'Mostrar podio y menciones' : 'Ocultar podio y menciones'" class="btn-toggle-podio" data-dark-bg="subtle" style="padding:0.45rem 0.7rem;background:#64748b;color:white;border:none;border-radius:8px;font-weight:700;font-size:0.75rem;cursor:pointer;display:inline-flex;align-items:center;gap:0.35rem;box-shadow:0 1px 3px rgba(0,0,0,0.2);transition:all 0.15s;" @mouseover="$event.target.style.background='#475569'" @mouseout="$event.target.style.background='#64748b'">
+            <span style="font-size:1rem;">{{ hidePodioMentions ? '👁️‍🗨️' : '👁️' }}</span>
+            {{ hidePodioMentions ? 'Mostrar podio' : 'Ocultar podio' }}
+          </button>
           <button @click="downloadExcel" :disabled="exporting" class="btn-export-ranking" data-dark-bg="subtle" style="padding:0.45rem 0.85rem;background:#16a34a;color:white;border:none;border-radius:8px;font-weight:700;font-size:0.75rem;cursor:pointer;display:inline-flex;align-items:center;gap:0.35rem;box-shadow:0 1px 3px rgba(22,163,74,0.3);transition:all 0.15s;" @mouseover="$event.target.style.background='#15803d'" @mouseout="$event.target.style.background='#16a34a'">
             <span v-if="exporting" style="display:inline-block;width:10px;height:10px;border:2px solid white;border-top-color:transparent;border-radius:50%;animation:exportSpin 0.7s linear infinite;"></span>
             <span v-else>📥</span>
@@ -422,6 +487,110 @@ export default {
         <span class="champion-legend-item"><span class="champion-legend-swatch alive"></span><span>Sigue en carrera</span></span>
         <span class="champion-legend-item"><span class="champion-legend-swatch eliminated"></span><span>Ya fue eliminado</span></span>
         <span class="champion-legend-item"><span class="champion-legend-swatch winner"></span><span>¡Es el campeón!</span></span>
+      </div>
+
+      <!-- 🏆 Podio Top 5 -->
+      <div v-if="isPodioVisible && rankingsData && rankingsData.length" class="podium-wrapper">
+        <div class="podium-stage">
+          <!-- 2do lugar (izquierda) -->
+          <div class="podium-slot second" v-if="topPositions.second.length">
+            <div class="podium-stack silver" :title="podiumUserTooltip(topPositions.second[0])">
+              <div class="podium-medal-icon">🥈</div>
+              <div class="podium-points-big">{{ topPositions.second[0].points }} <span style="font-size:0.5em;font-weight:600;">pts</span></div>
+              <div class="podium-names">
+                <div v-for="u in topPositions.second" :key="'2-'+u.id" class="podium-name" :title="u.name">{{ u.name }}</div>
+              </div>
+              <div class="podium-num-badge silver-num">2</div>
+            </div>
+          </div>
+
+          <!-- 1er lugar (centro, más alto) -->
+          <div class="podium-slot first" v-if="topPositions.first.length">
+            <div class="podium-stack gold" :title="podiumUserTooltip(topPositions.first[0])">
+              <div class="podium-crown">👑</div>
+              <div class="podium-medal-icon">🥇</div>
+              <div class="podium-points-big">{{ topPositions.first[0].points }} <span style="font-size:0.5em;font-weight:600;">pts</span></div>
+              <div class="podium-names">
+                <div v-for="u in topPositions.first" :key="'1-'+u.id" class="podium-name" :title="u.name">{{ u.name }}</div>
+              </div>
+              <div class="podium-num-badge gold-num">1</div>
+            </div>
+          </div>
+
+          <!-- 3er lugar (derecha) -->
+          <div class="podium-slot third" v-if="topPositions.third.length">
+            <div class="podium-stack bronze" :title="podiumUserTooltip(topPositions.third[0])">
+              <div class="podium-medal-icon">🥉</div>
+              <div class="podium-points-big">{{ topPositions.third[0].points }} <span style="font-size:0.5em;font-weight:600;">pts</span></div>
+              <div class="podium-names">
+                <div v-for="u in topPositions.third" :key="'3-'+u.id" class="podium-name" :title="u.name">{{ u.name }}</div>
+              </div>
+              <div class="podium-num-badge bronze-num">3</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4to y 5to lugar -->
+        <div v-if="topPositions.fourth.length || topPositions.fifth.length" class="podium-stage podium-stage-rest">
+          <!-- 4to lugar -->
+          <div class="podium-slot fourth" v-if="topPositions.fourth.length">
+            <div class="podium-stack fourth" :title="podiumUserTooltip(topPositions.fourth[0])">
+              <div class="podium-points-big">{{ topPositions.fourth[0].points }} <span style="font-size:0.5em;font-weight:600;">pts</span></div>
+              <div class="podium-names">
+                <div v-for="u in topPositions.fourth" :key="'4-'+u.id" class="podium-name" :title="u.name">{{ u.name }}</div>
+              </div>
+              <div class="podium-num-badge fourth-num">4</div>
+            </div>
+          </div>
+
+          <!-- 5to lugar -->
+          <div class="podium-slot fifth" v-if="topPositions.fifth.length">
+            <div class="podium-stack fifth" :title="podiumUserTooltip(topPositions.fifth[0])">
+              <div class="podium-points-big">{{ topPositions.fifth[0].points }} <span style="font-size:0.5em;font-weight:600;">pts</span></div>
+              <div class="podium-names">
+                <div v-for="u in topPositions.fifth" :key="'5-'+u.id" class="podium-name" :title="u.name">{{ u.name }}</div>
+              </div>
+              <div class="podium-num-badge fifth-num">5</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 🏅 Menciones Honoríficas -->
+      <div v-if="isPodioVisible && mentions && mentions.length" class="mentions-wrapper">
+        <div class="mentions-header">
+          <span class="mentions-icon">🏅</span>
+          <div>
+            <h3 class="mentions-title">MENCIONES HONORÍFICAS</h3>
+            <p class="mentions-subtitle">Galardones extraoficiales del torneo 🎭</p>
+          </div>
+          <button @click="toggleAllMentions" class="mentions-toggle-all" :title="allExpandedFlag ? 'Colapsar todas' : 'Expandir todas'">
+            <span v-if="allExpandedFlag" style="font-size:0.95rem;">▴</span>
+            <span v-else style="font-size:0.95rem;">▾</span>
+            <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.04em;">{{ allExpandedFlag ? 'COLAPSAR' : 'EXPANDIR' }}</span>
+          </button>
+        </div>
+        <div class="mentions-grid">
+          <div v-for="(m, idx) in mentions" :key="idx" class="mention-card" :class="['mention-' + m.color, { 'mention-expanded': isMentionExpanded(idx) }]">
+            <div class="mention-header" @click="toggleMention(idx)">
+              <div class="mention-emoji">{{ m.emoji }}</div>
+              <div class="mention-header-body">
+                <div class="mention-title-text">{{ m.title }}</div>
+                <div class="mention-description">{{ m.description }}</div>
+              </div>
+              <div class="mention-toggle">
+                <span class="mention-count">{{ m.users.length }}</span>
+                <span class="mention-chevron">{{ isMentionExpanded(idx) ? '▴' : '▾' }}</span>
+              </div>
+            </div>
+            <div v-if="isMentionExpanded(idx)" class="mention-details">
+              <div v-for="(u, uidx) in m.users" :key="uidx" class="mention-user">
+                <span class="mention-user-name">{{ u.name }}</span>
+                <span class="mention-user-detail">{{ u.detail }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 🔍 Comparación -->

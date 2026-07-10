@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mundial2026-v69-download-public';
+const CACHE_NAME = 'mundial2026-v94-podio-landing';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

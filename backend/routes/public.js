@@ -3,6 +3,7 @@ const rateLimit = require('express-rate-limit');
 const { db } = require('../db');
 const { nowStr } = require('../utils/datetime');
 
+
 const FLAG_MAP = {
   'Canadá': '🇨🇦', 'México': '🇲🇽', 'Estados Unidos': '🇺🇸',
   'Australia': '🇦🇺', 'Irak': '🇮🇶', 'Irán': '🇮🇷', 'Japón': '🇯🇵', 'Jordania': '🇯🇴',
@@ -89,6 +90,15 @@ router.get('/landing-data', publicLimiter, (req, res) => {
   } catch (e) {
     console.error('[public/landing-data]', e);
     res.status(500).json({ error: 'No se pudo cargar la landing' });
+  }
+});
+
+router.get('/champion-winner', publicLimiter, (req, res) => {
+  try {
+    const row = db.prepare("SELECT value FROM settings WHERE key='champion_winner'").get();
+    res.json({ champion_winner: (row && row.value) ? row.value : '' });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al obtener campeón' });
   }
 });
 
