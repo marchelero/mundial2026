@@ -16,6 +16,10 @@ export default {
       showRace: false,
       raceTimer: null,
       _chart: null,
+      championWinner: '',
+      mentions: [],
+      expandedMentions: new Set(),
+      allExpandedFlag: false,
     };
   },
   computed: {
@@ -35,8 +39,43 @@ export default {
       if (n <= 30) return Math.max(280, n * 26 + 40);
       return 480;
     },
+    showExtraSections() { return !!this.championWinner && this.rankings.length > 0; },
+    topPositions() {
+      const data = this.rankings;
+      const positions = { first: [], second: [], third: [], fourth: [], fifth: [] };
+      const keys = ['first', 'second', 'third', 'fourth', 'fifth'];
+      let i = 0, posIdx = 0;
+      while (i < data.length && posIdx < 5) {
+        const group = [data[i]];
+        let j = i + 1;
+        while (j < data.length && data[j].points === data[i].points) { group.push(data[j]); j++; }
+        positions[keys[posIdx]] = group;
+        posIdx++; i = j;
+      }
+      return positions;
+    },
   },
   methods: {
+    podiumUserTooltip(u) { return (u.points || 0) + ' puntos'; },
+    isMentionExpanded(idx) { return this.expandedMentions.has(idx); },
+    toggleMention(idx) {
+      const newSet = new Set(this.expandedMentions);
+      if (newSet.has(idx)) newSet.delete(idx);
+      else newSet.add(idx);
+      this.expandedMentions = newSet;
+      this.allExpandedFlag = newSet.size === this.mentions.length;
+    },
+    toggleAllMentions() {
+      if (this.allExpandedFlag) {
+        this.expandedMentions = new Set();
+        this.allExpandedFlag = false;
+      } else {
+        const newSet = new Set();
+        for (let i = 0; i < this.mentions.length; i++) newSet.add(i);
+        this.expandedMentions = newSet;
+        this.allExpandedFlag = true;
+      }
+    },
     _disposeChart() {
       if (this._chart) { this._chart.dispose(); this._chart = null; }
       if (this.raceTimer) { clearTimeout(this.raceTimer); this.raceTimer = null; }
@@ -163,10 +202,21 @@ export default {
       else this._disposeChart();
     },
   },
-  mounted() {
+  async mounted() {
     window.addEventListener('dark-mode-change', this._onDarkModeChange);
     window.addEventListener('resize', this._onResize);
     this.triggerGoogleLogin();
+    try {
+      const r = await fetch('/api/public/champion-winner');
+      if (r.ok) {
+        const d = await r.json();
+        this.championWinner = d.champion_winner || '';
+      }
+      if (this.championWinner) {
+        const m = await fetch('/api/public/mentions');
+        if (m.ok) this.mentions = await m.json();
+      }
+    } catch (e) {}
   },
   unmounted() {
     this._disposeChart();
@@ -230,6 +280,100 @@ export default {
           </div>
 
           <p v-if="authError" class="error-text" style="color: var(--color-red); margin-top: 1rem;">{{ authError }}</p>
+        </section>
+
+        <!-- 🏆 Podio - solo si hay campeón -->
+        <section v-if="showExtraSections" class="podium-wrapper">
+          <div class="podium-stage">
+            <div class="podium-slot second" v-if="topPositions.second.length">
+              <div class="podium-stack silver" :title="podiumUserTooltip(topPositions.second[0])">
+                <div class="podium-medal-icon">🥈</div>
+                <div class="podium-points-big">{{ topPositions.second[0].points }} <span style="font-size:0.5em;font-weight:600;">pts</span></div>
+                <div class="podium-names">
+                  <div v-for="u in topPositions.second" :key="'2-'+u.id" class="podium-name" :title="u.name">{{ u.name }}</div>
+                </div>
+                <div class="podium-num-badge silver-num">2</div>
+              </div>
+            </div>
+            <div class="podium-slot first" v-if="topPositions.first.length">
+              <div class="podium-stack gold" :title="podiumUserTooltip(topPositions.first[0])">
+                <div class="podium-crown">👑</div>
+                <div class="podium-medal-icon">🥇</div>
+                <div class="podium-points-big">{{ topPositions.first[0].points }} <span style="font-size:0.5em;font-weight:600;">pts</span></div>
+                <div class="podium-names">
+                  <div v-for="u in topPositions.first" :key="'1-'+u.id" class="podium-name" :title="u.name">{{ u.name }}</div>
+                </div>
+                <div class="podium-num-badge gold-num">1</div>
+              </div>
+            </div>
+            <div class="podium-slot third" v-if="topPositions.third.length">
+              <div class="podium-stack bronze" :title="podiumUserTooltip(topPositions.third[0])">
+                <div class="podium-medal-icon">🥉</div>
+                <div class="podium-points-big">{{ topPositions.third[0].points }} <span style="font-size:0.5em;font-weight:600;">pts</span></div>
+                <div class="podium-names">
+                  <div v-for="u in topPositions.third" :key="'3-'+u.id" class="podium-name" :title="u.name">{{ u.name }}</div>
+                </div>
+                <div class="podium-num-badge bronze-num">3</div>
+              </div>
+            </div>
+          </div>
+          <div v-if="topPositions.fourth.length || topPositions.fifth.length" class="podium-stage podium-stage-rest">
+            <div class="podium-slot fourth" v-if="topPositions.fourth.length">
+              <div class="podium-stack fourth" :title="podiumUserTooltip(topPositions.fourth[0])">
+                <div class="podium-points-big">{{ topPositions.fourth[0].points }} <span style="font-size:0.5em;font-weight:600;">pts</span></div>
+                <div class="podium-names">
+                  <div v-for="u in topPositions.fourth" :key="'4-'+u.id" class="podium-name" :title="u.name">{{ u.name }}</div>
+                </div>
+                <div class="podium-num-badge fourth-num">4</div>
+              </div>
+            </div>
+            <div class="podium-slot fifth" v-if="topPositions.fifth.length">
+              <div class="podium-stack fifth" :title="podiumUserTooltip(topPositions.fifth[0])">
+                <div class="podium-points-big">{{ topPositions.fifth[0].points }} <span style="font-size:0.5em;font-weight:600;">pts</span></div>
+                <div class="podium-names">
+                  <div v-for="u in topPositions.fifth" :key="'5-'+u.id" class="podium-name" :title="u.name">{{ u.name }}</div>
+                </div>
+                <div class="podium-num-badge fifth-num">5</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 🏅 Menciones - solo si hay campeón -->
+        <section v-if="showExtraSections && mentions && mentions.length" class="mentions-wrapper">
+          <div class="mentions-header">
+            <span class="mentions-icon">🏅</span>
+            <div>
+              <h3 class="mentions-title">MENCIONES HONORÍFICAS</h3>
+              <p class="mentions-subtitle">Galardones extraoficiales del torneo 🎭</p>
+            </div>
+            <button @click="toggleAllMentions" class="mentions-toggle-all" :title="allExpandedFlag ? 'Colapsar todas' : 'Expandir todas'">
+              <span v-if="allExpandedFlag" style="font-size:0.95rem;">▴</span>
+              <span v-else style="font-size:0.95rem;">▾</span>
+              <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.04em;">{{ allExpandedFlag ? 'COLAPSAR' : 'EXPANDIR' }}</span>
+            </button>
+          </div>
+          <div class="mentions-grid">
+            <div v-for="(m, idx) in mentions" :key="idx" class="mention-card" :class="['mention-' + m.color, { 'mention-expanded': isMentionExpanded(idx) }]">
+              <div class="mention-header" @click="toggleMention(idx)">
+                <div class="mention-emoji">{{ m.emoji }}</div>
+                <div class="mention-header-body">
+                  <div class="mention-title-text">{{ m.title }}</div>
+                  <div class="mention-description">{{ m.description }}</div>
+                </div>
+                <div class="mention-toggle">
+                  <span class="mention-count">{{ m.users.length }}</span>
+                  <span class="mention-chevron">{{ isMentionExpanded(idx) ? '▴' : '▾' }}</span>
+                </div>
+              </div>
+              <div v-if="isMentionExpanded(idx)" class="mention-details">
+                <div v-for="(u, uidx) in m.users" :key="uidx" class="mention-user">
+                  <span class="mention-user-name">{{ u.name }}</span>
+                  <span class="mention-user-detail">{{ u.detail }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section class="landing-stats">
